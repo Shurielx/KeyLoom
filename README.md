@@ -32,6 +32,8 @@ Capture is active only while recording. Keyloom's own controls and synthetic inp
 
 Requires Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
+For local use, double-click **Start Keyloom.bat**. It builds the current source and opens the app, so you do not need to download release builds. Close a running copy from its tray menu before rebuilding.
+
 ```powershell
 dotnet build Keyloom.csproj -c Release
 dotnet run --project tests/Keyloom.Tests.csproj -c Release
