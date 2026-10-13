@@ -1,0 +1,83 @@
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Text.Json;
+using Keyloom.Engine;
+using Keyloom.Models;
+
+namespace Keyloom.Services;
+
+public sealed record ProfileLoadResult(ObservableCollection<MacroProfile> Profiles, string Warning);
+
+public sealed class ProfileStorageService
+{
+    public string FilePath { get; }
+    private readonly string? _legacyPath;
+    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+    public ProfileStorageService(string? folder = null, string? legacyFolder = null)
+    {
+        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        FilePath = Path.Combine(folder ?? Path.Combine(appData, "Keyloom"), "macro_profiles.json");
+        _legacyPath = folder == null || legacyFolder != null ? Path.Combine(legacyFolder ?? Path.Combine(appData, "KeychronHUD"), "macro_profiles.json") : null;
+    }
+    public ProfileLoadResult LoadProfiles()
+    {
+        string source = File.Exists(FilePath) ? FilePath : _legacyPath != null && File.Exists(_legacyPath) ? _legacyPath : FilePath;
+        if (!File.Exists(source)) return new(new() { CreateDefault() }, "");
+        try
+        {
+            var profiles = Read(source);
+            if (source != FilePath)
+            {
+                foreach (var p in profiles)
+                {
+                    if (p.FallbackVk != 0) { p.PrimaryVk = p.FallbackVk; p.PrimaryModifiers = p.FallbackModifiers; }
+                    p.FallbackVk = 0; p.FallbackModifiers = 0;
+                    if (p.Name == "Primary Macro (Autoclicker)") p.Name = "Autoclicker";
+                }
+                SaveProfiles(profiles);
+            }
+            return new(profiles, "");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+        {
+            try { return new(Read(source + ".bak"), "Profiles recovered from backup. The previous file could not be read."); }
+            catch (Exception backupError) when (backupError is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+            {
+                return new(new() { CreateDefault() }, "Profiles could not be loaded. Your existing file is preserved until you save.");
+            }
+        }
+    }
+    private static ObservableCollection<MacroProfile> Read(string path)
+    {
+        if (new FileInfo(path).Length > 8 * 1024 * 1024) throw new JsonException("Profile file is too large.");
+        var profiles = JsonSerializer.Deserialize<ObservableCollection<MacroProfile>>(File.ReadAllText(path), Options) ?? throw new JsonException("Missing profiles.");
+        var ids = new HashSet<string>();
+        foreach (var p in profiles)
+        {
+            if (p == null) throw new JsonException("Missing profile.");
+            if (string.IsNullOrWhiteSpace(p.Id) || !ids.Add(p.Id)) { p.Id = Guid.NewGuid().ToString("N"); ids.Add(p.Id); }
+            p.SpamIntervalMs = Math.Max(1, p.SpamIntervalMs);
+            ProfileValidator.Validate(p);
+        }
+        return profiles;
+    }
+    public void SaveProfiles(IEnumerable<MacroProfile> profiles)
+    {
+        var snapshot = profiles.Select(p => p.Snapshot()).ToArray();
+        foreach (var p in snapshot) ProfileValidator.Validate(p);
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        string temporary = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+            {
+                JsonSerializer.Serialize(stream, snapshot, Options);
+                stream.Flush(true);
+            }
+            if (File.Exists(FilePath)) File.Replace(temporary, FilePath, FilePath + ".bak");
+            else File.Move(temporary, FilePath);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+    public static MacroProfile CreateDefault() => new() { Name = "Autoclicker", PrimaryVk = 0x77, PrimaryModifiers = Shortcut.Control | Shortcut.Shift };
+}

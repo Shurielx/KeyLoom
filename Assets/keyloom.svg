@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Keyloom app icon</title>
+  <desc id="desc">A cyan and mint K inside a dark rounded keycap.</desc>
+  <defs>
+    <linearGradient id="keycap" x1="46" y1="46" x2="210" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#222B3D"/>
+      <stop offset="1" stop-color="#151922"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#101117"/>
+  <rect x="46" y="46" width="164" height="164" rx="38" fill="url(#keycap)" stroke="#354157" stroke-width="3"/>
+  <path d="M94 88V168" fill="none" stroke="#38BDF8" stroke-width="24" stroke-linecap="round"/>
+  <path d="M167 88L125 128L167 168" fill="none" stroke="#34D399" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

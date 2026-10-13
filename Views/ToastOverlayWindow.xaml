@@ -1,0 +1,9 @@
+<Window x:Class="Keyloom.Views.ToastOverlayWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Keyloom notification" Style="{StaticResource {x:Type Window}}" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Topmost="True" ShowInTaskbar="False" ShowActivated="False" SizeToContent="WidthAndHeight" Focusable="False">
+  <Border x:Name="ToastCard" Background="#EE191C26" BorderBrush="#34D399" BorderThickness="1" CornerRadius="10" Padding="16,12" MaxWidth="400">
+    <StackPanel Orientation="Horizontal">
+      <Path x:Name="ToastIcon" Data="{StaticResource IconBolt}" Fill="#34D399" Stretch="Uniform" Width="14" Height="18" Margin="0,0,12,0" VerticalAlignment="Center"/>
+      <StackPanel><TextBlock x:Name="ToastTitle" Text="Macro running" FontSize="13" FontWeight="SemiBold"/><TextBlock x:Name="ToastSubtext" Foreground="#A0ABBD" FontSize="12" MaxWidth="300" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/></StackPanel>
+    </StackPanel>
+  </Border>
+</Window>

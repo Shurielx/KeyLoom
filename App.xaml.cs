@@ -1,0 +1,24 @@
+using System.Threading;
+using System.Windows;
+
+namespace Keyloom;
+
+public partial class App : Application
+{
+    private Mutex? _instance;
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        _instance = new Mutex(true, "Local\\Keyloom", out bool first);
+        if (!first)
+        {
+            MessageBox.Show("Keyloom is already running. Open it from the tray or press Ctrl + Shift + I.", "Keyloom");
+            Shutdown(); return;
+        }
+        base.OnStartup(e);
+    }
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _instance?.Dispose();
+        base.OnExit(e);
+    }
+}

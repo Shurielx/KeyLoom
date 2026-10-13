@@ -1,0 +1,22 @@
+name: Build
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build Keyloom.csproj -c Release
+      - run: dotnet run --project tests/Keyloom.Tests.csproj -c Release
+      - run: dotnet publish Keyloom.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o artifacts/windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Keyloom-win-x64
+          path: artifacts/windows/
