@@ -11,6 +11,7 @@ public partial class RecordingWindow : Window
     public RecordingWindow()
     {
         InitializeComponent();
+        Backdrop.Attach(this);
         Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - Width) / 2;
         Top = SystemParameters.WorkArea.Top + 18;
     }
@@ -22,7 +23,8 @@ public partial class RecordingWindow : Window
         StopButton.Content = "Stop";
         StateText.Text = paused ? "Recording paused" : "Recording";
         DetailsText.Text = $"{TimeSpan.FromMilliseconds(elapsed):mm\\:ss}   ·   {steps:N0} steps   ·   F8 to stop";
-        RecordingDot.Fill = new SolidColorBrush(paused ? Color.FromRgb(132, 109, 51) : Color.FromRgb(165, 67, 52));
+        RecordingDot.Fill = new SolidColorBrush(paused ? Color.FromRgb(176, 132, 40) : Color.FromRgb(210, 65, 47));
+        RecordingHalo.Visibility = paused ? Visibility.Hidden : Visibility.Visible;
     }
     private void Stop_Click(object sender, RoutedEventArgs e) => StopRequested?.Invoke();
     private void Pause_Click(object sender, RoutedEventArgs e) => PauseRequested?.Invoke();

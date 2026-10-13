@@ -159,15 +159,15 @@ internal static partial class Program
         var profiles = (System.Collections.ObjectModel.ObservableCollection<MacroProfile>)Field(main, "_profiles");
         profiles.Clear(); profiles.Add(ProfileStorageService.CreateDefault()); profiles.Add(new() { Name = "Copy and paste", PrimaryVk = 0x78, PrimaryModifiers = 6, Behavior = MacroBehaviorType.Sequence, RepeatCount = 1, Actions = new() { new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" }, new() { ActionType = MacroActionType.Delay, DelayMs = 100 }, new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+V" } } });
         var content = (FrameworkElement)main.Content;
-        Render(content, 718, 438, "main.png");
+        Render(content, 758, 478, "main.png");
         var buttons = Descendants<Button>(content).Where(b => b.Tag == profiles[0]).ToArray();
         Check(buttons.Length == 3 && buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path, "profile controls render vector edit and delete icons");
         profiles[0].IsActive = true; Pump();
         Check(buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path && (string)buttons[2].Content == "Stop", "running state changes only the Start button");
-        Render(content, 718, 438, "main-active.png");
+        Render(content, 758, 478, "main-active.png");
         profiles[0].IsActive = false; Pump();
         Check((string)buttons[2].Content == "Start", "stopped state restores Start");
-        Render(content, 618, 398, "main-small.png");
+        Render(content, 638, 358, "main-small.png");
         foreach (var mode in Enum.GetValues<MacroBehaviorType>())
         {
             var p = Profile(mode);
@@ -208,10 +208,10 @@ internal static partial class Program
     }
     private static void Render(FrameworkElement root, int width, int height, string name)
     {
-        root.Measure(new Size(width, height)); root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout(); Pump();
+        root.Measure(new Size(width, height)); root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout(); Pump(500);
         var image = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
         var background = new DrawingVisual();
-        using (var drawing = background.RenderOpen()) drawing.DrawRectangle(new SolidColorBrush(Color.FromRgb(16, 17, 23)), null, new Rect(0, 0, width, height));
+        using (var drawing = background.RenderOpen()) drawing.DrawRectangle(new LinearGradientBrush(Color.FromRgb(170, 205, 232), Color.FromRgb(214, 226, 240), 45), null, new Rect(0, 0, width, height));
         image.Render(background); image.Render(root);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
         string folder = Path.Combine(AppContext.BaseDirectory, "screenshots"); Directory.CreateDirectory(folder);

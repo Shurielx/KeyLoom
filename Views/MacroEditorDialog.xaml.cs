@@ -22,6 +22,7 @@ public partial class MacroEditorDialog : Window
     public MacroEditorDialog(MacroProfile profile, IEnumerable<MacroProfile>? others = null, bool isNew = false)
     {
         InitializeComponent();
+        Backdrop.Attach(this);
         Profile = profile; _others = others ?? [];
         _steps = new(profile.Actions.Select(a => a.Clone()));
         DialogTitleText.Text = isNew ? "New macro" : "Edit macro";

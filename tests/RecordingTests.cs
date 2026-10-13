@@ -90,7 +90,7 @@ internal static partial class Program
         Render((FrameworkElement)editor.Content, 718, (int)editor.Height - 2, "recorded-sequence.png");
         editor.Close();
         var options = new RecordingOptionsDialog();
-        Render((FrameworkElement)options.Content, 394, 320, "record-options.png");
+        Render((FrameworkElement)options.Content, 408, 378, "record-options.png");
         ((CheckBox)options.FindName("MovementBox")).IsChecked = false;
         ((CheckBox)options.FindName("ButtonsBox")).IsChecked = false;
         ((CheckBox)options.FindName("KeyboardBox")).IsChecked = false;
@@ -103,10 +103,10 @@ internal static partial class Program
         options.Close();
         var panel = new RecordingWindow(); panel.Status(false, 65000, 245);
         Check(((TextBlock)panel.FindName("DetailsText")).Text.Contains("01:05") && ((Button)panel.FindName("PauseButton")).IsEnabled, "recording panel displays elapsed time, count and pause");
-        Render((FrameworkElement)panel.Content, 408, 82, "record-panel.png");
+        Render((FrameworkElement)panel.Content, 428, 74, "record-panel.png");
         panel.Status(true, 65000, 245);
         Check((string)((Button)panel.FindName("PauseButton")).Content == "Resume", "recording pause switches to Resume");
-        Render((FrameworkElement)panel.Content, 408, 82, "record-panel-paused.png"); panel.Close();
+        Render((FrameworkElement)panel.Content, 428, 74, "record-panel-paused.png"); panel.Close();
         using var session = new RecordingSession();
         int completed = 0; session.Completed += (_, _) => completed++;
         session.Start(new(), 20000);

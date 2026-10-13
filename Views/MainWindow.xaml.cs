@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Backdrop.Attach(this);
         var loaded = _storage.LoadProfiles();
         _profiles = loaded.Profiles;
         StatusText.Text = loaded.Warning;

@@ -6,7 +6,11 @@ namespace Keyloom.Views;
 public partial class RecordingOptionsDialog : Window
 {
     public RecordingOptions Options { get; private set; } = new();
-    public RecordingOptionsDialog() => InitializeComponent();
+    public RecordingOptionsDialog()
+    {
+        InitializeComponent();
+        Backdrop.Attach(this);
+    }
     private void Start_Click(object sender, RoutedEventArgs e)
     {
         if (MovementBox.IsChecked != true && ButtonsBox.IsChecked != true && KeyboardBox.IsChecked != true)
