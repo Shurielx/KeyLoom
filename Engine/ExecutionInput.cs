@@ -46,6 +46,7 @@ internal sealed class ExecutionInput(IInputDriver driver)
         }
     }
     public void Move(int x, int y) => driver.Move(x, y);
+    public void Position(int x, int y) => driver.Position(x, y);
     public void Scroll(int amount) => driver.Scroll(amount);
     public void ReleaseOwned()
     {

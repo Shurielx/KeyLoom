@@ -57,7 +57,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
         {
             Wait(p.StartDelayMs, token);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
-                (p.SpamIntervalMs < 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs < 16)));
+                (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
             {
                 if (p.TargetType == TargetInputType.Mouse) input.MouseDown(p.TargetMouseButton);
@@ -113,6 +113,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
             case MacroActionType.KeyUp: foreach (var key in keys.Reverse()) input.KeyUp(key); break;
             case MacroActionType.Delay: Wait(a.DelayMs, token); break;
             case MacroActionType.MouseMove: input.Move(a.X, a.Y); break;
+            case MacroActionType.MousePosition: input.Position(a.X, a.Y); break;
             case MacroActionType.MouseScroll: input.Scroll(a.ScrollAmount); break;
             case MacroActionType.Text: input.Text(a.Text, token); break;
         }

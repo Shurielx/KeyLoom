@@ -14,7 +14,7 @@
         </Button>
       </Grid>
       <Border Grid.Row="1" Background="#F5F9FC" BorderBrush="#7D9BB1" BorderThickness="1" CornerRadius="3">
-        <Grid>
+        <Grid x:Name="MacroForm">
           <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="48"/></Grid.RowDefinitions>
           <Border Background="{StaticResource GlassBrush}" BorderBrush="#B9CFDD" BorderThickness="0,0,0,1" Padding="14,12">
             <Grid>
@@ -33,9 +33,15 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="170"/></Grid.ColumnDefinitions>
               <StackPanel Margin="0,0,16,0">
                 <TextBlock Text="Macro type" Margin="0,0,0,5"/>
-                <ComboBox x:Name="ModeBox" SelectionChanged="Mode_Changed" Margin="0,0,0,14">
-                  <ComboBoxItem Content="Repeat input"/><ComboBoxItem Content="Hold input"/><ComboBoxItem Content="Sequence"/>
-                </ComboBox>
+                <Grid Margin="0,0,0,14">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <ComboBox x:Name="ModeBox" SelectionChanged="Mode_Changed">
+                    <ComboBoxItem Content="Repeat input"/><ComboBoxItem Content="Hold input"/><ComboBoxItem Content="Sequence"/>
+                  </ComboBox>
+                  <Button Grid.Column="1" Click="Record_Click" Style="{StaticResource PrimaryButton}" Margin="7,0,0,0" ToolTip="Record mouse and keyboard input">
+                    <StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="#A54334" VerticalAlignment="Center" Margin="0,0,6,0"/><TextBlock Text="Record"/></StackPanel>
+                  </Button>
+                </Grid>
                 <Border x:Name="TargetPanel" Background="White" BorderBrush="#BDCEDA" BorderThickness="1" CornerRadius="3" Padding="12">
                   <StackPanel>
                     <TextBlock Text="Input" Margin="0,0,0,6"/>
@@ -48,8 +54,10 @@
                   <Grid Margin="0,0,0,6">
                     <TextBlock Text="Steps" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                      <Button Content="Delay" Click="InsertDelay_Click" ToolTip="Insert a delay after the selected step" Padding="8,4" Margin="0,0,7,0"/>
                       <Button Click="MoveUp_Click" ToolTip="Move step up" AutomationProperties.Name="Move step up" Width="28" Padding="6,4" Margin="0,0,4,0"><Path Data="{StaticResource IconArrowUp}" Fill="#3B637C" Width="12" Height="12" Stretch="Uniform"/></Button>
                       <Button Click="MoveDown_Click" ToolTip="Move step down" AutomationProperties.Name="Move step down" Width="28" Padding="6,4" Margin="0,0,4,0"><Path Data="{StaticResource IconArrowDown}" Fill="#3B637C" Width="12" Height="12" Stretch="Uniform"/></Button>
+                      <Button Click="DuplicateStep_Click" ToolTip="Duplicate step" AutomationProperties.Name="Duplicate step" Width="28" Padding="6,4" Margin="0,0,4,0"><Path Data="M3 3H11V14H3Z M6 0H14V11" Stroke="#3B637C" StrokeThickness="1.2" Width="12" Height="12" Stretch="Uniform"/></Button>
                       <Button Click="RemoveStep_Click" ToolTip="Remove step" AutomationProperties.Name="Remove step" Width="28" Padding="6,4"><Path Data="{StaticResource IconTrash}" Fill="#895D56" Width="12" Height="12" Stretch="Uniform"/></Button>
                     </StackPanel>
                   </Grid>

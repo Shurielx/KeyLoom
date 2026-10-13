@@ -16,7 +16,7 @@ public partial class MacroEditorDialog : Window
     }
     public MacroProfile Profile { get; }
     private readonly IEnumerable<MacroProfile> _others;
-    private readonly ObservableCollection<MacroAction> _steps;
+    private ObservableCollection<MacroAction> _steps;
     private uint _key, _modifiers;
     private bool _loadingStep;
     public MacroEditorDialog(MacroProfile profile, IEnumerable<MacroProfile>? others = null, bool isNew = false)
@@ -41,12 +41,14 @@ public partial class MacroEditorDialog : Window
             new(MacroActionType.MouseUp, "Mouse up"), new(MacroActionType.KeyPress, "Key press"),
             new(MacroActionType.KeyDown, "Key down"), new(MacroActionType.KeyUp, "Key up"),
             new(MacroActionType.Delay, "Wait"), new(MacroActionType.MouseMove, "Move mouse"),
-            new(MacroActionType.MouseScroll, "Scroll"), new(MacroActionType.Text, "Type text")
+            new(MacroActionType.MouseScroll, "Scroll"), new(MacroActionType.Text, "Type text"),
+            new(MacroActionType.MousePosition, "Pointer position")
         };
         StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0;
         UpdateMode();
         FitHeight();
         Loaded += (_, _) => FitHeight();
+        InitializeRecording();
     }
     private void UpdateShortcut() => ShortcutTextBox.Text = Shortcut.Format(_modifiers, _key);
     private void Shortcut_Focused(object sender, KeyboardFocusChangedEventArgs e) => ShortcutTextBox.Text = "Press a shortcut...";
@@ -72,7 +74,7 @@ public partial class MacroEditorDialog : Window
     }
     private void FitHeight()
     {
-        double preferred = ModeBox.SelectedIndex == 2 ? 580 : ModeBox.SelectedIndex == 1 ? 440 : 490;
+        double preferred = ModeBox.SelectedIndex == 2 ? 600 : ModeBox.SelectedIndex == 1 ? 440 : 490;
         Height = Math.Min(preferred, Math.Max(MinHeight, SystemParameters.WorkArea.Height - 48));
     }
     private void Target_Changed(object sender, SelectionChangedEventArgs e) => UpdateMode();
@@ -103,6 +105,7 @@ public partial class MacroEditorDialog : Window
             MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => "Examples: Space, F8, Ctrl+C. Use Plus for the + key.",
             MacroActionType.Delay => "Delay in milliseconds.",
             MacroActionType.MouseMove => "Relative movement: x, y in pixels. Example: 20, -10.",
+            MacroActionType.MousePosition => "Screen position: x, y in pixels. Supports negative coordinates on additional monitors.",
             MacroActionType.MouseScroll => "Positive scrolls up; negative scrolls down. Example: -3.",
             MacroActionType.Text => "Types Unicode text into the focused application.",
             _ => "Choose a mouse button."
@@ -110,6 +113,7 @@ public partial class MacroEditorDialog : Window
         if (!_loadingStep) StepValueTextBox.Text = StepType switch
         {
             MacroActionType.Delay => "50", MacroActionType.MouseMove => "20, 0",
+            MacroActionType.MousePosition => "0, 0",
             MacroActionType.MouseScroll => "1", MacroActionType.Text => "",
             _ => "Space"
         };
@@ -123,7 +127,7 @@ public partial class MacroEditorDialog : Window
         SelectMouse(StepMouseBox, a.MouseButton);
         StepValueTextBox.Text = a.ActionType switch
         {
-            MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove => $"{a.X}, {a.Y}",
+            MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",
             MacroActionType.MouseScroll => a.ScrollAmount.ToString(), MacroActionType.Text => a.Text,
             _ => a.KeyName
         };
@@ -135,7 +139,7 @@ public partial class MacroEditorDialog : Window
         var a = new MacroAction { ActionType = StepType, MouseButton = MouseValue(StepMouseBox), KeyName = value, Text = StepValueTextBox.Text };
         if (StepType == MacroActionType.Delay) a.DelayMs = Number(value, "Step delay");
         if (StepType == MacroActionType.MouseScroll) a.ScrollAmount = Number(value, "Scroll amount");
-        if (StepType == MacroActionType.MouseMove)
+        if (StepType is MacroActionType.MouseMove or MacroActionType.MousePosition)
         {
             var parts = value.Split(',');
             if (parts.Length != 2) throw new ArgumentException("Enter mouse movement as x, y.");
@@ -145,9 +149,20 @@ public partial class MacroEditorDialog : Window
     }
     private void AddStep_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
-        if (_steps.Count >= 1000) throw new ArgumentException("A sequence can contain up to 1000 steps.");
-        _steps.Add(ReadStep()); ActionsListBox.SelectedIndex = _steps.Count - 1;
+        InsertStep(ReadStep());
     });
+    private void InsertDelay_Click(object sender, RoutedEventArgs e) => Attempt(() => InsertStep(new() { ActionType = MacroActionType.Delay, DelayMs = 100 }));
+    private void DuplicateStep_Click(object sender, RoutedEventArgs e) => Attempt(() =>
+    {
+        if (ActionsListBox.SelectedItem is MacroAction a) InsertStep(a.Clone());
+    });
+    private void InsertStep(MacroAction action)
+    {
+        if (_steps.Count >= ProfileValidator.MaxActions) throw new ArgumentException($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps.");
+        int index = ActionsListBox.SelectedIndex >= 0 ? ActionsListBox.SelectedIndex + 1 : _steps.Count;
+        _steps.Insert(index, action); ActionsListBox.SelectedIndex = index;
+        ActionsListBox.ScrollIntoView(action);
+    }
     private void UpdateStep_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
         int i = ActionsListBox.SelectedIndex;

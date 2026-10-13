@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Keyloom.Models;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown, KeyUp, Delay, MouseMove, MouseScroll, Text }
+public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown, KeyUp, Delay, MouseMove, MouseScroll, Text, MousePosition }
 
 public class MacroAction
 {
@@ -25,6 +25,7 @@ public class MacroAction
         MacroActionType.KeyUp => $"Release {KeyName}",
         MacroActionType.Delay => $"Wait {DelayMs} ms",
         MacroActionType.MouseMove => $"Move mouse by {X}, {Y} px",
+        MacroActionType.MousePosition => $"Move pointer to {X}, {Y}",
         MacroActionType.MouseScroll => $"Scroll {ScrollAmount} notch(es)",
         _ => $"Type: {Text.Replace("\r", " ").Replace("\n", " ")}"
     };

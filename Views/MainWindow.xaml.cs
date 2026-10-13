@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<MacroProfile> _profiles;
     private readonly TrayService _tray;
     private HotkeyManager? _hotkeys;
+    private MacroEditorDialog? _activeEditor;
     private bool _exiting, _dialogOpen;
     public MainWindow()
     {
@@ -35,13 +36,13 @@ public partial class MainWindow : Window
         });
         _executor.ProgressChanged += (p, count) => Dispatcher.BeginInvoke(() => p.ExecutionCount = count);
         _executor.ExecutionFailed += message => Dispatcher.BeginInvoke(() => StatusText.Text = message);
-        _tray = new(ShowHud, () => Run(_executor.StopAsync), () => Run(ExitAsync));
+        _tray = new(ShowHud, StopAll, () => Run(ExitAsync));
         Loaded += (_, _) =>
         {
             _hotkeys = new(new WindowInteropHelper(this).Handle);
             _hotkeys.ProfileTriggered += p => { if (!_dialogOpen && !_exiting) Run(() => ToggleAsync(p)); };
             _hotkeys.WindowTriggered += () => { if (!_dialogOpen) { if (IsVisible) Hide(); else ShowHud(); } };
-            _hotkeys.StopTriggered += () => Run(_executor.StopAsync);
+            _hotkeys.StopTriggered += StopAll;
             RegisterShortcuts();
         };
         Closing += OnClosing;
@@ -61,7 +62,8 @@ public partial class MainWindow : Window
     {
         if (sender is Button { Tag: MacroProfile p }) Run(() => ToggleAsync(p));
     }
-    private void Stop_Click(object sender, RoutedEventArgs e) => Run(_executor.StopAsync);
+    private void Stop_Click(object sender, RoutedEventArgs e) => StopAll();
+    private void StopAll() { _activeEditor?.StopRecording(); Run(_executor.StopAsync); }
     private void Add_Click(object sender, RoutedEventArgs e) => Run(async () =>
     {
         await _executor.StopAsync();
@@ -91,8 +93,12 @@ public partial class MainWindow : Window
     {
         _dialogOpen = true;
         _hotkeys?.RegisterProfiles([]);
-        try { return new MacroEditorDialog(p, _profiles, isNew) { Owner = this }.ShowDialog() == true; }
-        finally { _dialogOpen = false; RegisterShortcuts(); }
+        try
+        {
+            _activeEditor = new MacroEditorDialog(p, _profiles, isNew) { Owner = this };
+            return _activeEditor.ShowDialog() == true;
+        }
+        finally { _activeEditor = null; _dialogOpen = false; RegisterShortcuts(); }
     }
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
@@ -111,7 +117,7 @@ public partial class MainWindow : Window
         if (warning.Length > 0) StatusText.Text = warning;
     }
     private void Help_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
-        "Create a macro, choose Repeat input, Hold input, or Sequence, then set a shortcut.\n\nStart again with the same shortcut to stop. Only one macro runs at a time.\n\nCtrl + Shift + F12: stop all\nCtrl + Shift + I: show or hide Keyloom\n\nClosing the window keeps Keyloom in the tray. Use the tray menu to exit.\n\nAny Windows keyboard or mouse works. Some apps reject synthetic input; game rules may restrict automation.",
+        "Create a macro, choose Repeat input, Hold input, or Sequence, then set a shortcut.\n\nRecord captures mouse and keyboard input after a 3-second countdown. F8 stops recording. Edit the captured steps or insert delays afterward.\n\nStart again with the same shortcut to stop playback. Only one macro runs at a time.\n\nCtrl + Shift + F12: stop all\nCtrl + Shift + I: show or hide Keyloom\n\nClosing the window keeps Keyloom in the tray. Use the tray menu to exit.\n\nAny Windows keyboard or mouse works. Some apps reject synthetic input; game rules may restrict automation.",
         "Keyloom help", MessageBoxButton.OK, MessageBoxImage.Information);
     public void ShowHud() { Show(); WindowState = WindowState.Normal; Activate(); }
     private void Hide_Click(object sender, RoutedEventArgs e) => Hide();

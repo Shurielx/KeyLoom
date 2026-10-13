@@ -8,6 +8,7 @@ public interface IInputDriver
     void Key(ushort key, bool down);
     void Mouse(string button, bool down);
     void Move(int x, int y);
+    void Position(int x, int y);
     void Scroll(int notches);
     void Character(char value, bool down);
 }
@@ -16,6 +17,7 @@ public sealed class InputSimulator : IInputDriver
 {
     [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, INPUT[] inputs, int size);
     [DllImport("user32.dll")] private static extern uint MapVirtualKey(uint code, uint type);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint type; public InputUnion data; }
     [StructLayout(LayoutKind.Explicit)] private struct InputUnion
     {
@@ -58,6 +60,14 @@ public sealed class InputSimulator : IInputDriver
         SendMouse(flags, button == "X1" ? 1u : button == "X2" ? 2u : 0u);
     }
     public void Move(int x, int y) => SendMouse(1, x: x, y: y);
+    public void Position(int x, int y)
+    {
+        int left = GetSystemMetrics(76), top = GetSystemMetrics(77);
+        int width = Math.Max(1, GetSystemMetrics(78)), height = Math.Max(1, GetSystemMetrics(79));
+        SendMouse(0xC001, x: NormalizePosition(x, left, width), y: NormalizePosition(y, top, height));
+    }
+    public static int NormalizePosition(int value, int origin, int size) =>
+        (int)Math.Clamp((2 * ((long)value - origin) + 1) * 65536 / (2L * Math.Max(1, size)), 0, 65535);
     public void Scroll(int notches) => SendMouse(0x0800, unchecked((uint)(notches * 120)));
     private void SendMouse(uint flags, uint data = 0, int x = 0, int y = 0) => Send(new INPUT
     {

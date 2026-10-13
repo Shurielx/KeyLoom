@@ -15,7 +15,7 @@ using Keyloom.Models;
 using Keyloom.Services;
 using Keyloom.Views;
 
-internal static class Program
+internal static partial class Program
 {
     private static int _checks;
     [STAThread]
@@ -24,10 +24,15 @@ internal static class Program
         try
         {
             EngineTests().GetAwaiter().GetResult();
+            RecordingTests().GetAwaiter().GetResult();
             StorageTests();
-            var app = new Keyloom.App(); app.InitializeComponent(); app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Theme.xaml", UriKind.Relative) });
             UiTests();
             HotkeyRegistrationTests();
+            RecordingUiTests();
+            RecorderHookTests();
             if (args.Contains("--input")) NativeInputTests();
             Console.WriteLine($"PASS: {_checks} checks");
             app.Shutdown(); return 0;
@@ -147,7 +152,8 @@ internal static class Program
     private static void UiTests()
     {
         var main = new MainWindow();
-        main.Show(); Pump(); main.Hide();
+        main.Show();
+        Pump(); main.Hide();
         Check(Field(main, "_hotkeys") is HotkeyManager, "main window starts and initializes global shortcuts");
         Check(main.Icon != null && ((SolidColorBrush)main.Foreground).Color == Color.FromRgb(25, 54, 75), "derived windows receive the shared theme and app icon");
         var profiles = (System.Collections.ObjectModel.ObservableCollection<MacroProfile>)Field(main, "_profiles");
@@ -287,6 +293,7 @@ internal static class Program
         }
         public void Mouse(string button, bool down) => Events.Enqueue($"M{button}:{(down ? "down" : "up")}");
         public void Move(int x, int y) => Events.Enqueue($"move:{x},{y}");
+        public void Position(int x, int y) => Events.Enqueue($"position:{x},{y}");
         public void Scroll(int amount) => Events.Enqueue($"scroll:{amount}");
         public void Character(char value, bool down) => Events.Enqueue($"char:{(int)value}:{down}");
     }

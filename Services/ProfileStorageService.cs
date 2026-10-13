@@ -72,6 +72,7 @@ public sealed class ProfileStorageService
             using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
                 JsonSerializer.Serialize(stream, snapshot, Options);
+                if (stream.Length > 8 * 1024 * 1024) throw new IOException("Profiles exceed the 8 MB storage limit. Shorten large recordings or text steps.");
                 stream.Flush(true);
             }
             if (File.Exists(FilePath)) File.Replace(temporary, FilePath, FilePath + ".bak");

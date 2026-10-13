@@ -1,0 +1,16 @@
+<Window x:Class="Keyloom.Views.RecordingWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Keyloom recording" Style="{StaticResource {x:Type Window}}" Width="410" Height="84" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False" Topmost="True">
+  <Border Background="{StaticResource GlassBrush}" BorderBrush="#6F9AB5" BorderThickness="1" CornerRadius="4" Padding="12">
+    <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <StackPanel VerticalAlignment="Center" Margin="0,0,8,0" MouseLeftButtonDown="Drag_MouseDown">
+        <StackPanel Orientation="Horizontal"><Ellipse x:Name="RecordingDot" Width="7" Height="7" Fill="#A54334" VerticalAlignment="Center" Margin="0,0,7,0"/><TextBlock x:Name="StateText" Text="Starting in 3..." FontWeight="SemiBold"/></StackPanel>
+        <TextBlock x:Name="DetailsText" Text="Switch to your target window" Style="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="14,5,0,0"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button x:Name="PauseButton" Content="Pause" Click="Pause_Click" IsEnabled="False" Margin="0,0,6,0"/>
+        <Button x:Name="StopButton" Content="Cancel" Click="Stop_Click" Background="{StaticResource StopBrush}"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

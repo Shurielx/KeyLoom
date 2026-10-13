@@ -1,0 +1,29 @@
+<Window x:Class="Keyloom.Views.RecordingOptionsDialog" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Record sequence" Style="{StaticResource {x:Type Window}}" Width="410" Height="360" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+  <Border Margin="7" Background="#F5F9FC" BorderBrush="#8EAABE" BorderThickness="1" Padding="16">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <StackPanel>
+        <TextBlock Text="Record outside Keyloom" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12"/>
+        <WrapPanel>
+          <CheckBox x:Name="MovementBox" Content="Mouse movement" IsChecked="True" Width="160" Margin="0,0,0,8"/>
+          <CheckBox x:Name="ButtonsBox" Content="Clicks &amp; scroll" IsChecked="True" Width="160" Margin="0,0,0,8"/>
+          <CheckBox x:Name="KeyboardBox" Content="Keyboard" IsChecked="True" Width="160" Margin="0,0,0,8"/>
+          <CheckBox x:Name="TimingBox" Content="Keep delays" IsChecked="True" Width="160" Margin="0,0,0,8"/>
+        </WrapPanel>
+        <Grid Margin="0,8,0,10">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="65"/></Grid.ColumnDefinitions>
+          <TextBlock Text="Mouse sample (ms)" VerticalAlignment="Center"/>
+          <TextBox x:Name="SampleTextBox" Grid.Column="1" Text="16"/>
+        </Grid>
+        <ComboBox x:Name="InsertModeBox" SelectedIndex="0" Margin="0,0,0,12"><ComboBoxItem Content="Append to sequence"/><ComboBoxItem Content="Replace sequence"/></ComboBox>
+        <TextBlock Text="Starts after 3 seconds. F8 stops recording." Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+      </StackPanel>
+      <TextBlock x:Name="ErrorText" Grid.Row="1" Foreground="#A14E2E" TextWrapping="Wrap" Margin="0,8,0,8"/>
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Content="Cancel" IsCancel="True" Margin="0,0,7,0"/>
+        <Button Content="Start recording" Click="Start_Click" Style="{StaticResource PrimaryButton}"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
