@@ -116,6 +116,7 @@ public partial class MainWindow : Window
     public void ShowHud() { Show(); WindowState = WindowState.Normal; Activate(); }
     private void Hide_Click(object sender, RoutedEventArgs e) => Hide();
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         if (!_exiting) { e.Cancel = true; Hide(); }

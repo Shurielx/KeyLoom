@@ -28,7 +28,7 @@ public partial class ToastOverlayWindow : Window
         _hideTimer.Stop();
         ToastTitle.Text = isActive ? "Macro running" : "Macro stopped";
         ToastSubtext.Text = macroName;
-        var color = isActive ? Color.FromRgb(52, 211, 153) : Color.FromRgb(239, 114, 126);
+        var color = isActive ? Color.FromRgb(55, 124, 101) : Color.FromRgb(157, 82, 64);
         ToastCard.BorderBrush = new SolidColorBrush(color);
         ToastIcon.Fill = new SolidColorBrush(color);
         Show(); UpdateLayout();

@@ -9,6 +9,8 @@ Validated on Windows x64 on 2026-10-13.
 - Compiled WPF views were instantiated and rendered at default and compact sizes. Edit/delete icons remain intact when a macro runs. All editor modes and step editing passed.
 - Real Windows hotkey registration, conflict reporting, reserved shortcut protection, and the native input structure layout passed.
 
+The Aero UI revision was checked in the main window, running and stopped states, compact layout, and all three macro editor modes. It uses native WPF gradients and controls; no graphics package or background animation was added.
+
 The executor tests use a recording input driver. A separate opt-in test targets a focused WPF window with the real SendInput backend:
 
 ```powershell

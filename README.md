@@ -1,6 +1,6 @@
 # Keyloom
 
-Simple keyboard and mouse macros for Windows. **Alpha-01**.
+Simple keyboard and mouse macros for Windows. **Alpha-01**, with an Aero-inspired desktop interface.
 
 ![Keyloom](docs/screenshot.png)
 

@@ -149,15 +149,16 @@ internal static class Program
         var main = new MainWindow();
         main.Show(); Pump(); main.Hide();
         Check(Field(main, "_hotkeys") is HotkeyManager, "main window starts and initializes global shortcuts");
-        Check(main.Icon != null && ((SolidColorBrush)main.Foreground).Color == Color.FromRgb(238, 242, 247), "derived windows receive the shared theme and app icon");
+        Check(main.Icon != null && ((SolidColorBrush)main.Foreground).Color == Color.FromRgb(25, 54, 75), "derived windows receive the shared theme and app icon");
         var profiles = (System.Collections.ObjectModel.ObservableCollection<MacroProfile>)Field(main, "_profiles");
         profiles.Clear(); profiles.Add(ProfileStorageService.CreateDefault()); profiles.Add(new() { Name = "Copy and paste", PrimaryVk = 0x78, PrimaryModifiers = 6, Behavior = MacroBehaviorType.Sequence, RepeatCount = 1, Actions = new() { new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" }, new() { ActionType = MacroActionType.Delay, DelayMs = 100 }, new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+V" } } });
         var content = (FrameworkElement)main.Content;
-        Render(content, 738, 508, "main.png");
+        Render(content, 718, 438, "main.png");
         var buttons = Descendants<Button>(content).Where(b => b.Tag == profiles[0]).ToArray();
         Check(buttons.Length == 3 && buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path, "profile controls render vector edit and delete icons");
         profiles[0].IsActive = true; Pump();
         Check(buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path && (string)buttons[2].Content == "Stop", "running state changes only the Start button");
+        Render(content, 718, 438, "main-active.png");
         profiles[0].IsActive = false; Pump();
         Check((string)buttons[2].Content == "Start", "stopped state restores Start");
         Render(content, 618, 398, "main-small.png");
@@ -166,7 +167,7 @@ internal static class Program
             var p = Profile(mode);
             if (mode == MacroBehaviorType.Sequence) p.Actions.Add(new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" });
             var editor = new MacroEditorDialog(p);
-            Render((FrameworkElement)editor.Content, 660, 704, "editor-" + mode + ".png");
+            Render((FrameworkElement)editor.Content, (int)editor.Width - 2, (int)editor.Height - 2, "editor-" + mode + ".png");
             Check(((FrameworkElement)editor.FindName("SequencePanel")).Visibility == (mode == MacroBehaviorType.Sequence ? Visibility.Visible : Visibility.Collapsed), mode + " editor visibility");
             editor.Close();
         }

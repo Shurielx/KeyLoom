@@ -45,7 +45,8 @@ public partial class MacroEditorDialog : Window
         };
         StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0;
         UpdateMode();
-        Loaded += (_, _) => Height = Math.Min(Height, Math.Max(MinHeight, SystemParameters.WorkArea.Height - 48));
+        FitHeight();
+        Loaded += (_, _) => FitHeight();
     }
     private void UpdateShortcut() => ShortcutTextBox.Text = Shortcut.Format(_modifiers, _key);
     private void Shortcut_Focused(object sender, KeyboardFocusChangedEventArgs e) => ShortcutTextBox.Text = "Press a shortcut...";
@@ -64,7 +65,16 @@ public partial class MacroEditorDialog : Window
         { ErrorText.Text = "Use Ctrl, Alt, or Win with a key, or choose an F1–F24 key."; return; }
         _key = vk; _modifiers = modifiers; ErrorText.Text = ""; UpdateShortcut();
     }
-    private void Mode_Changed(object sender, SelectionChangedEventArgs e) => UpdateMode();
+    private void Mode_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateMode();
+        if (IsLoaded) FitHeight();
+    }
+    private void FitHeight()
+    {
+        double preferred = ModeBox.SelectedIndex == 2 ? 580 : ModeBox.SelectedIndex == 1 ? 440 : 490;
+        Height = Math.Min(preferred, Math.Max(MinHeight, SystemParameters.WorkArea.Height - 48));
+    }
     private void Target_Changed(object sender, SelectionChangedEventArgs e) => UpdateMode();
     private void UpdateMode()
     {
