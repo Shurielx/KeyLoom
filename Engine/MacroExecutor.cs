@@ -3,9 +3,11 @@ using Keyloom.Models;
 
 namespace Keyloom.Engine;
 
-public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposable
+public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null) : IAsyncDisposable
 {
     private readonly IInputDriver _driver = driver ?? new InputSimulator();
+    private readonly IWindowSystem _windows = windows ?? WindowSystem.Instance;
+    private readonly Func<IntPtr, IInputDriver> _backgroundDriver = backgroundDriver ?? (window => new WindowMessageDriver(window, windows));
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _cts;
     private Task? _task;
@@ -28,11 +30,14 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
             ProfileValidator.Validate(snapshot);
             var keys = snapshot.TargetType == TargetInputType.Keyboard ? KeyResolver.Resolve(snapshot.TargetKey) : [];
             var stepKeys = snapshot.Actions.Select(a => a.ActionType is MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp ? KeyResolver.Resolve(a.KeyName) : Array.Empty<ushort>()).ToArray();
+            IntPtr window = snapshot.NeedsWindow ? _windows.Find(snapshot.Window!) : IntPtr.Zero;
+            if (snapshot.NeedsWindow && window == IntPtr.Zero)
+                throw new ArgumentException($"Target window '{snapshot.Window!.Label}' was not found. Open it or pick the window again.");
             _cts = new();
             var token = _cts.Token;
             Volatile.Write(ref _activeProfile, profile);
             ExecutionStateChanged?.Invoke(profile, true);
-            _task = Task.Run(() => Run(snapshot, profile, keys, stepKeys, token));
+            _task = Task.Run(() => Run(snapshot, profile, keys, stepKeys, window, token));
         }
         finally { _gate.Release(); }
     }
@@ -48,18 +53,25 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
         if (_task != null) await _task;
         _cts?.Dispose(); _cts = null; _task = null;
     }
-    private void Run(MacroProfile p, MacroProfile original, ushort[] keys, ushort[][] stepKeys, CancellationToken token)
+    private void Run(MacroProfile p, MacroProfile original, ushort[] keys, ushort[][] stepKeys, IntPtr window, CancellationToken token)
     {
-        var input = new ExecutionInput(_driver);
+        ExecutionInput? input = null;
         long count = 0;
         var progressClock = Stopwatch.StartNew();
         try
         {
+            input = new ExecutionInput(p.ExecutionMode == ExecutionMode.Background ? _backgroundDriver(window) : _driver);
             Wait(p.StartDelayMs, token);
+            var pointer = new PointerResolver(_windows, window, p);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
                 (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
             {
+                if (p.TargetType == TargetInputType.Mouse && p.UsePoint)
+                {
+                    var (x, y) = pointer.Resolve(CoordinateSpace.Window, p.PointX, p.PointY);
+                    input.Position(x, y);
+                }
                 if (p.TargetType == TargetInputType.Mouse) input.MouseDown(p.TargetMouseButton);
                 else foreach (var key in keys) input.KeyDown(key);
                 count = 1; ProgressChanged?.Invoke(original, count);
@@ -70,15 +82,22 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
                 while (p.RepeatCount == 0 || count < p.RepeatCount)
                 {
                     token.ThrowIfCancellationRequested();
+                    pointer.EnsureAlive();
                     if (p.Behavior == MacroBehaviorType.ClickSpam)
                     {
+                        if (p.TargetType == TargetInputType.Mouse && p.UsePoint)
+                        {
+                            var (x, y) = pointer.Resolve(CoordinateSpace.Window, p.PointX, p.PointY);
+                            input.Position(x, y);
+                        }
                         if (p.TargetType == TargetInputType.Mouse) input.Click(p.TargetMouseButton);
                         else input.Press(keys);
                     }
                     else for (int i = 0; i < p.Actions.Count; i++)
                     {
                         token.ThrowIfCancellationRequested();
-                        Execute(p.Actions[i], stepKeys[i], input, token);
+                        pointer.EnsureAlive();
+                        Execute(p.Actions[i], stepKeys[i], input, pointer, token);
                     }
                     count++;
                     if (progressClock.ElapsedMilliseconds >= 100)
@@ -94,14 +113,14 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
         catch (Exception ex) { ExecutionFailed?.Invoke(ex.Message); }
         finally
         {
-            try { input.ReleaseOwned(); }
+            try { input?.ReleaseOwned(); }
             catch (Exception ex) { ExecutionFailed?.Invoke(ex.Message); }
             Volatile.Write(ref _activeProfile, null);
             ProgressChanged?.Invoke(original, count);
             ExecutionStateChanged?.Invoke(original, false);
         }
     }
-    private static void Execute(MacroAction a, ushort[] keys, ExecutionInput input, CancellationToken token)
+    private static void Execute(MacroAction a, ushort[] keys, ExecutionInput input, PointerResolver pointer, CancellationToken token)
     {
         switch (a.ActionType)
         {
@@ -113,7 +132,9 @@ public sealed class MacroExecutor(IInputDriver? driver = null) : IAsyncDisposabl
             case MacroActionType.KeyUp: foreach (var key in keys.Reverse()) input.KeyUp(key); break;
             case MacroActionType.Delay: Wait(a.DelayMs, token); break;
             case MacroActionType.MouseMove: input.Move(a.X, a.Y); break;
-            case MacroActionType.MousePosition: input.Position(a.X, a.Y); break;
+            case MacroActionType.MousePosition:
+                var (x, y) = pointer.Resolve(a.Space, a.X, a.Y);
+                input.Position(x, y); break;
             case MacroActionType.MouseScroll: input.Scroll(a.ScrollAmount); break;
             case MacroActionType.Text: input.Text(a.Text, token); break;
         }

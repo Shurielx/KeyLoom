@@ -8,7 +8,7 @@ public static class ProfileValidator
     public static void Validate(MacroProfile p)
     {
         if (string.IsNullOrWhiteSpace(p.Name) || p.Name.Length > 80) throw new ArgumentException("Use a macro name between 1 and 80 characters.");
-        if (!Enum.IsDefined(p.Behavior) || !Enum.IsDefined(p.TargetType)) throw new ArgumentException("Unknown macro mode.");
+        if (!Enum.IsDefined(p.Behavior) || !Enum.IsDefined(p.TargetType) || !Enum.IsDefined(p.ExecutionMode)) throw new ArgumentException("Unknown macro mode.");
         if (p.Actions == null || p.Actions.Count > MaxActions) throw new ArgumentException($"A sequence can contain up to {MaxActions:N0} steps.");
         foreach (var action in p.Actions) ValidateAction(action);
         if (p.PrimaryVk > 254 || p.PrimaryModifiers > 15) throw new ArgumentException("Invalid shortcut.");
@@ -21,6 +21,20 @@ public static class ProfileValidator
         }
         else if (p.TargetType == TargetInputType.Keyboard) KeyResolver.Resolve(p.TargetKey);
         else ValidateButton(p.TargetMouseButton);
+        ValidateTarget(p);
+    }
+    private static void ValidateTarget(MacroProfile p)
+    {
+        if (p.Window is { } w && (w.ProcessName.Length is < 1 or > 260 || w.ClassName.Length > 256 || w.Title.Length > 512 ||
+            w.ClientWidth is < 0 or > 100000 || w.ClientHeight is < 0 or > 100000))
+            throw new ArgumentException("The saved target window is invalid. Pick the window again.");
+        if (p.UsePoint && (p.PointX is < 0 or > 100000 || p.PointY is < 0 or > 100000)) throw new ArgumentException("The chosen point is out of range. Pick it again.");
+        if (p.NeedsWindow && p.Window == null) throw new ArgumentException(p.ExecutionMode == ExecutionMode.Background
+            ? "Background mode needs a target window. Use Pick point first."
+            : "Pick a target window for window-relative positions.");
+        if (p.ExecutionMode == ExecutionMode.Background && p.Behavior == MacroBehaviorType.Sequence &&
+            p.Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Start))
+            throw new ArgumentException("Positions relative to the start point need Standard mode.");
     }
     public static void ValidateAction(MacroAction a)
     {
@@ -31,7 +45,7 @@ public static class ProfileValidator
             case MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp: ValidateButton(a.MouseButton); break;
             case MacroActionType.Delay when a.DelayMs is < 1 or > 3600000: throw new ArgumentException("Step delay must be between 1 and 3600000 ms.");
             case MacroActionType.MouseMove when Math.Abs((long)a.X) > 10000 || Math.Abs((long)a.Y) > 10000: throw new ArgumentException("Relative mouse movement is limited to 10000 px per axis.");
-            case MacroActionType.MousePosition when Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000: throw new ArgumentException("Pointer coordinates are out of range.");
+            case MacroActionType.MousePosition when !Enum.IsDefined(a.Space) || Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000: throw new ArgumentException("Pointer coordinates are out of range.");
             case MacroActionType.MouseScroll when a.ScrollAmount is < -100 or > 100 or 0: throw new ArgumentException("Use a scroll amount from -100 to 100, excluding 0.");
             case MacroActionType.Text when string.IsNullOrEmpty(a.Text) || a.Text.Length > 10000: throw new ArgumentException("Text steps must contain between 1 and 10000 characters.");
         }

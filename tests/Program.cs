@@ -25,6 +25,7 @@ internal static partial class Program
         {
             EngineTests().GetAwaiter().GetResult();
             RecordingTests().GetAwaiter().GetResult();
+            FeatureEngineTests().GetAwaiter().GetResult();
             StorageTests();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
@@ -33,7 +34,10 @@ internal static partial class Program
             HotkeyRegistrationTests();
             RecordingUiTests();
             RecorderHookTests();
+            FeatureUiTests();
+            BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();
+            if (args.Contains("--bench")) Benchmarks();
             Console.WriteLine($"PASS: {_checks} checks");
             app.Shutdown(); return 0;
         }

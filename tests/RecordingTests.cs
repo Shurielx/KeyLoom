@@ -108,7 +108,7 @@ internal static partial class Program
         Check((string)((Button)panel.FindName("PauseButton")).Content == "Resume", "recording pause switches to Resume");
         Render((FrameworkElement)panel.Content, 428, 74, "record-panel-paused.png"); panel.Close();
         using var session = new RecordingSession();
-        int completed = 0; session.Completed += (_, _) => completed++;
+        int completed = 0; session.Completed += _ => completed++;
         session.Start(new(), 20000);
         session.Stop(); session.Stop();
         Check(completed == 1, "canceling countdown completes once without installing capture hooks");

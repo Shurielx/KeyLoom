@@ -23,14 +23,15 @@ public partial class MacroEditorDialog
         ErrorText.Text = "";
         var session = new RecordingSession();
         _recording = session;
-        session.Completed += (steps, reason) =>
+        session.Completed += result =>
         {
             _recording = null;
             session.Dispose();
             MacroForm.IsEnabled = true;
             if (!_closed && !Dispatcher.HasShutdownStarted)
             {
-                ApplyRecording(steps, options.Append, reason);
+                if (result.Window != null && result.Steps.Count > 0) SetWindow(result.Window);
+                ApplyRecording(result.Steps, options.Append, result.Reason);
                 WindowState = WindowState.Normal; Activate();
             }
         };
@@ -48,8 +49,7 @@ public partial class MacroEditorDialog
         if (recorded.Count + (append ? _steps.Count : 0) > ProfileValidator.MaxActions)
             throw new InvalidOperationException("Recording exceeds the sequence step limit.");
         bool firstRecording = _steps.Count == 0;
-        _steps = new ObservableCollection<MacroAction>((append ? _steps : Enumerable.Empty<MacroAction>()).Concat(recorded).Select(a => a.Clone()));
-        ActionsListBox.ItemsSource = _steps;
+        BindSteps(new ObservableCollection<MacroAction>((append ? _steps : Enumerable.Empty<MacroAction>()).Concat(recorded).Select(a => a.Clone())));
         ActionsListBox.SelectedIndex = append ? _steps.Count - recorded.Count : 0;
         ActionsListBox.ScrollIntoView(ActionsListBox.SelectedItem);
         if (!append || firstRecording) RunsTextBox.Text = "1";

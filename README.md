@@ -1,6 +1,6 @@
 # Keyloom
 
-Simple keyboard and mouse macros for Windows. **Alpha-01**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, and smooth animations.
+Simple keyboard and mouse macros for Windows. **0.1-dev-1**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, and smooth animations.
 
 ![Keyloom](docs/screenshot.png)
 
@@ -20,11 +20,30 @@ Sequences support clicks, key combinations, key down/up, delays, relative moveme
 
 Profiles are stored in `%APPDATA%\Keyloom`, with a backup on save. Existing KeychronHUD profiles are imported automatically.
 
+## Pick a point
+
+**Pick point** in the macro editor lets you click once inside another window. Keyloom remembers that window and the point relative to its content, so clicks follow the window when it moves. Choose whether positions keep their pixel distance or **scale** when the window is resized. The picking click is not passed to the app; Esc or right-click cancels.
+
+- **Repeat input / Hold input** — tick *Click at the chosen point* (or *Hold at…*) to use it instead of the current pointer.
+- **Sequence** — the point is added as a *Move pointer … in window* step plus a click.
+
+If the target window is not open, the macro reports it instead of starting; if it closes while running, the macro stops.
+
+## Preview
+
+Sequences show a route thumbnail in the editor. **Preview** plays it with a moving marker, click pulses and a countdown for each wait, with a timeline, pause and 0.25×–4× speed. **Show on screen** draws the route exactly where it will run; the overlay lets your clicks through. Preview never moves the pointer or sends input, and it shows planned positions, not a guaranteed result.
+
+## Background mode (experimental)
+
+Turn on **Settings → Show experimental features** to get **Run mode** in the editor. *Background* sends clicks and keys straight to the target window as window messages instead of through the system input stream, so your own mouse and keyboard stay free. Use **Test background input** first: many games (including ones that read raw mouse input) ignore these messages, and Keyloom does not fall back to taking over your pointer. Running apps in an isolated virtual machine is not included; see [validation notes](docs/VALIDATION.md).
+
 ## Record
 
 Click **Record** in the macro editor, choose what to capture, then switch to your target window during the 3-second countdown. **F8** or the recording panel stops capture; the panel also supports pause/resume.
 
-Keep recorded delays or add your own with **Delay**. Steps can be edited, duplicated, reordered, appended, or replaced. New recordings default to one run. Pointer positions use screen coordinates, so keep the same monitor/window arrangement for playback.
+Keep recorded delays or add your own with **Delay**. Steps can be edited, duplicated, reordered, appended, or replaced. New recordings default to one run.
+
+Pointer positions can be recorded on the **screen**, **relative to the window** that is in front when recording starts, or **relative to the start point** (offsets from wherever the pointer is when the macro starts). **Simplify mouse path** drops samples on straight stretches while keeping clicks, holds and total timing exact.
 
 Capture is active only while recording. Keyloom's own controls and synthetic input are excluded. Recordings stay local and are saved only with the macro. Sequences are limited to 20,000 steps; recording stops after 10 active minutes or at the step limit.
 

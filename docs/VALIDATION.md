@@ -1,3 +1,30 @@
+# 0.1-dev-1 validation
+
+Validated on Windows 11 x64 (12 logical cores, Intel Iris Xe) on 2026-10-14.
+
+- Release build: zero warnings and errors. 104 automated checks passed (62 earlier checks plus 42 new).
+- **Target window and point**: window-relative, start-relative and screen positions resolve at run time against a test window system; proportional scaling; missing target reported before running; closing the target stops the macro with a message; target, point, run mode and coordinate spaces round-trip through storage. A real top-level window is found again by process, class and title. The point-picker highlight was confirmed invisible to `WindowFromPoint`, and Esc cancels picking and removes its hooks.
+- **Background mode**: real `PostMessage` delivery to a WinForms test window — left/right clicks reached the child control at the chosen client point and text reached the focused text box, while the real pointer stayed where it was. The executor sends only through the per-window driver in this mode.
+- **Recording**: window/start conversion; path simplification keeps press/release positions and total timing, keeps curves within 2 px, and still samples at least every ~40 ms (a straight 51-sample drag became 18 samples).
+- **Preview**: timeline positions, relative moves, delays and running step; scrubbing, real-time play, on-screen overlay that is click-through and never activated, and full cleanup on close.
+
+Measurements (same machine; CPU as a share of all 12 cores):
+
+| Scenario | CPU | Notes |
+|---|---|---|
+| App idle, before this release | 0.000% | 171 MB working set |
+| App idle, this release | 0.000% | 167 MB working set — no idle cost from the new features |
+| Preview of a 20,000-step route, paused | 0.56% | Opens in ~285 ms |
+| Preview playing | 2.6% | ≈ 31% of one core; route is cached as a bitmap, only the marker redraws |
+| Preview playing + on-screen overlay | 1.9% | Overlay covers only the route area, ~30 fps |
+| After closing preview | 0.00% | Render loop detached |
+| Background clicking, 1 ms interval | 1.4% | ~640 clicks/s delivered (timer resolution) |
+| Background clicking, 50 ms interval | 0.09% | |
+
+Benchmarks run with `dotnet run --project tests/Keyloom.Tests.csproj -c Release -- --bench`. They measure Keyloom only, not the target app.
+
+**Not verified:** Roblox or any other game. Games often read mouse input through Raw Input or check the physical key state, so background messages may be ignored; Roblox's own support notes that running in a virtual machine needs GPU passthrough. An isolated VM mode was therefore **not** built: it would need its own guest OS and the game inside it, with far higher resource use, and Windows Sandbox is unavailable on Windows Home. Also unverified: multi-monitor setups with mixed DPI for picking and the on-screen overlay, exclusive-fullscreen games, and apps running as administrator (Windows blocks messages from a normal-privilege app to them).
+
 # Alpha-01 validation
 
 Validated on Windows x64 on 2026-10-13.

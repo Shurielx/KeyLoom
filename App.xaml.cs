@@ -14,6 +14,7 @@ public partial class App : Application
             MessageBox.Show("Keyloom is already running. Open it from the tray or press Ctrl + Shift + I.", "Keyloom");
             Shutdown(); return;
         }
+        Services.AppSettings.Load();
         base.OnStartup(e);
     }
     protected override void OnExit(ExitEventArgs e)

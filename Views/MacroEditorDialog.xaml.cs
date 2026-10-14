@@ -35,7 +35,7 @@ public partial class MacroEditorDialog : Window
         StartDelayTextBox.Text = profile.StartDelayMs.ToString();
         IntervalTextBox.Text = profile.SpamIntervalMs.ToString();
         RunsTextBox.Text = profile.RepeatCount.ToString();
-        ActionsListBox.ItemsSource = _steps;
+        BindSteps(_steps);
         StepTypeBox.ItemsSource = new[]
         {
             new StepChoice(MacroActionType.MouseClick, "Mouse click"), new(MacroActionType.MouseDown, "Mouse down"),
@@ -46,6 +46,7 @@ public partial class MacroEditorDialog : Window
             new(MacroActionType.MousePosition, "Pointer position")
         };
         StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0;
+        InitializeTarget();
         UpdateMode();
         FitHeight();
         Loaded += (_, _) => FitHeight();
@@ -75,7 +76,7 @@ public partial class MacroEditorDialog : Window
     }
     private void FitHeight()
     {
-        double preferred = ModeBox.SelectedIndex == 2 ? 600 : ModeBox.SelectedIndex == 1 ? 440 : 490;
+        double preferred = (ModeBox.SelectedIndex == 2 ? 700 : ModeBox.SelectedIndex == 1 ? 560 : 600) + (RunModePanel.Visibility == Visibility.Visible ? 40 : 0);
         Height = Math.Min(preferred, Math.Max(MinHeight, SystemParameters.WorkArea.Height - 48));
     }
     private void Target_Changed(object sender, SelectionChangedEventArgs e) => UpdateMode();
@@ -91,6 +92,7 @@ public partial class MacroEditorDialog : Window
         IntervalLabel.Text = sequence ? "Loop pause (ms)" : "Interval (ms)";
         ModeHintText.Visibility = hold ? Visibility.Visible : Visibility.Collapsed;
         ModeHintText.Text = "The input stays held until you stop this macro.";
+        UpdateTargetUi();
     }
     private MacroActionType StepType => StepTypeBox.SelectedValue is MacroActionType kind ? kind : MacroActionType.MouseClick;
     private void StepType_Changed(object sender, SelectionChangedEventArgs e)
@@ -98,6 +100,7 @@ public partial class MacroEditorDialog : Window
         if (StepValueTextBox == null) return;
         bool mouse = StepType is MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp;
         StepMouseBox.Visibility = mouse ? Visibility.Visible : Visibility.Collapsed;
+        StepSpaceBox.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
         StepValueTextBox.Visibility = mouse ? Visibility.Collapsed : Visibility.Visible;
         StepValueTextBox.AcceptsReturn = StepType == MacroActionType.Text;
         StepValueTextBox.TextWrapping = StepType == MacroActionType.Text ? TextWrapping.Wrap : TextWrapping.NoWrap;
@@ -106,7 +109,7 @@ public partial class MacroEditorDialog : Window
             MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => "Examples: Space, F8, Ctrl+C. Use Plus for the + key.",
             MacroActionType.Delay => "Delay in milliseconds.",
             MacroActionType.MouseMove => "Relative movement: x, y in pixels. Example: 20, -10.",
-            MacroActionType.MousePosition => "Screen position: x, y in pixels. Supports negative coordinates on additional monitors.",
+            MacroActionType.MousePosition => "x, y in pixels. Screen positions support negative coordinates on additional monitors; window positions follow the target window.",
             MacroActionType.MouseScroll => "Positive scrolls up; negative scrolls down. Example: -3.",
             MacroActionType.Text => "Types Unicode text into the focused application.",
             _ => "Choose a mouse button."
@@ -126,6 +129,7 @@ public partial class MacroEditorDialog : Window
         _loadingStep = true;
         StepTypeBox.SelectedValue = a.ActionType;
         SelectMouse(StepMouseBox, a.MouseButton);
+        StepSpaceBox.SelectedIndex = (int)a.Space;
         StepValueTextBox.Text = a.ActionType switch
         {
             MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",
@@ -145,6 +149,7 @@ public partial class MacroEditorDialog : Window
             var parts = value.Split(',');
             if (parts.Length != 2) throw new ArgumentException("Enter mouse movement as x, y.");
             a.X = Number(parts[0], "X"); a.Y = Number(parts[1], "Y");
+            if (StepType == MacroActionType.MousePosition) a.Space = (CoordinateSpace)Math.Max(0, StepSpaceBox.SelectedIndex);
         }
         ProfileValidator.ValidateAction(a); return a;
     }
@@ -195,6 +200,7 @@ public partial class MacroEditorDialog : Window
         Profile.SpamIntervalMs = Profile.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, "Interval");
         Profile.RepeatCount = Profile.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, "Runs");
         Profile.Actions = new(_steps.Select(a => a.Clone()));
+        ApplyTarget(Profile);
         ProfileValidator.Validate(Profile);
         DialogResult = true;
     });

@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Backdrop.Attach(this);
+        VersionText.Text = AppVersion.Display;
         var loaded = _storage.LoadProfiles();
         _profiles = loaded.Profiles;
         StatusText.Text = loaded.Warning;
@@ -117,8 +118,15 @@ public partial class MainWindow : Window
         string warning = _hotkeys?.RegisterProfiles(_profiles) ?? "";
         if (warning.Length > 0) StatusText.Text = warning;
     }
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        _dialogOpen = true;
+        try { new SettingsDialog { Owner = this }.ShowDialog(); }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { StatusText.Text = "Settings could not be saved: " + ex.Message; }
+        finally { _dialogOpen = false; }
+    }
     private void Help_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
-        "Create a macro, choose Repeat input, Hold input, or Sequence, then set a shortcut.\n\nRecord captures mouse and keyboard input after a 3-second countdown. F8 stops recording. Edit the captured steps or insert delays afterward.\n\nStart again with the same shortcut to stop playback. Only one macro runs at a time.\n\nCtrl + Shift + F12: stop all\nCtrl + Shift + I: show or hide Keyloom\n\nClosing the window keeps Keyloom in the tray. Use the tray menu to exit.\n\nAny Windows keyboard or mouse works. Some apps reject synthetic input; game rules may restrict automation.",
+        "Create a macro, choose Repeat input, Hold input, or Sequence, then set a shortcut.\n\nRecord captures mouse and keyboard input after a 3-second countdown. F8 stops recording. Edit the captured steps or insert delays afterward. Preview plays a sequence's route without sending input.\n\nPick point chooses a spot inside another window, so clicks follow that window when it moves.\n\nStart again with the same shortcut to stop playback. Only one macro runs at a time.\n\nCtrl + Shift + F12: stop all\nCtrl + Shift + I: show or hide Keyloom\n\nClosing the window keeps Keyloom in the tray. Use the tray menu to exit.\n\nAny Windows keyboard or mouse works. Some apps reject synthetic input; game rules may restrict automation.",
         "Keyloom help", MessageBoxButton.OK, MessageBoxImage.Information);
     public void ShowHud() { Show(); WindowState = WindowState.Normal; Activate(); }
     private void Hide_Click(object sender, RoutedEventArgs e) => Hide();

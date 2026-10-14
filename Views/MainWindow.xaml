@@ -11,7 +11,6 @@
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
             <Image Source="/Keyloom;component/Assets/keyloom.ico" Width="18" Height="18" Margin="0,0,9,0"/>
             <TextBlock Text="Keyloom" FontSize="12" Foreground="#2C4A60" VerticalAlignment="Center"/>
-            <Border Style="{StaticResource Pill}" Margin="9,0,0,0" Padding="7,1"><TextBlock Text="Alpha-01" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/></Border>
           </StackPanel>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" shell:WindowChrome.IsHitTestVisibleInChrome="True">
             <Button Click="Minimize_Click" Style="{StaticResource CaptionButton}" ToolTip="Minimize" AutomationProperties.Name="Minimize"><Path Data="{StaticResource IconMinimize}" Style="{StaticResource ChromeIcon}"/></Button>
@@ -27,6 +26,7 @@
               <TextBlock Text="Shortcuts work everywhere, even while Keyloom sits in the tray." Style="{StaticResource Muted}" Margin="0,2,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+              <Button Click="Settings_Click" Style="{StaticResource IconButton}" ToolTip="Settings" AutomationProperties.Name="Settings" Margin="0,0,2,0"><Path Data="{StaticResource IconSettings}" Fill="#3B5D75" Width="15" Height="15" Stretch="Uniform"/></Button>
               <Button Click="Help_Click" Style="{StaticResource IconButton}" ToolTip="Help" AutomationProperties.Name="Help" Margin="0,0,6,0"><TextBlock Text="?" FontSize="14" FontWeight="SemiBold" Foreground="#3B5D75"/></Button>
               <Button Click="Stop_Click" Margin="0,0,8,0" ToolTip="Stop all macros (Ctrl + Shift + F12)">
                 <StackPanel Orientation="Horizontal"><Border Width="8" Height="8" CornerRadius="1.5" Background="#B8402F" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock Text="Stop all"/></StackPanel>
@@ -145,6 +145,7 @@
               <TextBlock Text="Show or hide" Style="{StaticResource Muted}" FontSize="11"/>
               <TextBlock Text="Ctrl + Shift + I" FontSize="11" Foreground="#2C4A60" Margin="6,0,0,0"/>
             </StackPanel>
+            <TextBlock x:Name="VersionText" Style="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="Keyloom version"/>
           </Grid>
         </Grid>
       </Grid>
