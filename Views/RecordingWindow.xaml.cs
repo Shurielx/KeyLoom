@@ -23,7 +23,8 @@ public partial class RecordingWindow : Window
         StopButton.Content = "Stop";
         StateText.Text = paused ? "Recording paused" : "Recording";
         DetailsText.Text = $"{TimeSpan.FromMilliseconds(elapsed):mm\\:ss}   ·   {steps:N0} steps   ·   F8 to stop";
-        RecordingDot.Fill = new SolidColorBrush(paused ? Color.FromRgb(176, 132, 40) : Color.FromRgb(210, 65, 47));
+        if (paused) RecordingDot.Fill = new SolidColorBrush(Color.FromRgb(176, 132, 40));
+        else RecordingDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "RecordBrush");
         RecordingHalo.Visibility = paused ? Visibility.Hidden : Visibility.Visible;
     }
     private void Stop_Click(object sender, RoutedEventArgs e) => StopRequested?.Invoke();

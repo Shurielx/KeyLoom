@@ -1,17 +1,14 @@
 using System.Windows;
+using System.Windows.Controls;
 using Keyloom.Models;
 using Keyloom.Recording;
 
 namespace Keyloom.Views;
 
-public partial class RecordingOptionsDialog : Window
+public partial class RecordingOptionsView : UserControl
 {
     public RecordingOptions Options { get; private set; } = new();
-    public RecordingOptionsDialog()
-    {
-        InitializeComponent();
-        Backdrop.Attach(this);
-    }
+    public RecordingOptionsView() => InitializeComponent();
     private void Start_Click(object sender, RoutedEventArgs e)
     {
         if (MovementBox.IsChecked != true && ButtonsBox.IsChecked != true && KeyboardBox.IsChecked != true)
@@ -21,6 +18,7 @@ public partial class RecordingOptionsDialog : Window
         Options = new(MovementBox.IsChecked == true, ButtonsBox.IsChecked == true,
             KeyboardBox.IsChecked == true, TimingBox.IsChecked == true, InsertModeBox.SelectedIndex == 0, interval,
             (CoordinateSpace)Math.Max(0, SpaceBox.SelectedIndex), SimplifyBox.IsChecked == true);
-        DialogResult = true;
+        SheetLayer.Close(this, true);
     }
+    private void Cancel_Click(object sender, RoutedEventArgs e) => SheetLayer.Close(this, false);
 }

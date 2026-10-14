@@ -9,6 +9,8 @@ public enum MacroBehaviorType { ClickSpam, PressAndHold, Sequence }
 public enum TargetInputType { Mouse, Keyboard }
 /// <summary>Standard sends system input; Background posts messages to the target window without moving the pointer.</summary>
 public enum ExecutionMode { Standard, Background }
+/// <summary>Auto follows the macro type. Glyph shows one or two characters; Image shows a picture from the icon folder.</summary>
+public enum MacroIconKind { Auto, Mouse, Keyboard, Cursor, Glyph, Image }
 
 public class MacroProfile : INotifyPropertyChanged
 {
@@ -37,6 +39,10 @@ public class MacroProfile : INotifyPropertyChanged
     public int PointY { get; set; }
     /// <summary>When the window size differs from the size at pick time, positions scale proportionally instead of keeping pixel distances.</summary>
     public bool ScaleWithWindow { get; set; }
+    public MacroIconKind IconKind { get; set; }
+    public string IconGlyph { get; set; } = "";
+    /// <summary>File name inside the icon folder, never a path.</summary>
+    public string IconImage { get; set; } = "";
 
     [JsonIgnore] public string HotkeyLabel => Services.Shortcut.Format(PrimaryModifiers, PrimaryVk);
     [JsonIgnore] public string BehaviorBadge => Behavior switch
@@ -77,7 +83,7 @@ public class MacroProfile : INotifyPropertyChanged
         TargetKey = TargetKey, SpamIntervalMs = SpamIntervalMs, StartDelayMs = StartDelayMs,
         RepeatCount = RepeatCount, Actions = new(Actions.Select(a => a.Clone())),
         ExecutionMode = ExecutionMode, Window = Window, UsePoint = UsePoint, PointX = PointX, PointY = PointY,
-        ScaleWithWindow = ScaleWithWindow
+        ScaleWithWindow = ScaleWithWindow, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
     };
     /// <summary>True when execution needs the target window to be found first.</summary>
     [JsonIgnore] public bool NeedsWindow => ExecutionMode == ExecutionMode.Background ||

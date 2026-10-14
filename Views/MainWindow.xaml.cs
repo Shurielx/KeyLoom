@@ -1,23 +1,29 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Keyloom.Engine;
 using Keyloom.Models;
 using Keyloom.Services;
 
 namespace Keyloom.Views;
 
+/// <summary>The one Keyloom window: the macro list, plus the editor, settings and help as pages inside it.</summary>
 public partial class MainWindow : Window
 {
+    private const string ListTitle = "Macros", ListSubtitle = "Shortcuts work everywhere, even while Keyloom sits in the tray.";
     private readonly MacroExecutor _executor = new();
     private readonly ProfileStorageService _storage = new();
     private readonly ToastOverlayWindow _toast = new();
     private readonly ObservableCollection<MacroProfile> _profiles;
     private readonly TrayService _tray;
     private HotkeyManager? _hotkeys;
-    private MacroEditorDialog? _activeEditor;
+    private MacroEditorView? _activeEditor;
     private bool _exiting, _dialogOpen;
     public MainWindow()
     {
@@ -66,16 +72,58 @@ public partial class MainWindow : Window
     }
     private void Stop_Click(object sender, RoutedEventArgs e) => StopAll();
     private void StopAll() { _activeEditor?.StopRecording(); Run(_executor.StopAsync); }
+
+    // Pages
+    private void ShowPage(FrameworkElement? page, string title, string subtitle)
+    {
+        bool list = page == null;
+        PageTitle.Text = title; PageSubtitle.Text = subtitle;
+        BackButton.Visibility = list ? Visibility.Collapsed : Visibility.Visible;
+        ListActions.Visibility = list ? Visibility.Visible : Visibility.Collapsed;
+        PageHost.Content = page;
+        PageHost.Visibility = list ? Visibility.Collapsed : Visibility.Visible;
+        ListPage.Visibility = list ? Visibility.Visible : Visibility.Collapsed;
+        if (!list) StatusText.Text = "";
+        SlideIn(list ? ListPage : PageHost, list ? -1 : 1);
+        SlideIn(TitlePanel, list ? -1 : 1);
+    }
+    /// <summary>Pages enter from the side they are navigated toward.</summary>
+    private static void SlideIn(FrameworkElement element, int direction)
+    {
+        if (element.RenderTransform is not TranslateTransform shift) element.RenderTransform = shift = new TranslateTransform();
+        var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
+        shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(18 * direction, 0, TimeSpan.FromMilliseconds(360)) { EasingFunction = ease });
+        element.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
+    }
+    private bool OnList => PageHost.Content == null;
+    private void Back_Click(object sender, RoutedEventArgs e) => GoBack();
+    private void GoBack()
+    {
+        if (_activeEditor != null) _activeEditor.Cancel();
+        else ShowPage(null, ListTitle, ListSubtitle);
+    }
+    private void Settings_Click(object sender, RoutedEventArgs e) => ShowPage(new SettingsView(), "Settings", "Appearance, features and where your macros live.");
+    private void Help_Click(object sender, RoutedEventArgs e) => ShowPage(new HelpView(), "Help", "How Keyloom works, in a minute.");
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && !e.Handled)
+        {
+            if (Sheets.IsOpen) { Sheets.CloseTop(false); e.Handled = true; }
+            else if (!OnList) { GoBack(); e.Handled = true; }
+        }
+        base.OnKeyDown(e);
+    }
+
+    // Editing
     private void Add_Click(object sender, RoutedEventArgs e) => Run(async () =>
     {
         await _executor.StopAsync();
         var p = new MacroProfile { Name = $"Macro {_profiles.Count + 1}" };
-        if (EditDialog(p, true))
+        OpenEditor(p, true, () =>
         {
-            var next = _profiles.Append(p).ToArray();
-            _storage.SaveProfiles(next);
-            _profiles.Add(p); RegisterShortcuts();
-        }
+            _storage.SaveProfiles(_profiles.Append(p).ToArray());
+            _profiles.Add(p);
+        });
     });
     private void Edit_Click(object sender, RoutedEventArgs e)
     {
@@ -84,23 +132,43 @@ public partial class MainWindow : Window
         {
             await _executor.StopAsync();
             var copy = p.Snapshot();
-            if (!EditDialog(copy, false)) return;
-            int index = _profiles.IndexOf(p);
-            var next = _profiles.ToArray(); next[index] = copy;
-            _storage.SaveProfiles(next);
-            _profiles[index] = copy; RegisterShortcuts();
+            OpenEditor(copy, false, () =>
+            {
+                int index = _profiles.IndexOf(p);
+                if (index < 0) throw new InvalidOperationException("This macro was removed while you edited it.");
+                var next = _profiles.ToArray(); next[index] = copy;
+                _storage.SaveProfiles(next);
+                _profiles[index] = copy;
+            });
         });
     }
-    private bool EditDialog(MacroProfile p, bool isNew)
+    /// <summary>Shows the editor as a page. Shortcuts are paused while it is open; commit stores the saved profile.</summary>
+    private void OpenEditor(MacroProfile p, bool isNew, Action commit)
     {
         _dialogOpen = true;
         _hotkeys?.RegisterProfiles([]);
-        try
+        var editor = new MacroEditorView(p, _profiles, isNew);
+        editor.Saved += () =>
         {
-            _activeEditor = new MacroEditorDialog(p, _profiles, isNew) { Owner = this };
-            return _activeEditor.ShowDialog() == true;
-        }
-        finally { _activeEditor = null; _dialogOpen = false; RegisterShortcuts(); }
+            try { commit(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            { editor.Say("The macro could not be saved: " + ex.Message, true); return; }
+            IconStore.Prune(_profiles.Select(x => x.IconImage).Where(x => x.Length > 0));
+            CloseEditor();
+        };
+        editor.Cancelled += CloseEditor;
+        _activeEditor = editor;
+        // The editor needs more room than the list; grow a small window once.
+        if (WindowState == WindowState.Normal && ActualHeight > 0 && ActualHeight < 600)
+            Height = Math.Min(640, SystemParameters.WorkArea.Height - 40);
+        ShowPage(editor, isNew ? "New macro" : "Edit macro", isNew ? "Choose what it does, set a shortcut, then save." : p.Name);
+    }
+    private void CloseEditor()
+    {
+        _activeEditor = null;
+        _dialogOpen = false;
+        RegisterShortcuts();
+        ShowPage(null, ListTitle, ListSubtitle);
     }
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
@@ -108,9 +176,10 @@ public partial class MainWindow : Window
         Run(async () =>
         {
             await _executor.StopAsync();
-            if (MessageBox.Show(this, $"Delete '{p.Name}'?", "Keyloom", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (!await Sheets.ConfirmAsync("Delete this macro?", $"'{p.Name}' and its shortcut will be removed. This can't be undone.", "Delete", danger: true)) return;
             _storage.SaveProfiles(_profiles.Where(x => x != p));
             _profiles.Remove(p); RegisterShortcuts();
+            IconStore.Prune(_profiles.Select(x => x.IconImage).Where(x => x.Length > 0));
         });
     }
     private void RegisterShortcuts()
@@ -118,16 +187,8 @@ public partial class MainWindow : Window
         string warning = _hotkeys?.RegisterProfiles(_profiles) ?? "";
         if (warning.Length > 0) StatusText.Text = warning;
     }
-    private void Settings_Click(object sender, RoutedEventArgs e)
-    {
-        _dialogOpen = true;
-        try { new SettingsDialog { Owner = this }.ShowDialog(); }
-        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { StatusText.Text = "Settings could not be saved: " + ex.Message; }
-        finally { _dialogOpen = false; }
-    }
-    private void Help_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
-        "Create a macro, choose Repeat input, Hold input, or Sequence, then set a shortcut.\n\nRecord captures mouse and keyboard input after a 3-second countdown. F8 stops recording. Edit the captured steps or insert delays afterward. Preview plays a sequence's route without sending input.\n\nPick point chooses a spot inside another window, so clicks follow that window when it moves.\n\nStart again with the same shortcut to stop playback. Only one macro runs at a time.\n\nCtrl + Shift + F12: stop all\nCtrl + Shift + I: show or hide Keyloom\n\nClosing the window keeps Keyloom in the tray. Use the tray menu to exit.\n\nAny Windows keyboard or mouse works. Some apps reject synthetic input; game rules may restrict automation.",
-        "Keyloom help", MessageBoxButton.OK, MessageBoxImage.Information);
+
+    // Window
     public void ShowHud() { Show(); WindowState = WindowState.Normal; Activate(); }
     private void Hide_Click(object sender, RoutedEventArgs e) => Hide();
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -141,6 +202,7 @@ public partial class MainWindow : Window
     {
         if (_exiting) return;
         _exiting = true;
+        _activeEditor?.StopRecording();
         _hotkeys?.Dispose();
         await _executor.DisposeAsync();
         Microsoft.Win32.SystemEvents.SessionEnding -= SessionEnding;

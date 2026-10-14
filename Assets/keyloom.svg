@@ -1,14 +1,47 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
   <title id="title">Keyloom app icon</title>
-  <desc id="desc">A cyan and mint K inside a dark rounded keycap.</desc>
+  <desc id="desc">A white keycap with a blue and teal K and a mouse pointer, on a glossy blue tile.</desc>
   <defs>
-    <linearGradient id="keycap" x1="46" y1="46" x2="210" y2="210" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#222B3D"/>
-      <stop offset="1" stop-color="#151922"/>
+    <linearGradient id="tile" x1="12" y1="12" x2="244" y2="244" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#62BDF9"/><stop offset=".5" stop-color="#1A7FDB"/><stop offset="1" stop-color="#0B4F9E"/>
     </linearGradient>
+    <radialGradient id="teal" cx="236" cy="236" r="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38C9B8" stop-opacity=".7"/><stop offset="1" stop-color="#38C9B8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="40" cy="20" r="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#47E0FF" stop-opacity=".33"/><stop offset="1" stop-color="#47E0FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0" y1="12" x2="0" y2="132" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF" stop-opacity=".4"/><stop offset="1" stop-color="#FFF" stop-opacity=".06"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="12" x2="0" y2="244" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF" stop-opacity=".67"/><stop offset=".5" stop-color="#FFF" stop-opacity=".13"/><stop offset="1" stop-color="#062A55" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="56" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF"/><stop offset="1" stop-color="#E4F1FC"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="90" y1="80" x2="90" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2B8FE8"/><stop offset="1" stop-color="#0F5FB0"/>
+    </linearGradient>
+    <linearGradient id="arms" x1="110" y1="80" x2="170" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22B8C8"/><stop offset="1" stop-color="#1FA58A"/>
+    </linearGradient>
+    <linearGradient id="pointer" x1="0" y1="156" x2="0" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF"/><stop offset="1" stop-color="#DDEBF7"/>
+    </linearGradient>
+    <clipPath id="clip"><rect x="12" y="12" width="232" height="232" rx="56"/></clipPath>
   </defs>
-  <rect width="256" height="256" rx="56" fill="#101117"/>
-  <rect x="46" y="46" width="164" height="164" rx="38" fill="url(#keycap)" stroke="#354157" stroke-width="3"/>
-  <path d="M94 88V168" fill="none" stroke="#38BDF8" stroke-width="24" stroke-linecap="round"/>
-  <path d="M167 88L125 128L167 168" fill="none" stroke="#34D399" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="12" y="12" width="232" height="232" rx="56" fill="url(#tile)"/>
+  <g clip-path="url(#clip)">
+    <rect width="256" height="256" fill="url(#teal)"/>
+    <rect width="256" height="256" fill="url(#glow)"/>
+    <path d="M12 68A56 56 0 0 1 68 12H188A56 56 0 0 1 244 68V112C190 132 66 132 12 112Z" fill="url(#gloss)"/>
+  </g>
+  <rect x="13.5" y="13.5" width="229" height="229" rx="54.5" fill="none" stroke="url(#rim)" stroke-width="3"/>
+  <rect x="56" y="62" width="144" height="144" rx="30" fill="#06325F" fill-opacity=".48"/>
+  <rect x="56" y="52" width="144" height="138" rx="30" fill="url(#cap)" stroke="#FFF" stroke-opacity=".8" stroke-width="2"/>
+  <path d="M100 90V158" fill="none" stroke="url(#stem)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M158 90L116 124L158 158" fill="none" stroke="url(#arms)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M176 160L176 222L190 209L200 232L211 227L201 204L221 204Z" fill="#06325F" fill-opacity=".33"/>
+  <path d="M176 156L176 218L190 205L200 228L211 223L201 200L221 200Z" fill="url(#pointer)" stroke="#0B3F78" stroke-width="7" stroke-linejoin="round"/>
 </svg>

@@ -67,7 +67,7 @@ internal static partial class Program
     }
     private static void RecordingUiTests()
     {
-        var editor = new MacroEditorDialog(Profile(MacroBehaviorType.Sequence));
+        var editor = new MacroEditorView(Profile(MacroBehaviorType.Sequence));
         var recording = new MacroAction[]
         {
             new() { ActionType = MacroActionType.MousePosition, X = 500, Y = 300 },
@@ -81,16 +81,15 @@ internal static partial class Program
         Check(((ComboBox)editor.FindName("StepTypeBox")).SelectedValue is MacroActionType.MousePosition &&
               ((TextBox)editor.FindName("StepValueTextBox")).Text == "500, 300", "recorded pointer coordinates remain editable");
         list.SelectedIndex = 1;
-        Invoke(editor, "InsertDelay_Click", editor, new RoutedEventArgs());
-        Check(((MacroAction)list.Items[2]).ActionType == MacroActionType.Delay && ((MacroAction)list.Items[2]).DelayMs == 100, "quick Delay inserts after the selected step");
-        Invoke(editor, "DuplicateStep_Click", editor, new RoutedEventArgs());
+        editor.AddStep(MacroActionType.Delay);
+        Check(((MacroAction)list.Items[2]).ActionType == MacroActionType.Delay && ((MacroAction)list.Items[2]).DelayMs == 100, "Add step inserts a wait after the selected step");
+        Invoke(editor, "RowDuplicate_Click", new Button { Tag = list.Items[2] }, new RoutedEventArgs());
         Check(list.Items.Count == 6 && !ReferenceEquals(list.Items[2], list.Items[3]), "duplicate step creates an independent action");
         Invoke(editor, "ApplyRecording", new MacroAction[] { new() { ActionType = MacroActionType.Delay, DelayMs = 50 } }, true, "");
         Check(list.Items.Count == 7, "recording can append to an existing sequence");
-        Render((FrameworkElement)editor.Content, 718, (int)editor.Height - 2, "recorded-sequence.png");
-        editor.Close();
-        var options = new RecordingOptionsDialog();
-        Render((FrameworkElement)options.Content, 408, 378, "record-options.png");
+        Render(editor, 800, 760, "recorded-sequence.png");
+        var options = new RecordingOptionsView();
+        Render(options, 384, 440, "record-options.png");
         ((CheckBox)options.FindName("MovementBox")).IsChecked = false;
         ((CheckBox)options.FindName("ButtonsBox")).IsChecked = false;
         ((CheckBox)options.FindName("KeyboardBox")).IsChecked = false;
@@ -100,7 +99,6 @@ internal static partial class Program
         ((TextBox)options.FindName("SampleTextBox")).Text = "0";
         Invoke(options, "Start_Click", options, new RoutedEventArgs());
         Check(((TextBlock)options.FindName("ErrorText")).Text.Contains("8"), "record options reject invalid movement sampling");
-        options.Close();
         var panel = new RecordingWindow(); panel.Status(false, 65000, 245);
         Check(((TextBlock)panel.FindName("DetailsText")).Text.Contains("01:05") && ((Button)panel.FindName("PauseButton")).IsEnabled, "recording panel displays elapsed time, count and pause");
         Render((FrameworkElement)panel.Content, 428, 74, "record-panel.png");

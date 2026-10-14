@@ -15,6 +15,7 @@ public partial class App : Application
             Shutdown(); return;
         }
         Services.AppSettings.Load();
+        Services.ThemeManager.Apply(Services.AppSettings.Current.Theme);
         base.OnStartup(e);
     }
     protected override void OnExit(ExitEventArgs e)

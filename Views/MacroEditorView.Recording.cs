@@ -6,44 +6,44 @@ using Keyloom.Recording;
 
 namespace Keyloom.Views;
 
-public partial class MacroEditorDialog
+public partial class MacroEditorView
 {
     private RecordingSession? _recording;
-    private bool _closed;
-    private void InitializeRecording() => Closed += (_, _) => { _closed = true; _recording?.Dispose(); };
-    private void Record_Click(object sender, RoutedEventArgs e)
+    private void InitializeRecording() => Unloaded += (_, _) => StopRecording();
+    private async void Record_Click(object sender, RoutedEventArgs e)
     {
-        if (_recording != null) return;
-        var dialog = new RecordingOptionsDialog { Owner = this };
-        if (dialog.ShowDialog() != true) return;
+        if (_recording != null || _picker != null || SheetLayer.For(this) is not { } sheets) return;
+        var dialog = new RecordingOptionsView();
+        if (!await sheets.ShowAsync(dialog, 420)) return;
         var options = dialog.Options;
         int available = ProfileValidator.MaxActions - (options.Append ? _steps.Count : 0);
-        if (available < 16) { ErrorText.Text = "The sequence is full. Choose Replace sequence or remove some steps."; return; }
-        ModeBox.SelectedIndex = 2; FitHeight();
-        ErrorText.Text = "";
+        if (available < 16) { Say("The sequence is full. Choose Replace sequence or remove some steps.", true); return; }
+        SetMode(2);
+        Say("");
         var session = new RecordingSession();
         _recording = session;
+        var host = Host;
         session.Completed += result =>
         {
             _recording = null;
             session.Dispose();
             MacroForm.IsEnabled = true;
-            if (!_closed && !Dispatcher.HasShutdownStarted)
+            if (IsLoaded && !Dispatcher.HasShutdownStarted)
             {
                 if (result.Window != null && result.Steps.Count > 0) SetWindow(result.Window);
                 ApplyRecording(result.Steps, options.Append, result.Reason);
-                WindowState = WindowState.Normal; Activate();
+                if (host != null) { host.WindowState = WindowState.Normal; host.Activate(); }
             }
         };
         MacroForm.IsEnabled = false;
-        WindowState = WindowState.Minimized;
+        if (host != null) host.WindowState = WindowState.Minimized;
         session.Start(options, available);
     }
     private void ApplyRecording(IReadOnlyList<MacroAction> recorded, bool append, string reason)
     {
         if (recorded.Count == 0)
         {
-            ErrorText.Text = reason.Length > 0 ? reason : "Nothing recorded.";
+            Say(reason.Length > 0 ? reason : "Nothing recorded.", reason.Length > 0);
             return;
         }
         if (recorded.Count + (append ? _steps.Count : 0) > ProfileValidator.MaxActions)
@@ -53,7 +53,7 @@ public partial class MacroEditorDialog
         ActionsListBox.SelectedIndex = append ? _steps.Count - recorded.Count : 0;
         ActionsListBox.ScrollIntoView(ActionsListBox.SelectedItem);
         if (!append || firstRecording) RunsTextBox.Text = "1";
-        ErrorText.Text = reason.Length > 0 ? reason : $"Recorded {recorded.Count:N0} {(recorded.Count == 1 ? "step" : "steps")}.";
+        Say(reason.Length > 0 ? reason : $"Recorded {recorded.Count:N0} {(recorded.Count == 1 ? "step" : "steps")}.");
     }
     public void StopRecording() => _recording?.Stop();
 }

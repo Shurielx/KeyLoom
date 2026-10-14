@@ -5,7 +5,7 @@
     <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <Grid Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,10,0" MouseLeftButtonDown="Drag_MouseDown" Background="Transparent">
-        <Ellipse x:Name="RecordingHalo" Fill="#D2412F" Opacity=".25" RenderTransformOrigin=".5,.5">
+        <Ellipse x:Name="RecordingHalo" Fill="{DynamicResource RecordBrush}" Opacity=".25" RenderTransformOrigin=".5,.5">
           <Ellipse.RenderTransform><ScaleTransform x:Name="HaloScale"/></Ellipse.RenderTransform>
           <Ellipse.Triggers>
             <EventTrigger RoutedEvent="FrameworkElement.Loaded">
@@ -17,7 +17,7 @@
             </EventTrigger>
           </Ellipse.Triggers>
         </Ellipse>
-        <Ellipse x:Name="RecordingDot" Width="9" Height="9" Fill="#D2412F"/>
+        <Ellipse x:Name="RecordingDot" Width="9" Height="9" Fill="{DynamicResource RecordBrush}"/>
       </Grid>
       <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0" MouseLeftButtonDown="Drag_MouseDown" Background="Transparent">
         <TextBlock x:Name="StateText" Text="Starting in 3..." FontWeight="SemiBold" FontSize="13"/>

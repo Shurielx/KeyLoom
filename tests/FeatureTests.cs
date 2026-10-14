@@ -115,7 +115,7 @@ internal static partial class Program
         for (int i = 0; i < 1000; i++) { large.PositionAt(i * 80); large.DelayAt(i * 80); large.StepAt(i * 80); }
         Check(clock.ElapsedMilliseconds < 500, $"20,000-step timeline builds and answers 3,000 queries in {clock.ElapsedMilliseconds} ms");
 
-        Check(AppVersion.Format("0.1-dev-1+abc123") == "0.1-dev-1" && AppVersion.Display == "0.1-dev-1", "version is shown as 0.1-dev-1 without build metadata");
+        Check(AppVersion.Format("0.1-dev-2+abc123") == "0.1-dev-2" && AppVersion.Display == "0.1-dev-2", "version is shown as 0.1-dev-2 without build metadata");
         string settingsPath = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         new AppSettings { ShowExperimental = true }.Save(settingsPath);
         Check(AppSettings.Load(settingsPath).ShowExperimental, "experimental setting round-trips");
@@ -130,12 +130,14 @@ internal static partial class Program
             "target window, point, run mode and coordinate spaces round-trip through storage");
         Directory.Delete(folder, true);
     }
-    /// <summary>Runs Save on a non-modal editor; the profile is written before Save sets DialogResult, which only modal windows accept.</summary>
-    private static void Save(MacroEditorDialog editor)
+    private static void Save(MacroEditorView editor)
     {
-        try { Invoke(editor, "Save_Click", editor, new RoutedEventArgs()); }
-        catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException) { }
-        Check(((TextBlock)editor.FindName("ErrorText")).Text.Length == 0, "editor saves without validation errors");
+        bool saved = false;
+        void OnSaved() => saved = true;
+        editor.Saved += OnSaved;
+        Invoke(editor, "Save_Click", editor, new RoutedEventArgs());
+        editor.Saved -= OnSaved;
+        Check(saved && ((TextBlock)editor.FindName("ErrorText")).Text.Length == 0, "editor saves without validation errors");
     }
     private static bool Throws(Action action)
     {
@@ -159,61 +161,62 @@ internal static partial class Program
             new() { ActionType = MacroActionType.MouseUp }
         };
         var shown = p.Snapshot(); shown.Name = "Collect and drag"; shown.Window = null;
-        var editor = new MacroEditorDialog(p);
+        var editor = new MacroEditorView(p);
         Check(((FrameworkElement)editor.FindName("RunModePanel")).Visibility == Visibility.Collapsed, "run mode stays hidden until experimental features are enabled");
         Check(((PathPreview)editor.FindName("Thumbnail")).Timeline?.HasPointer == true && ((TextBlock)editor.FindName("WindowText")).Text.Contains("Game"), "editor shows the target window and a route thumbnail");
-        Render((FrameworkElement)editor.Content, (int)editor.Width - 2, (int)editor.Height - 2, "editor-target.png");
-        ((ComboBox)editor.FindName("StepTypeBox")).SelectedValue = MacroActionType.MousePosition;
+        Render(editor, 800, 760, "editor-target.png");
+        editor.AddStep(MacroActionType.MousePosition);
         ((ComboBox)editor.FindName("StepSpaceBox")).SelectedIndex = 1;
         ((TextBox)editor.FindName("StepValueTextBox")).Text = "12, 34";
-        Invoke(editor, "AddStep_Click", editor, new RoutedEventArgs());
         Save(editor);
         Check(editor.Profile.Actions.Any(a => a.Space == CoordinateSpace.Window && a.X == 12) && editor.Profile.Window == TestTarget, "editor saves window-relative steps and the target");
-        editor.Close();
 
         string settings = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         new AppSettings { ShowExperimental = true }.Save(settings);
         var repeat = Profile(); repeat.TargetType = TargetInputType.Mouse; repeat.Window = TestTarget; repeat.UsePoint = true; repeat.PointX = 30; repeat.PointY = 40;
-        var repeatEditor = new MacroEditorDialog(repeat);
-        ((ComboBox)repeatEditor.FindName("RunModeBox")).SelectedIndex = 1;
+        var repeatEditor = new MacroEditorView(repeat);
+        ((RadioButton)repeatEditor.FindName("BackgroundModeRadio")).IsChecked = true;
+        ((System.Windows.Controls.Primitives.ToggleButton)repeatEditor.FindName("MoreToggle")).IsChecked = true;
         Check(((FrameworkElement)repeatEditor.FindName("RunModePanel")).Visibility == Visibility.Visible && ((FrameworkElement)repeatEditor.FindName("TestButton")).Visibility == Visibility.Visible,
             "experimental setting reveals background mode and its test button");
-        Render((FrameworkElement)repeatEditor.Content, (int)repeatEditor.Width - 2, (int)repeatEditor.Height - 2, "editor-background.png");
+        Render(repeatEditor, 800, 900, "editor-background.png");
         Save(repeatEditor);
         Check(repeatEditor.Profile is { ExecutionMode: ExecutionMode.Background, UsePoint: true, PointX: 30 }, "editor saves background mode and the chosen point");
-        repeatEditor.Close();
         File.Delete(settings); AppSettings.Load(settings);
 
-        var preview = new PreviewWindow(shown, new FakeWindows { Present = false });
-        preview.Show(); Pump(100);
+        var preview = new PreviewView(shown, new FakeWindows { Present = false });
+        var previewHost = new Window { Content = preview, Width = 680, Height = 520, ShowActivated = false };
+        previewHost.Show(); Pump(100);
         var route = (PathPreview)preview.FindName("Route");
         var slider = (Slider)preview.FindName("TimeSlider");
         slider.Value = 250; Pump();
         Check(route.Time == 250 && ((TextBlock)preview.FindName("StepText")).Text.Contains("Step 5"), "preview scrubbing moves the marker and shows the running step");
-        Render((FrameworkElement)preview.Content, (int)preview.Width - 2, (int)preview.Height - 2, "preview.png");
+        Render(preview, 640, 470, "preview.png");
         Invoke(preview, "Play_Click", preview, new RoutedEventArgs());
         Pump(120);
         Check(route.Time > 250, "preview plays in real time");
         ((ComboBox)preview.FindName("SpeedBox")).SelectedIndex = 4;
         ((CheckBox)preview.FindName("ScreenBox")).IsChecked = true; Pump(100);
-        var overlay = (Window)typeof(PreviewWindow).GetField("_overlay", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(preview)!;
+        var overlay = (Window)typeof(PreviewView).GetField("_overlay", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(preview)!;
         var style = GetWindowLong(new WindowInteropHelper(overlay).Handle, -20);
         Check(overlay.IsVisible && (style & 0x20) != 0 && (style & 0x08000000) != 0, "on-screen preview is click-through and never takes focus");
-        preview.Close(); Pump();
-        Check(!overlay.IsVisible && !((PreviewPlayer)typeof(PreviewWindow).GetField("_player", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(preview)!).IsPlaying,
+        preview.Dispose(); previewHost.Close(); Pump();
+        Check(!overlay.IsVisible && !((PreviewPlayer)typeof(PreviewView).GetField("_player", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(preview)!).IsPlaying,
             "closing preview stops playback and removes the overlay");
 
-        var options = new RecordingOptionsDialog();
+        var options = new RecordingOptionsView();
         ((ComboBox)options.FindName("SpaceBox")).SelectedIndex = 2;
-        try { Invoke(options, "Start_Click", options, new RoutedEventArgs()); }
-        catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException) { }
+        Invoke(options, "Start_Click", options, new RoutedEventArgs());
         Check(options.Options is { Space: CoordinateSpace.Start, Simplify: true }, "record options choose coordinate space and simplification");
-        Render((FrameworkElement)options.Content, (int)options.Width - 2, (int)options.Height - 2, "record-options.png");
-        options.Close();
-        var settingsDialog = new SettingsDialog();
-        Check(((TextBlock)settingsDialog.FindName("VersionText")).Text == "Keyloom 0.1-dev-1", "settings show the version");
-        Render((FrameworkElement)settingsDialog.Content, (int)settingsDialog.Width - 2, (int)settingsDialog.Height - 2, "settings.png");
-        settingsDialog.Close();
+        string settingsFile = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        var settingsView = new SettingsView(settingsFile);
+        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.1-dev-2", "settings show the version");
+        ((RadioButton)settingsView.FindName("DarkThemeRadio")).IsChecked = true;
+        Check(ThemeManager.IsDark && AppSettings.Load(settingsFile).Theme == AppTheme.Dark, "choosing a theme applies and saves it right away");
+        ((RadioButton)settingsView.FindName("LightThemeRadio")).IsChecked = true;
+        Check(!ThemeManager.IsDark && AppSettings.Load(settingsFile).Theme == AppTheme.Light, "light theme can be chosen again");
+        File.Delete(settingsFile); AppSettings.Load(settingsFile);
+        IconTests();
 
         var highlight = new PickerOverlayWindow(); highlight.Show();
         var under = new Window { Title = "Keyloom hit-test target", Left = 100, Top = 100, Width = 300, Height = 200, ShowActivated = false, Topmost = true };
@@ -240,6 +243,51 @@ internal static partial class Program
         Check((IntPtr)typeof(PointPicker).GetField("_mouseHook", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(picker)! == IntPtr.Zero, "point picking releases its hooks");
     }
     [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hwnd, int index);
+    /// <summary>Macro icons: built-in symbols, characters and stored pictures.</summary>
+    private static void IconTests()
+    {
+        string iconFolder = Path.Combine(Path.GetTempPath(), "keyloom-icons-" + Guid.NewGuid().ToString("N"));
+        string previousIcons = IconStore.Folder; IconStore.Folder = iconFolder;
+        string picture = Path.Combine(Path.GetTempPath(), "keyloom-picture-" + Guid.NewGuid().ToString("N") + ".png");
+        try
+        {
+            var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(300, 200, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            var drawing = new System.Windows.Media.DrawingVisual();
+            using (var dc = drawing.RenderOpen()) dc.DrawRectangle(System.Windows.Media.Brushes.OrangeRed, null, new Rect(0, 0, 300, 200));
+            bitmap.Render(drawing);
+            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+            using (var file = File.Create(picture)) encoder.Save(file);
+            var iconEditor = new MacroEditorView(Profile());
+            iconEditor.UseIconImage(picture);
+            Save(iconEditor);
+            string stored = iconEditor.Profile.IconImage;
+            Check(iconEditor.Profile.IconKind == MacroIconKind.Image && IconStore.IsValidName(stored) && IconStore.Load(stored) is System.Windows.Media.Imaging.BitmapSource { PixelWidth: 96, PixelHeight: 96 },
+                "a custom picture is copied into the icon folder as a square icon");
+            Render(iconEditor, 800, 300, "editor-icon-image.png");
+            ((TextBox)iconEditor.FindName("GlyphTextBox")).Text = "P1";
+            Save(iconEditor);
+            Check(iconEditor.Profile is { IconKind: MacroIconKind.Glyph, IconGlyph: "P1", IconImage: "" }, "typing a letter or number makes it the icon");
+            Render(iconEditor, 800, 300, "editor-icon-glyph.png");
+            Render((FrameworkElement)((System.Windows.Controls.Primitives.Popup)iconEditor.FindName("IconPopup")).Child, 290, 300, "icon-picker.png");
+            ((RadioButton)iconEditor.FindName("CursorIconRadio")).IsChecked = true;
+            Save(iconEditor);
+            Check(iconEditor.Profile is { IconKind: MacroIconKind.Cursor, IconGlyph: "" }, "built-in icons can be chosen");
+            IconStore.Prune([]);
+            Check(IconStore.Load(stored) == null, "unused pictures are removed");
+            var glyph = Profile(); glyph.IconKind = MacroIconKind.Glyph; glyph.IconGlyph = "ABC";
+            Check(Throws(() => ProfileValidator.Validate(glyph)), "icons are limited to two characters");
+            glyph.IconGlyph = "K"; glyph.IconImage = "..\\evil.png";
+            Check(Throws(() => ProfileValidator.Validate(glyph)), "icon pictures must be stored names, not paths");
+            Check(MacroIcon.Effective(MacroIconKind.Glyph, " ", "") == MacroIconKind.Auto && MacroIcon.Effective(MacroIconKind.Image, "", "") == MacroIconKind.Auto,
+                "empty icons fall back to the automatic icon");
+        }
+        finally
+        {
+            IconStore.Folder = previousIcons;
+            if (File.Exists(picture)) File.Delete(picture);
+            if (Directory.Exists(iconFolder)) Directory.Delete(iconFolder, true);
+        }
+    }
     /// <summary>Resource use of the new features, measured in this process. Run with --bench.</summary>
     private static void Benchmarks()
     {
@@ -261,15 +309,16 @@ internal static partial class Program
             p.Actions.Add(new() { ActionType = i % 50 == 0 ? MacroActionType.MouseClick : MacroActionType.Delay, DelayMs = 16 });
         }
         var clock = Stopwatch.StartNew();
-        var preview = new PreviewWindow(p, new FakeWindows { Present = false });
-        preview.Show(); Pump(200);
+        var preview = new PreviewView(p, new FakeWindows { Present = false });
+        var previewHost = new Window { Content = preview, Width = 680, Height = 520, ShowActivated = false };
+        previewHost.Show(); Pump(200);
         Console.WriteLine($"BENCH preview open (20,000 steps): {clock.ElapsedMilliseconds} ms");
         Report("preview open, paused", Measure(3000));
         Invoke(preview, "Play_Click", preview, new RoutedEventArgs());
         Report("preview playing", Measure(3000));
         ((CheckBox)preview.FindName("ScreenBox")).IsChecked = true;
         Report("preview playing + on-screen overlay", Measure(3000));
-        preview.Close(); GC.Collect();
+        preview.Dispose(); previewHost.Close(); GC.Collect();
         Report("after preview closed", Measure(3000));
         using var form = new System.Windows.Forms.Form { Text = "Keyloom bench target", ShowInTaskbar = false, ClientSize = new(300, 200) };
         int clicks = 0; form.MouseDown += (_, _) => clicks++;

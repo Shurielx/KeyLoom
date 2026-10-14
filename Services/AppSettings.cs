@@ -8,6 +8,7 @@ namespace Keyloom.Services;
 public sealed class AppSettings
 {
     public bool ShowExperimental { get; set; }
+    public AppTheme Theme { get; set; }
 
     public static AppSettings Current { get; private set; } = new();
     private static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Keyloom", "settings.json");
@@ -18,9 +19,15 @@ public sealed class AppSettings
             path ??= DefaultPath;
             Current = File.Exists(path) && new FileInfo(path).Length < 64 * 1024
                 ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new() : new();
+            if (!Enum.IsDefined(Current.Theme)) Current.Theme = AppTheme.System;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { Current = new(); }
         return Current;
+    }
+    public AppSettings With(Action<AppSettings> change)
+    {
+        var next = new AppSettings { ShowExperimental = ShowExperimental, Theme = Theme };
+        change(next); return next;
     }
     public void Save(string? path = null)
     {

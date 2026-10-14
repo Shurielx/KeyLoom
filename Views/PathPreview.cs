@@ -15,7 +15,9 @@ public sealed class PathPreview : FrameworkElement
     private static readonly Brush ClickFill = Frozen(new SolidColorBrush(Color.FromRgb(210, 65, 47)));
     private static readonly Brush StartFill = Frozen(new SolidColorBrush(Color.FromRgb(46, 158, 107)));
     private static readonly Pen RoutePen = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0xB0, 15, 108, 189))), 1.6) { LineJoin = PenLineJoin.Round });
-    private static readonly Pen RouteHalo = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0x90, 255, 255, 255))), 4) { LineJoin = PenLineJoin.Round });
+    private static readonly Pen LightHalo = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0x90, 255, 255, 255))), 4) { LineJoin = PenLineJoin.Round });
+    private static readonly Pen DarkHalo = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0x70, 10, 14, 20))), 4) { LineJoin = PenLineJoin.Round });
+    private static readonly Pen DarkRoutePen = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0xD0, 90, 176, 247))), 1.6) { LineJoin = PenLineJoin.Round });
     private static readonly Pen WhitePen = Frozen(new Pen(Brushes.White, 1.5));
     private static readonly Pen HoldPen = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromRgb(210, 65, 47))), 1.5));
     private readonly VisualCollection _layers;
@@ -28,6 +30,8 @@ public sealed class PathPreview : FrameworkElement
         _layers = new(this) { _route, _marker };
         // The route is drawn into a texture once, so playback only composes it instead of re-tessellating every frame.
         _route.CacheMode = new BitmapCache();
+        Loaded += (_, _) => Services.ThemeManager.Changed += Redraw;
+        Unloaded += (_, _) => Services.ThemeManager.Changed -= Redraw;
     }
     /// <summary>Maps screen pixels to local DIPs. Null fits the route into the control.</summary>
     public Func<double, double, Point>? Map { get => _map; set { _map = value; Redraw(); } }
@@ -72,8 +76,9 @@ public sealed class PathPreview : FrameworkElement
             }
         }
         geometry.Freeze();
-        dc.DrawGeometry(null, RouteHalo, geometry);
-        dc.DrawGeometry(null, RoutePen, geometry);
+        bool dark = Services.ThemeManager.IsDark;
+        dc.DrawGeometry(null, dark ? DarkHalo : LightHalo, geometry);
+        dc.DrawGeometry(null, dark ? DarkRoutePen : RoutePen, geometry);
         // Input markers share frozen geometries per kind instead of thousands of elements.
         var clicks = new GeometryGroup(); var holds = new GeometryGroup();
         var drawn = new HashSet<(int, int, TimelineEventKind)>();

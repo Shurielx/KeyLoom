@@ -22,6 +22,14 @@ public static class ProfileValidator
         else if (p.TargetType == TargetInputType.Keyboard) KeyResolver.Resolve(p.TargetKey);
         else ValidateButton(p.TargetMouseButton);
         ValidateTarget(p);
+        ValidateIcon(p);
+    }
+    private static void ValidateIcon(MacroProfile p)
+    {
+        p.IconGlyph ??= ""; p.IconImage ??= "";
+        if (!Enum.IsDefined(p.IconKind)) throw new ArgumentException("Unknown macro icon.");
+        if (new System.Globalization.StringInfo(p.IconGlyph).LengthInTextElements > 2 || p.IconGlyph.Length > 16) throw new ArgumentException("An icon can show up to two characters.");
+        if (p.IconImage.Length > 0 && !Services.IconStore.IsValidName(p.IconImage)) throw new ArgumentException("The macro icon image is invalid. Choose it again.");
     }
     private static void ValidateTarget(MacroProfile p)
     {

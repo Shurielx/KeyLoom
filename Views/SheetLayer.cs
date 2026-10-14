@@ -1,0 +1,115 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+
+namespace Keyloom.Views;
+
+/// <summary>
+/// Shows dialogs inside the window over a dimmed backdrop, instead of separate system windows.
+/// Content closes itself with <see cref="Close"/>; IDisposable content is disposed once it has gone.
+/// </summary>
+public sealed class SheetLayer : Grid
+{
+    private sealed record Open(FrameworkElement Content, Grid Layer, TaskCompletionSource<bool> Done, IInputElement? Focus);
+    private readonly List<Open> _open = new();
+    public SheetLayer() { Visibility = Visibility.Collapsed; }
+    public bool IsOpen => _open.Count > 0;
+    public FrameworkElement? Top => _open.Count > 0 ? _open[^1].Content : null;
+    public Task<bool> ShowAsync(FrameworkElement content, double width = 440)
+    {
+        var scrim = new Border();
+        scrim.SetResourceReference(Border.BackgroundProperty, "ScrimBrush");
+        scrim.MouseLeftButtonDown += (_, _) => Close(content, false);
+        var card = new Border
+        {
+            Child = content, Width = width, BorderThickness = new(1), CornerRadius = new(12), Padding = new(18, 16, 18, 16),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(24),
+            RenderTransformOrigin = new(.5, .5), RenderTransform = new ScaleTransform(.96, .96)
+        };
+        card.SetResourceReference(Border.BackgroundProperty, "SheetBrush");
+        card.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
+        card.SetResourceReference(EffectProperty, "SheetShadow");
+        KeyboardNavigation.SetTabNavigation(card, KeyboardNavigationMode.Cycle);
+        KeyboardNavigation.SetControlTabNavigation(card, KeyboardNavigationMode.Cycle);
+        var layer = new Grid { Children = { scrim, card } };
+        // Keep the sheet inside the window when the window is small.
+        card.SetBinding(MaxWidthProperty, new System.Windows.Data.Binding(nameof(ActualWidth)) { Source = this, Converter = Inset.Instance });
+        card.SetBinding(MaxHeightProperty, new System.Windows.Data.Binding(nameof(ActualHeight)) { Source = this, Converter = Inset.Instance });
+        var done = new TaskCompletionSource<bool>();
+        _open.Add(new(content, layer, done, Keyboard.FocusedElement));
+        Children.Add(layer);
+        Visibility = Visibility.Visible;
+        var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
+        scrim.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
+        card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+        var grow = new DoubleAnimation(.96, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease };
+        card.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        card.RenderTransform.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+        content.Dispatcher.BeginInvoke(() => content.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)), System.Windows.Threading.DispatcherPriority.Input);
+        return done.Task;
+    }
+    /// <summary>Closes the sheet that holds this content. Returns false when it is not shown in a sheet.</summary>
+    public static bool Close(FrameworkElement content, bool result)
+    {
+        for (DependencyObject? d = content; d != null; d = VisualTreeHelper.GetParent(d) ?? LogicalTreeHelper.GetParent(d))
+            if (d is SheetLayer layer) return layer.CloseSheet(content, result);
+        return false;
+    }
+    public bool CloseTop(bool result) => _open.Count > 0 && CloseSheet(_open[^1].Content, result);
+    /// <summary>The sheet layer of the window that holds this element.</summary>
+    public static SheetLayer? For(DependencyObject element) => Window.GetWindow(element) is { } window ? Find(window) : null;
+    private static SheetLayer? Find(DependencyObject root)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is SheetLayer layer) return layer;
+            if (Find(child) is { } found) return found;
+        }
+        return null;
+    }
+    /// <summary>Asks a yes/no question in a sheet.</summary>
+    public Task<bool> ConfirmAsync(string title, string message, string confirm, bool danger = false)
+    {
+        var panel = new StackPanel();
+        var heading = new TextBlock { Text = title, FontSize = 15, Margin = new(0, 0, 0, 6) };
+        heading.SetResourceReference(StyleProperty, "SectionTitle");
+        var body = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Margin = new(0, 0, 0, 18) };
+        body.SetResourceReference(StyleProperty, "Muted");
+        var cancel = new Button { Content = "Cancel", MinWidth = 84, Margin = new(0, 0, 8, 0) };
+        var ok = new Button { Content = confirm, MinWidth = 84 };
+        ok.SetResourceReference(StyleProperty, danger ? "DangerButton" : "PrimaryButton");
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { cancel, ok } };
+        panel.Children.Add(heading); panel.Children.Add(body); panel.Children.Add(buttons);
+        cancel.Click += (_, _) => Close(panel, false);
+        ok.Click += (_, _) => Close(panel, true);
+        return ShowAsync(panel, 380);
+    }
+    private bool CloseSheet(FrameworkElement content, bool result)
+    {
+        int index = _open.FindIndex(o => o.Content == content);
+        if (index < 0) return false;
+        var open = _open[index];
+        _open.RemoveAt(index);
+        open.Layer.IsHitTestVisible = false;
+        var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(150));
+        fade.Completed += (_, _) =>
+        {
+            Children.Remove(open.Layer);
+            if (_open.Count == 0) Visibility = Visibility.Collapsed;
+        };
+        open.Layer.BeginAnimation(OpacityProperty, fade);
+        if (content is IDisposable disposable) disposable.Dispose();
+        open.Focus?.Focus();
+        open.Done.TrySetResult(result);
+        return true;
+    }
+    private sealed class Inset : System.Windows.Data.IValueConverter
+    {
+        public static readonly Inset Instance = new();
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => Math.Max(0, (double)value - 48);
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
+    }
+}

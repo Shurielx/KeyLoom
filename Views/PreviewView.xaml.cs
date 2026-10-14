@@ -6,7 +6,8 @@ using Keyloom.Models;
 
 namespace Keyloom.Views;
 
-public partial class PreviewWindow : Window
+/// <summary>Plays a sequence route inside a sheet. Disposing stops playback and removes the on-screen overlay.</summary>
+public partial class PreviewView : UserControl, IDisposable
 {
     private static readonly double[] Speeds = [0.25, 0.5, 1, 2, 4];
     private readonly PreviewPlayer _player = new();
@@ -15,10 +16,9 @@ public partial class PreviewWindow : Window
     private ScreenPreviewOverlay? _overlay;
     private bool _syncing;
     private long _overlayFrame;
-    public PreviewWindow(MacroProfile profile, IWindowSystem? windows = null)
+    public PreviewView(MacroProfile profile, IWindowSystem? windows = null)
     {
         InitializeComponent();
-        Backdrop.Attach(this);
         windows ??= WindowSystem.Instance;
         _steps = profile.Actions.ToArray();
         TitleText.Text = $"Preview · {profile.Name}";
@@ -35,8 +35,13 @@ public partial class PreviewWindow : Window
         _player.Changed += Sync;
         DelayTrack.SizeChanged += (_, _) => Sync();
         Sync();
-        Closed += (_, _) => { _player.Dispose(); _overlay?.Close(); };
     }
+    public void Dispose()
+    {
+        _player.Dispose();
+        _overlay?.Close(); _overlay = null;
+    }
+    private void Close_Click(object sender, RoutedEventArgs e) => SheetLayer.Close(this, false);
     private void Sync()
     {
         _syncing = true;

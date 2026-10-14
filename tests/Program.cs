@@ -163,36 +163,74 @@ internal static partial class Program
         var profiles = (System.Collections.ObjectModel.ObservableCollection<MacroProfile>)Field(main, "_profiles");
         profiles.Clear(); profiles.Add(ProfileStorageService.CreateDefault()); profiles.Add(new() { Name = "Copy and paste", PrimaryVk = 0x78, PrimaryModifiers = 6, Behavior = MacroBehaviorType.Sequence, RepeatCount = 1, Actions = new() { new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" }, new() { ActionType = MacroActionType.Delay, DelayMs = 100 }, new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+V" } } });
         var content = (FrameworkElement)main.Content;
-        Render(content, 758, 478, "main.png");
+        Render(content, 838, 598, "main.png");
         var buttons = Descendants<Button>(content).Where(b => b.Tag == profiles[0]).ToArray();
         Check(buttons.Length == 3 && buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path, "profile controls render vector edit and delete icons");
         profiles[0].IsActive = true; Pump();
         Check(buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path && (string)buttons[2].Content == "Stop", "running state changes only the Start button");
-        Render(content, 758, 478, "main-active.png");
+        Render(content, 838, 598, "main-active.png");
         profiles[0].IsActive = false; Pump();
         Check((string)buttons[2].Content == "Start", "stopped state restores Start");
-        Render(content, 638, 358, "main-small.png");
+        Render(content, 698, 458, "main-small.png");
+
+        // Pages live inside the main window instead of separate dialogs.
+        var host = (ContentControl)main.FindName("PageHost");
+        Invoke(main, "Settings_Click", main, new RoutedEventArgs()); Pump();
+        Check(host.Content is SettingsView && ((FrameworkElement)main.FindName("BackButton")).Visibility == Visibility.Visible, "settings open as a page in the main window");
+        Render(content, 838, 598, "settings.png");
+        Invoke(main, "GoBack");
+        Invoke(main, "Help_Click", main, new RoutedEventArgs()); Pump();
+        Check(host.Content is HelpView, "help opens as a page in the main window");
+        Render(content, 838, 760, "help.png");
+        Invoke(main, "GoBack");
+        Invoke(main, "Add_Click", main, new RoutedEventArgs()); Pump(100);
+        Check(host.Content is MacroEditorView && (bool)Field(main, "_dialogOpen"), "New macro opens the editor inside the main window and pauses shortcuts");
+        Render(content, 838, 640, "main-editor.png");
+        Invoke(main, "GoBack");
+        Check(host.Content == null && !(bool)Field(main, "_dialogOpen") && profiles.Count == 2, "leaving the editor discards a new macro and restores shortcuts");
+        var sheets = (SheetLayer)main.FindName("Sheets");
+        var confirm = sheets.ConfirmAsync("Delete this macro?", "'Autoclicker' and its shortcut will be removed.", "Delete", true); Pump(250);
+        Render(content, 838, 598, "confirm.png");
+        Check(sheets.IsOpen && !confirm.IsCompleted, "confirmation is shown as an in-window sheet");
+        sheets.CloseTop(true); Pump();
+        Check(confirm.IsCompleted && confirm.Result && !sheets.IsOpen, "confirming closes the sheet with a yes");
+
+        // Dark theme switches live.
+        ThemeManager.Apply(AppTheme.Dark); Pump();
+        Check(ThemeManager.IsDark && ((SolidColorBrush)main.Foreground).Color != Color.FromRgb(25, 54, 75), "dark theme replaces the palette live");
+        Render(content, 838, 598, "main-dark.png");
+        var dark = Profile(MacroBehaviorType.Sequence);
+        dark.Actions.Add(new() { ActionType = MacroActionType.MousePosition, X = 10, Y = 10 });
+        dark.Actions.Add(new() { ActionType = MacroActionType.MousePosition, X = 200, Y = 90 });
+        dark.Actions.Add(new() { ActionType = MacroActionType.MouseClick });
+        var darkEditor = new MacroEditorView(dark);
+        ((ListBox)darkEditor.FindName("ActionsListBox")).SelectedIndex = 1;
+        Render(darkEditor, 800, 760, "editor-dark.png");
+        ThemeManager.Apply(AppTheme.Light); Pump();
+        Check(!ThemeManager.IsDark && ((SolidColorBrush)main.Foreground).Color == Color.FromRgb(25, 54, 75), "light theme restores the palette");
+
         foreach (var mode in Enum.GetValues<MacroBehaviorType>())
         {
             var p = Profile(mode);
             if (mode == MacroBehaviorType.Sequence) p.Actions.Add(new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" });
-            var editor = new MacroEditorDialog(p);
-            Render((FrameworkElement)editor.Content, (int)editor.Width - 2, (int)editor.Height - 2, "editor-" + mode + ".png");
+            var editor = new MacroEditorView(p);
+            Render(editor, 800, 760, "editor-" + mode + ".png");
             Check(((FrameworkElement)editor.FindName("SequencePanel")).Visibility == (mode == MacroBehaviorType.Sequence ? Visibility.Visible : Visibility.Collapsed), mode + " editor visibility");
-            editor.Close();
         }
-        var validationEditor = new MacroEditorDialog(Profile(MacroBehaviorType.Sequence));
+        var validationEditor = new MacroEditorView(Profile(MacroBehaviorType.Sequence));
         Invoke(validationEditor, "Save_Click", validationEditor, new RoutedEventArgs());
         Check(((TextBlock)validationEditor.FindName("ErrorText")).Text.Contains("sequence"), "editor blocks saving an empty sequence");
-        validationEditor.Close();
-        var edit = new MacroEditorDialog(Profile(MacroBehaviorType.Sequence));
-        ((ComboBox)edit.FindName("StepTypeBox")).SelectedValue = MacroActionType.KeyPress;
-        ((TextBox)edit.FindName("StepValueTextBox")).Text = "Ctrl+C";
-        Invoke(edit, "AddStep_Click", edit, new RoutedEventArgs());
-        ((TextBox)edit.FindName("StepValueTextBox")).Text = "Ctrl+V";
-        Invoke(edit, "UpdateStep_Click", edit, new RoutedEventArgs());
-        Check(((ListBox)edit.FindName("ActionsListBox")).Items.Count == 1 && ((MacroAction)((ListBox)edit.FindName("ActionsListBox")).Items[0]).KeyName == "Ctrl+V", "sequence steps can be added and edited");
-        edit.Close();
+        var edit = new MacroEditorView(Profile(MacroBehaviorType.Sequence));
+        var stepList = (ListBox)edit.FindName("ActionsListBox");
+        var stepValue = (TextBox)edit.FindName("StepValueTextBox");
+        edit.AddStep(MacroActionType.KeyPress);
+        stepValue.Text = "Ctrl+C";
+        stepValue.Text = "Ctrl+V";
+        Check(stepList.Items.Count == 1 && ((MacroAction)stepList.Items[0]).KeyName == "Ctrl+V", "sequence steps can be added and edited in place");
+        stepValue.Text = "NotAKey";
+        Check(((MacroAction)stepList.Items[0]).KeyName == "Ctrl+V" && ((TextBlock)edit.FindName("StepHintText")).Text.Length > 0, "invalid step input is reported and not applied");
+        Invoke(edit, "Save_Click", edit, new RoutedEventArgs());
+        Check(((TextBlock)edit.FindName("ErrorText")).Text.StartsWith("Step 1"), "saving is blocked while a step has invalid input");
         ((TrayService)Field(main, "_tray")).Dispose();
         ((HotkeyManager)Field(main, "_hotkeys")).Dispose();
         ((Window)Field(main, "_toast")).Close();

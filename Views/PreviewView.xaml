@@ -1,0 +1,44 @@
+<UserControl x:Class="Keyloom.Views.PreviewView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Keyloom.Views"
+             Foreground="{DynamicResource InkBrush}" Height="470">
+  <Grid>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid Margin="0,0,0,12">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Path Data="{StaticResource IconPlay}" Style="{StaticResource AccentIcon}" Width="11" Height="11" Margin="0,0,9,0"/>
+        <TextBlock x:Name="TitleText" Text="Preview" Style="{StaticResource SectionTitle}" FontSize="15" TextTrimming="CharacterEllipsis" MaxWidth="480"/>
+      </StackPanel>
+      <Button Click="Close_Click" Style="{StaticResource IconButton}" HorizontalAlignment="Right" ToolTip="Close (Esc)" AutomationProperties.Name="Close preview">
+        <Path Data="{StaticResource IconClose}" Style="{StaticResource Icon}" Width="10" Height="10"/>
+      </Button>
+    </Grid>
+    <Border Grid.Row="1" CornerRadius="8" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" ClipToBounds="True">
+      <Grid>
+        <local:PathPreview x:Name="Route"/>
+        <TextBlock x:Name="EmptyText" Text="This sequence has no pointer positions to draw." Style="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="2" Margin="0,12,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <Button x:Name="PlayButton" Click="Play_Click" Style="{StaticResource PrimaryButton}" MinWidth="84" Margin="0,0,12,0" AutomationProperties.Name="Play or pause">
+        <StackPanel Orientation="Horizontal"><Path x:Name="PlayIcon" Data="{StaticResource IconPlay}" Fill="White" Width="9" Height="10" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock x:Name="PlayText" Text="Play"/></StackPanel>
+      </Button>
+      <Slider x:Name="TimeSlider" Grid.Column="1" VerticalAlignment="Center" Minimum="0" IsMoveToPointEnabled="True" ValueChanged="Time_Changed" AutomationProperties.Name="Preview time"/>
+      <TextBlock x:Name="TimeText" Grid.Column="2" Text="0.0 s / 0.0 s" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="96" TextAlignment="Right"/>
+    </Grid>
+    <Grid Grid.Row="3" Margin="0,10,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <ComboBox x:Name="SpeedBox" Width="84" SelectedIndex="2" SelectionChanged="Speed_Changed" ToolTip="Preview speed">
+        <ComboBoxItem Content="0.25×"/><ComboBoxItem Content="0.5×"/><ComboBoxItem Content="1×"/><ComboBoxItem Content="2×"/><ComboBoxItem Content="4×"/>
+      </ComboBox>
+      <CheckBox x:Name="ScreenBox" Grid.Column="1" Content="Show on screen" Margin="14,0,0,0" VerticalAlignment="Center" Checked="Screen_Changed" Unchecked="Screen_Changed" ToolTip="Draw the route where it will run. Clicks pass through."/>
+      <StackPanel Grid.Column="2" Margin="16,0,0,0" VerticalAlignment="Center">
+        <TextBlock x:Name="StepText" TextTrimming="CharacterEllipsis" FontSize="12"/>
+        <Border x:Name="DelayTrack" Height="4" CornerRadius="2" Background="{DynamicResource PillBrush}" Margin="0,4,0,0">
+          <Border x:Name="DelayBar" HorizontalAlignment="Left" Width="0" CornerRadius="2" Background="{DynamicResource AccentBrush}"/>
+        </Border>
+      </StackPanel>
+    </Grid>
+    <TextBlock x:Name="NoteText" Grid.Row="4" Style="{StaticResource Hint}" Margin="0,10,0,0"
+               Text="Planned positions only: preview never moves your pointer or sends input. Moved buttons, resized windows or a game camera can change the real result."/>
+  </Grid>
+</UserControl>

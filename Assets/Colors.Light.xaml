@@ -1,0 +1,94 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Light palette. Colors.Dark.xaml defines the same keys; ThemeManager layers it on top when dark mode is on. -->
+  <Color x:Key="AccentColor">#0F6CBD</Color>
+  <Color x:Key="DangerColor">#C42B1C</Color>
+
+  <!-- Text and icons -->
+  <SolidColorBrush x:Key="InkBrush" Color="#19364B"/>
+  <SolidColorBrush x:Key="InkStrongBrush" Color="#14324A"/>
+  <SolidColorBrush x:Key="InkSoftBrush" Color="#2C4A60"/>
+  <SolidColorBrush x:Key="MutedBrush" Color="#5A7184"/>
+  <SolidColorBrush x:Key="LabelBrush" Color="#3B5568"/>
+  <SolidColorBrush x:Key="SectionBrush" Color="#1D4560"/>
+  <SolidColorBrush x:Key="IconBrush" Color="#3B5D75"/>
+  <SolidColorBrush x:Key="AccentBrush" Color="#0F6CBD"/>
+  <SolidColorBrush x:Key="DangerTextBrush" Color="#A8361F"/>
+  <SolidColorBrush x:Key="DangerIconBrush" Color="#A2564A"/>
+  <SolidColorBrush x:Key="RecordBrush" Color="#D2412F"/>
+  <SolidColorBrush x:Key="RecordHaloBrush" Color="#33D2412F"/>
+  <SolidColorBrush x:Key="SuccessBrush" Color="#2E9E6B"/>
+  <SolidColorBrush x:Key="SuccessTextBrush" Color="#1F7A51"/>
+
+  <!-- Lines -->
+  <SolidColorBrush x:Key="HairlineBrush" Color="#260F3550"/>
+  <SolidColorBrush x:Key="DividerBrush" Color="#1A0F3550"/>
+  <SolidColorBrush x:Key="ControlBorderBrush" Color="#3A0F3550"/>
+  <SolidColorBrush x:Key="FieldBorderBrush" Color="#330F3550"/>
+  <SolidColorBrush x:Key="FieldBorderHoverBrush" Color="#590F3550"/>
+  <SolidColorBrush x:Key="CheckBorderBrush" Color="#660F3550"/>
+  <SolidColorBrush x:Key="HoverBorderBrush" Color="#8C47A3F3"/>
+  <SolidColorBrush x:Key="TopHighlightBrush" Color="#99FFFFFF"/>
+
+  <!-- Fills -->
+  <SolidColorBrush x:Key="HoverFillBrush" Color="#5CFFFFFF"/>
+  <SolidColorBrush x:Key="SubtleFillBrush" Color="#1A0F6CBD"/>
+  <SolidColorBrush x:Key="ListHoverBrush" Color="#120F6CBD"/>
+  <SolidColorBrush x:Key="ListSelectedBrush" Color="#240F6CBD"/>
+  <SolidColorBrush x:Key="PillBrush" Color="#1F0F6CBD"/>
+  <SolidColorBrush x:Key="RunningPillBrush" Color="#212E9E6B"/>
+  <SolidColorBrush x:Key="KeycapBrush" Color="#B3FFFFFF"/>
+  <SolidColorBrush x:Key="KeycapBorderBrush" Color="#2E0F3550"/>
+  <SolidColorBrush x:Key="CaptionHoverBrush" Color="#1A0F3550"/>
+  <SolidColorBrush x:Key="DangerFillBrush" Color="#1FC42B1C"/>
+  <SolidColorBrush x:Key="DangerBorderBrush" Color="#40C42B1C"/>
+  <SolidColorBrush x:Key="InfoFillBrush" Color="#140F6CBD"/>
+  <SolidColorBrush x:Key="RowHoverBrush" Color="#40FFFFFF"/>
+  <SolidColorBrush x:Key="ActiveFillBrush" Color="#140F6CBD"/>
+  <SolidColorBrush x:Key="ScrimBrush" Color="#4D0B2235"/>
+  <SolidColorBrush x:Key="ScrollThumbBrush" Color="#660F3550"/>
+  <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#990F3550"/>
+  <SolidColorBrush x:Key="SwitchTrackBrush" Color="#2E0F3550"/>
+
+  <!-- Window shell: opaque fallback, translucent tint over the Windows 11 acrylic backdrop -->
+  <LinearGradientBrush x:Key="ShellBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#EEF6FC" Offset="0"/><GradientStop Color="#DAEAF6" Offset=".55"/><GradientStop Color="#E8F0F8" Offset="1"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="GlassShellBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#8CF4F9FD" Offset="0"/><GradientStop Color="#73E6F0F8" Offset="1"/>
+  </LinearGradientBrush>
+  <RadialGradientBrush x:Key="AuroraBrush" Center=".12,0" GradientOrigin=".12,0" RadiusX=".75" RadiusY="1.1">
+    <GradientStop Color="#4D47A3F3" Offset="0"/><GradientStop Color="#0047A3F3" Offset="1"/>
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="AuroraAltBrush" Center=".95,.05" GradientOrigin=".95,.05" RadiusX=".55" RadiusY=".8">
+    <GradientStop Color="#3338C9B8" Offset="0"/><GradientStop Color="#0038C9B8" Offset="1"/>
+  </RadialGradientBrush>
+
+  <!-- Surfaces -->
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#D9FFFFFF"/>
+  <SolidColorBrush x:Key="SurfaceAltBrush" Color="#99FFFFFF"/>
+  <SolidColorBrush x:Key="FieldBrush" Color="#F2FFFFFF"/>
+  <SolidColorBrush x:Key="FieldFocusBrush" Color="#FFFFFFFF"/>
+  <SolidColorBrush x:Key="FieldReadOnlyBrush" Color="#B3F3F8FC"/>
+  <SolidColorBrush x:Key="PopupBrush" Color="#FAFFFFFF"/>
+  <SolidColorBrush x:Key="SheetBrush" Color="#F7F9FCFE"/>
+  <LinearGradientBrush x:Key="ButtonBrush" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#FAFFFFFF" Offset="0"/><GradientStop Color="#E8F3F7FB" Offset="1"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="BlueButtonBrush" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#3F9CEE" Offset="0"/><GradientStop Color="#1675CC" Offset=".55"/><GradientStop Color="#0F64B3" Offset="1"/>
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="BlueButtonBorderBrush" Color="#0B5596"/>
+  <LinearGradientBrush x:Key="StopBrush" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#EE7462" Offset="0"/><GradientStop Color="#D2412F" Offset=".55"/><GradientStop Color="#BB3324" Offset="1"/>
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="StopBorderBrush" Color="#9E2A1E"/>
+  <LinearGradientBrush x:Key="AccentTileBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#DCEEFC" Offset="0"/><GradientStop Color="#C3E0F7" Offset="1"/>
+  </LinearGradientBrush>
+
+  <DropShadowEffect x:Key="CardShadow" Color="#0F3550" BlurRadius="14" ShadowDepth="2" Direction="270" Opacity=".10"/>
+  <DropShadowEffect x:Key="PopupShadow" Color="#0F3550" BlurRadius="18" ShadowDepth="4" Direction="270" Opacity=".18"/>
+  <DropShadowEffect x:Key="SheetShadow" Color="#0B2235" BlurRadius="40" ShadowDepth="10" Direction="270" Opacity=".28"/>
+  <DropShadowEffect x:Key="AccentGlow" Color="#0F6CBD" BlurRadius="10" ShadowDepth="1" Direction="270" Opacity=".30"/>
+  <DropShadowEffect x:Key="DangerGlow" Color="#C42B1C" BlurRadius="10" ShadowDepth="1" Direction="270" Opacity=".28"/>
+</ResourceDictionary>
