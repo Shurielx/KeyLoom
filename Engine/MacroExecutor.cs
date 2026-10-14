@@ -3,11 +3,12 @@ using Keyloom.Models;
 
 namespace Keyloom.Engine;
 
-public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null) : IAsyncDisposable
+public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null) : IAsyncDisposable
 {
     private readonly IInputDriver _driver = driver ?? new InputSimulator();
     private readonly IWindowSystem _windows = windows ?? WindowSystem.Instance;
     private readonly Func<IntPtr, IInputDriver> _backgroundDriver = backgroundDriver ?? (window => new WindowMessageDriver(window, windows));
+    private readonly Func<IntPtr, IInputDriver> _switchDriver = switchDriver ?? (window => new FocusSwitchDriver(driver ?? new InputSimulator(), window, windows));
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _cts;
     private Task? _task;
@@ -60,7 +61,12 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
         var progressClock = Stopwatch.StartNew();
         try
         {
-            input = new ExecutionInput(p.ExecutionMode == ExecutionMode.Background ? _backgroundDriver(window) : _driver);
+            input = new ExecutionInput(p.ExecutionMode switch
+            {
+                ExecutionMode.Background => _backgroundDriver(window),
+                ExecutionMode.QuickSwitch => _switchDriver(window),
+                _ => _driver
+            });
             Wait(p.StartDelayMs, token);
             var pointer = new PointerResolver(_windows, window, p);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
@@ -105,6 +111,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                         ProgressChanged?.Invoke(original, count); progressClock.Restart();
                     }
                     if (p.RepeatCount != 0 && count == p.RepeatCount) break;
+                    input.Settle();
                     Wait(p.SpamIntervalMs, token);
                 }
             }
@@ -130,7 +137,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             case MacroActionType.KeyPress: input.Press(keys); break;
             case MacroActionType.KeyDown: foreach (var key in keys) input.KeyDown(key); break;
             case MacroActionType.KeyUp: foreach (var key in keys.Reverse()) input.KeyUp(key); break;
-            case MacroActionType.Delay: Wait(a.DelayMs, token); break;
+            case MacroActionType.Delay: input.Settle(); Wait(a.DelayMs, token); break;
             case MacroActionType.MouseMove: input.Move(a.X, a.Y); break;
             case MacroActionType.MousePosition:
                 var (x, y) = pointer.Resolve(a.Space, a.X, a.Y);

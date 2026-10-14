@@ -21,12 +21,13 @@ public partial class MacroEditorView
         _pointX = Profile.PointX; _pointY = Profile.PointY;
         UsePointBox.IsChecked = Profile.UsePoint;
         ScaleBox.IsChecked = Profile.ScaleWithWindow;
-        (Profile.ExecutionMode == ExecutionMode.Background ? BackgroundModeRadio : StandardModeRadio).IsChecked = true;
+        (Profile.ExecutionMode switch { ExecutionMode.Background => BackgroundModeRadio, ExecutionMode.QuickSwitch => SwitchModeRadio, _ => StandardModeRadio }).IsChecked = true;
         Unloaded += (_, _) => { _picker?.Dispose(); _picker = null; };
     }
-    /// <summary>Background mode stays hidden unless experimental features are on, or this macro already uses it.</summary>
-    private bool ShowRunMode => AppSettings.Current.ShowExperimental || Profile.ExecutionMode == ExecutionMode.Background;
-    private bool IsBackgroundMode => BackgroundModeRadio.IsChecked == true;
+    /// <summary>Run modes stay hidden unless experimental features are on, or this macro already uses one.</summary>
+    private bool ShowRunMode => AppSettings.Current.ShowExperimental || Profile.ExecutionMode != ExecutionMode.Standard;
+    private ExecutionMode RunMode => BackgroundModeRadio.IsChecked == true ? ExecutionMode.Background
+        : SwitchModeRadio.IsChecked == true ? ExecutionMode.QuickSwitch : ExecutionMode.Standard;
     private void UpdateTargetUi()
     {
         if (WindowPanel == null || RunModePanel == null || PreviewCard == null || TimingPanel == null) return;
@@ -39,10 +40,13 @@ public partial class MacroEditorView
         WindowText.ToolTip = _window == null ? null : $"{_window.Label}\nClass: {_window.ClassName}\nClient size when picked: {_window.ClientWidth} × {_window.ClientHeight}";
         ClearWindowButton.IsEnabled = ScaleBox.IsEnabled = _window != null;
         RunModePanel.Visibility = ShowRunMode ? Visibility.Visible : Visibility.Collapsed;
-        TestButton.Visibility = IsBackgroundMode ? Visibility.Visible : Visibility.Collapsed;
-        RunModeHint.Text = IsBackgroundMode
-            ? "Experimental. Sends input to the target window only, so you can keep using your mouse. Many games ignore it — test first."
-            : "Uses the real pointer and keyboard. Moves can collide with yours.";
+        TestButton.Visibility = RunMode != ExecutionMode.Standard ? Visibility.Visible : Visibility.Collapsed;
+        RunModeHint.Text = RunMode switch
+        {
+            ExecutionMode.Background => "Sends input to the target window only, so your mouse stays free. Many games, Roblox included, ignore it. Test it first.",
+            ExecutionMode.QuickSwitch => "For games that ignore Background, like Roblox. Each input brings the window to the front for a moment, then gives your window and pointer back. Best for inputs a second or more apart. Keep the game open, it can sit behind other windows.",
+            _ => "Uses the real pointer and keyboard. Moves can collide with yours."
+        };
     }
     private void RunMode_Changed(object sender, RoutedEventArgs e) => UpdateTargetUi();
     private void UsePoint_Changed(object sender, RoutedEventArgs e) => UpdateTargetUi();
@@ -101,7 +105,7 @@ public partial class MacroEditorView
         p.UsePoint = _window != null && UsePointBox.IsChecked == true;
         p.PointX = _pointX; p.PointY = _pointY;
         p.ScaleWithWindow = ScaleBox.IsChecked == true;
-        p.ExecutionMode = IsBackgroundMode ? ExecutionMode.Background : ExecutionMode.Standard;
+        p.ExecutionMode = RunMode;
     }
     private void TestBackground_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
@@ -110,7 +114,8 @@ public partial class MacroEditorView
         if (window == IntPtr.Zero) throw new ArgumentException($"{_window.Label} is not open.");
         var probe = new MacroProfile { Window = _window, ScaleWithWindow = ScaleBox.IsChecked == true };
         var resolver = new PointerResolver(WindowSystem.Instance, window, probe);
-        var driver = new WindowMessageDriver(window);
+        bool quick = RunMode == ExecutionMode.QuickSwitch;
+        IInputDriver driver = quick ? new FocusSwitchDriver(new InputSimulator(), window) : new WindowMessageDriver(window);
         string sent;
         if (Mode != 2 && KeyboardTarget)
         {
@@ -129,7 +134,9 @@ public partial class MacroEditorView
             driver.Position(sx, sy); driver.Mouse(button, true); driver.Mouse(button, false);
             sent = $"Sent a {button.ToLowerInvariant()} click at {x}, {y}";
         }
-        Say($"{sent} to {_window.Label} without moving your pointer. If nothing happened there, this app ignores background input — use Standard mode.");
+        (driver as IBurstDriver)?.EndBurst();
+        Say(quick ? $"{sent} to {_window.Label} with a quick switch. If nothing happened there, try Standard mode."
+            : $"{sent} to {_window.Label} without moving your pointer. If nothing happened there, this app ignores background input. Try Quick switch.");
     });
     private async void Preview_Click(object sender, RoutedEventArgs e)
     {

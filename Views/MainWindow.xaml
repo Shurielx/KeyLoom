@@ -55,7 +55,8 @@
                 <TextBlock Text="No macros yet" Style="{StaticResource SectionTitle}" HorizontalAlignment="Center" Margin="0,12,0,3"/>
                 <TextBlock Text="Create your first macro with New macro." Style="{StaticResource Muted}" HorizontalAlignment="Center"/>
               </StackPanel>
-              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="-4,0,-14,0" Padding="4,0,14,0">
+              <!-- Top padding leaves room for the hover lift and shadow of the first row -->
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="-4,-6,-14,0" Padding="4,6,14,0">
                 <ItemsControl x:Name="ProfilesItemsControl" Margin="0,0,0,6">
                   <ItemsControl.ItemTemplate><DataTemplate>
                     <Grid x:Name="RowRoot" Margin="0,0,0,8" RenderTransformOrigin=".5,.5">

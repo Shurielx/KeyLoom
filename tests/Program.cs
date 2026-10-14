@@ -324,6 +324,17 @@ internal static partial class Program
         executor.DisposeAsync().AsTask().GetAwaiter().GetResult();
         target.Close();
     }
+    private sealed class FakeFocus : IFocusSystem
+    {
+        public IntPtr Current;
+        public List<string> Log { get; } = new();
+        public IntPtr Foreground() => Current;
+        public bool Activate(IntPtr window) { Current = window; Log.Add($"activate:{window}"); return true; }
+        public bool IsMinimized(IntPtr window) => false;
+        public (int X, int Y) Cursor() => (5, 5);
+        public void SetCursor(int x, int y) => Log.Add($"cursor:{x},{y}");
+        public void Pause(int milliseconds) { }
+    }
     private sealed class FakeDriver : IInputDriver
     {
         public ConcurrentQueue<string> Events { get; } = new();

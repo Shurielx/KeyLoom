@@ -81,19 +81,19 @@
         <UniformGrid Columns="3">
           <RadioButton x:Name="RepeatRadio" GroupName="Mode" Style="{StaticResource ChoiceCard}" Checked="Mode_Changed" Margin="0,0,5,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,10,0" VerticalAlignment="Top"><Path Data="{StaticResource IconRepeat}" Style="{StaticResource AccentIcon}"/></Border>
+              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,10,0" VerticalAlignment="Center"><Path Data="{StaticResource IconRepeat}" Style="{StaticResource AccentIcon}"/></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="Repeat" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Click or press again and again" Style="{StaticResource Hint}" Margin="0,2,0,0"/></StackPanel>
             </Grid>
           </RadioButton>
           <RadioButton x:Name="HoldRadio" GroupName="Mode" Style="{StaticResource ChoiceCard}" Checked="Mode_Changed" Margin="5,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,10,0" VerticalAlignment="Top"><Path Data="{StaticResource IconHold}" Style="{StaticResource AccentIcon}"/></Border>
+              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,10,0" VerticalAlignment="Center"><Path Data="{StaticResource IconHold}" Style="{StaticResource AccentIcon}"/></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="Hold" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Keep a key or button held down" Style="{StaticResource Hint}" Margin="0,2,0,0"/></StackPanel>
             </Grid>
           </RadioButton>
           <RadioButton x:Name="SequenceRadio" GroupName="Mode" Style="{StaticResource ChoiceCard}" Checked="Mode_Changed" Margin="5,0,0,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,10,0" VerticalAlignment="Top"><Path Data="{StaticResource IconBolt}" Style="{StaticResource AccentIcon}"/></Border>
+              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,10,0" VerticalAlignment="Center"><Path Data="{StaticResource IconBolt}" Style="{StaticResource AccentIcon}"/></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="Sequence" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="Play steps you record or build" Style="{StaticResource Hint}" Margin="0,2,0,0"/></StackPanel>
             </Grid>
           </RadioButton>
@@ -289,11 +289,12 @@
                   <StackPanel Orientation="Horizontal">
                     <RadioButton x:Name="StandardModeRadio" GroupName="RunMode" Style="{StaticResource Segment}" Content="Standard" Checked="RunMode_Changed"/>
                     <RadioButton x:Name="BackgroundModeRadio" GroupName="RunMode" Style="{StaticResource Segment}" Content="Background" Checked="RunMode_Changed"/>
+                    <RadioButton x:Name="SwitchModeRadio" GroupName="RunMode" Style="{StaticResource Segment}" Content="Quick switch" Checked="RunMode_Changed" ToolTip="For games that ignore Background, like Roblox"/>
                   </StackPanel>
                 </Border>
               </Grid>
               <TextBlock x:Name="RunModeHint" Style="{StaticResource Hint}" Margin="28,8,0,0"/>
-              <Button x:Name="TestButton" Content="Test background input" Click="TestBackground_Click" Margin="28,10,0,0" HorizontalAlignment="Left" ToolTip="Send one input to the target window without moving your pointer"/>
+              <Button x:Name="TestButton" Content="Send a test input" Click="TestBackground_Click" Margin="28,10,0,0" HorizontalAlignment="Left" ToolTip="Send one input to the target window in this mode"/>
             </StackPanel>
           </Border>
         </StackPanel>

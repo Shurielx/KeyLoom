@@ -65,6 +65,26 @@ internal static partial class Program
         windowStep.Actions.Add(new() { ActionType = MacroActionType.MousePosition, Space = CoordinateSpace.Window });
         Check(Throws(() => ProfileValidator.Validate(windowStep)), "window positions require a chosen window");
 
+        // Quick switch: focus moves to the target for each burst and comes back while the macro waits.
+        var focus = new FakeFocus { Current = (IntPtr)7 };
+        var switched = new FakeDriver();
+        await using (var quickExecutor = new MacroExecutor(new FakeDriver(), windows, _ => background, w => new FocusSwitchDriver(switched, w, windows, focus)))
+        {
+            var quick = Profile(MacroBehaviorType.Sequence); quick.RepeatCount = 1; quick.Window = TestTarget; quick.ExecutionMode = ExecutionMode.QuickSwitch;
+            quick.Actions.Add(new() { ActionType = MacroActionType.MousePosition, Space = CoordinateSpace.Window, X = 30, Y = 40 });
+            quick.Actions.Add(new() { ActionType = MacroActionType.MouseClick });
+            quick.Actions.Add(new() { ActionType = MacroActionType.Delay, DelayMs = 5 });
+            quick.Actions.Add(new() { ActionType = MacroActionType.KeyPress, KeyName = "E" });
+            await quickExecutor.ToggleAsync(quick); await Until(() => quickExecutor.ActiveProfile == null);
+            Check(focus.Log.SequenceEqual(new[] { "activate:42", "cursor:5,5", "activate:7", "activate:42", "cursor:5,5", "activate:7" }),
+                "quick switch brings the target forward per burst and gives focus and pointer back");
+            Check(switched.Events.Contains("position:1030,240") && switched.Events.Contains("MLeft:up") && switched.Events.Contains("K69:up"),
+                "quick switch sends real input at the chosen point");
+            Check(quick.BehaviorSummary.Contains("quick switch"), "macro list summarizes quick switch mode");
+        }
+        var quickHold = Profile(MacroBehaviorType.PressAndHold); quickHold.Window = TestTarget; quickHold.ExecutionMode = ExecutionMode.QuickSwitch;
+        Check(Throws(() => ProfileValidator.Validate(quickHold)), "hold is rejected in quick switch mode");
+
         // Recording post-processing.
         var recorded = new List<MacroAction>();
         for (int i = 0; i <= 50; i++)
@@ -115,7 +135,7 @@ internal static partial class Program
         for (int i = 0; i < 1000; i++) { large.PositionAt(i * 80); large.DelayAt(i * 80); large.StepAt(i * 80); }
         Check(clock.ElapsedMilliseconds < 500, $"20,000-step timeline builds and answers 3,000 queries in {clock.ElapsedMilliseconds} ms");
 
-        Check(AppVersion.Format("0.1-dev-2+abc123") == "0.1-dev-2" && AppVersion.Display == "0.1-dev-2", "version is shown as 0.1-dev-2 without build metadata");
+        Check(AppVersion.Format("0.1-dev-3+abc123") == "0.1-dev-3" && AppVersion.Display == "0.1-dev-3", "version is shown as 0.1-dev-3 without build metadata");
         string settingsPath = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         new AppSettings { ShowExperimental = true }.Save(settingsPath);
         Check(AppSettings.Load(settingsPath).ShowExperimental, "experimental setting round-trips");
@@ -210,7 +230,7 @@ internal static partial class Program
         Check(options.Options is { Space: CoordinateSpace.Start, Simplify: true }, "record options choose coordinate space and simplification");
         string settingsFile = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         var settingsView = new SettingsView(settingsFile);
-        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.1-dev-2", "settings show the version");
+        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.1-dev-3", "settings show the version");
         ((RadioButton)settingsView.FindName("DarkThemeRadio")).IsChecked = true;
         Check(ThemeManager.IsDark && AppSettings.Load(settingsFile).Theme == AppTheme.Dark, "choosing a theme applies and saves it right away");
         ((RadioButton)settingsView.FindName("LightThemeRadio")).IsChecked = true;

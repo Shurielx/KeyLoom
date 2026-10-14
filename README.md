@@ -1,6 +1,6 @@
 # Keyloom
 
-Simple keyboard and mouse macros for Windows. **0.1-dev-2**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, smooth animations, and light and dark themes. Everything happens in one window: the editor, settings and help open as pages, and dialogs appear inside it.
+Simple keyboard and mouse macros for Windows. **0.1-dev-3**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, smooth animations, and light and dark themes. Everything happens in one window: the editor, settings and help open as pages, and dialogs appear inside it.
 
 ![Keyloom](docs/screenshot.png)
 
@@ -39,9 +39,14 @@ If the target window is not open, the macro reports it instead of starting; if i
 
 Sequences show a route thumbnail in the editor. **Preview** plays it with a moving marker, click pulses and a countdown for each wait, with a timeline, pause and 0.25×–4× speed. **Show on screen** draws the route exactly where it will run; the overlay lets your clicks through. Preview never moves the pointer or sends input, and it shows planned positions, not a guaranteed result.
 
-## Background mode (experimental)
+## Run modes (experimental)
 
-Turn on **Settings → Experimental features** to get **Run mode** under **More options** in the editor. *Background* sends clicks and keys straight to the target window as window messages instead of through the system input stream, so your own mouse and keyboard stay free. Use **Test background input** first: many games (including ones that read raw mouse input) ignore these messages, and Keyloom does not fall back to taking over your pointer. Running apps in an isolated virtual machine is not included; see [validation notes](docs/VALIDATION.md).
+Turn on **Settings → Experimental features** to get **Run mode** under **More options** in the editor. Both modes below let you keep using your PC while a macro runs, and both need a target window chosen with **Pick point**. Use **Send a test input** to check that the target reacts.
+
+- **Background** sends clicks and keys straight to the target window as window messages, so your own mouse and keyboard stay free. Many games, Roblox included, ignore these messages.
+- **Quick switch** is for those games. For each input it brings the target window to the front for a moment (about 70 ms), sends real input at the chosen point, then gives focus and the pointer back to whatever you were using. It works best for inputs a second or more apart, such as staying active in a game. The target must not be minimized, but it can sit behind other windows or on another monitor. Hold macros are not available in this mode, and a key you press during the switch may reach the game.
+
+Running apps in an isolated virtual machine is not included; see [validation notes](docs/VALIDATION.md).
 
 ## Record
 

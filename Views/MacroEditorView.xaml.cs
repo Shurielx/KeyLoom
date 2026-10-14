@@ -53,7 +53,7 @@ public partial class MacroEditorView : UserControl
         InitializeIcon();
         SetMode((int)profile.Behavior);
         InitializeRecording();
-        MoreToggle.IsChecked = profile.Window != null && profile.Behavior == MacroBehaviorType.Sequence || profile.ExecutionMode == ExecutionMode.Background;
+        MoreToggle.IsChecked = profile.Window != null && profile.Behavior == MacroBehaviorType.Sequence || profile.ExecutionMode != ExecutionMode.Standard;
         Loaded += (_, _) => { if (isNew) { MacroNameTextBox.Focus(); MacroNameTextBox.SelectAll(); } };
     }
     /// <summary>0 repeat, 1 hold, 2 sequence: the order of <see cref="MacroBehaviorType"/>.</summary>

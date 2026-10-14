@@ -48,12 +48,18 @@ internal sealed class ExecutionInput(IInputDriver driver)
     public void Move(int x, int y) => driver.Move(x, y);
     public void Position(int x, int y) => driver.Position(x, y);
     public void Scroll(int amount) => driver.Scroll(amount);
+    /// <summary>Called when the macro waits; a quick-switch driver gives focus back unless something is still held.</summary>
+    public void Settle()
+    {
+        if (_keys.Count == 0 && _buttons.Count == 0 && _characters.Count == 0) (driver as IBurstDriver)?.EndBurst();
+    }
     public void ReleaseOwned()
     {
         var failures = new List<Exception>();
         foreach (char ch in _characters.ToArray()) Try(() => { driver.Character(ch, false); _characters.Remove(ch); });
         foreach (ushort key in _keys.Reverse().ToArray()) Try(() => KeyUp(key));
         foreach (string button in _buttons.ToArray()) Try(() => MouseUp(button));
+        Try(() => (driver as IBurstDriver)?.EndBurst());
         if (failures.Count > 0) throw new AggregateException("Some macro inputs could not be released.", failures);
         void Try(Action action) { try { action(); } catch (Exception ex) { failures.Add(ex); } }
     }

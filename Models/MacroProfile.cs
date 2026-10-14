@@ -7,8 +7,9 @@ namespace Keyloom.Models;
 
 public enum MacroBehaviorType { ClickSpam, PressAndHold, Sequence }
 public enum TargetInputType { Mouse, Keyboard }
-/// <summary>Standard sends system input; Background posts messages to the target window without moving the pointer.</summary>
-public enum ExecutionMode { Standard, Background }
+/// <summary>Standard sends system input; Background posts messages to the target window without moving the pointer;
+/// QuickSwitch brings the target to the front for each burst of input, then gives focus and the pointer back.</summary>
+public enum ExecutionMode { Standard, Background, QuickSwitch }
 /// <summary>Auto follows the macro type. Glyph shows one or two characters; Image shows a picture from the icon folder.</summary>
 public enum MacroIconKind { Auto, Mouse, Keyboard, Cursor, Glyph, Image }
 
@@ -56,7 +57,7 @@ public class MacroProfile : INotifyPropertyChanged
         MacroBehaviorType.ClickSpam => $"{TargetLabel} every {SpamIntervalMs} ms{PointLabel}",
         MacroBehaviorType.PressAndHold => $"Hold {TargetLabel.ToLowerInvariant()}{PointLabel}",
         _ => $"{Actions.Count} steps · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}"
-    } + (ExecutionMode == ExecutionMode.Background ? " · background" : "");
+    } + ExecutionMode switch { ExecutionMode.Background => " · background", ExecutionMode.QuickSwitch => " · quick switch", _ => "" };
     private string PointLabel => UsePoint && TargetType == TargetInputType.Mouse ? $" at {PointX}, {PointY}" : "";
     [JsonIgnore] public string TargetLabel => TargetType == TargetInputType.Mouse ? $"{TargetMouseButton} click" : TargetKey;
     [JsonIgnore] public string StatusBadgeText => IsActive ? "Running" : "Ready";
@@ -86,7 +87,7 @@ public class MacroProfile : INotifyPropertyChanged
         ScaleWithWindow = ScaleWithWindow, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
     };
     /// <summary>True when execution needs the target window to be found first.</summary>
-    [JsonIgnore] public bool NeedsWindow => ExecutionMode == ExecutionMode.Background ||
+    [JsonIgnore] public bool NeedsWindow => ExecutionMode != ExecutionMode.Standard ||
         (UsePoint && Behavior != MacroBehaviorType.Sequence && TargetType == TargetInputType.Mouse) ||
         (Behavior == MacroBehaviorType.Sequence && Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window));
     public event PropertyChangedEventHandler? PropertyChanged;

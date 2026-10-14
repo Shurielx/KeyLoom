@@ -37,12 +37,19 @@ public static class ProfileValidator
             w.ClientWidth is < 0 or > 100000 || w.ClientHeight is < 0 or > 100000))
             throw new ArgumentException("The saved target window is invalid. Pick the window again.");
         if (p.UsePoint && (p.PointX is < 0 or > 100000 || p.PointY is < 0 or > 100000)) throw new ArgumentException("The chosen point is out of range. Pick it again.");
-        if (p.NeedsWindow && p.Window == null) throw new ArgumentException(p.ExecutionMode == ExecutionMode.Background
-            ? "Background mode needs a target window. Use Pick point first."
-            : "Pick a target window for window-relative positions.");
-        if (p.ExecutionMode == ExecutionMode.Background && p.Behavior == MacroBehaviorType.Sequence &&
+        if (p.NeedsWindow && p.Window == null) throw new ArgumentException(p.ExecutionMode switch
+        {
+            ExecutionMode.Background => "Background mode needs a target window. Use Pick point first.",
+            ExecutionMode.QuickSwitch => "Quick switch needs a target window. Use Pick point first.",
+            _ => "Pick a target window for window-relative positions."
+        });
+        if (p.ExecutionMode != ExecutionMode.Standard && p.Behavior == MacroBehaviorType.Sequence &&
             p.Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Start))
             throw new ArgumentException("Positions relative to the start point need Standard mode.");
+        if (p.ExecutionMode == ExecutionMode.QuickSwitch && p.Behavior == MacroBehaviorType.PressAndHold)
+            throw new ArgumentException("Quick switch cannot keep input held while you use another window. Use Repeat, or Standard mode.");
+        if (p.ExecutionMode == ExecutionMode.QuickSwitch && p.Behavior == MacroBehaviorType.ClickSpam && p.TargetType == TargetInputType.Mouse && !p.UsePoint)
+            throw new ArgumentException("Quick switch clicks at a chosen point. Turn on At a chosen point.");
     }
     public static void ValidateAction(MacroAction a)
     {
