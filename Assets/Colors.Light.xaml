@@ -18,6 +18,13 @@
   <SolidColorBrush x:Key="RecordHaloBrush" Color="#33D2412F"/>
   <SolidColorBrush x:Key="SuccessBrush" Color="#2E9E6B"/>
   <SolidColorBrush x:Key="SuccessTextBrush" Color="#1F7A51"/>
+  <!-- Sequence step tones -->
+  <SolidColorBrush x:Key="StepPointerBrush" Color="#0F6CBD"/>
+  <SolidColorBrush x:Key="StepKeyBrush" Color="#6B4FD8"/>
+  <SolidColorBrush x:Key="StepHoldBrush" Color="#B5532A"/>
+  <SolidColorBrush x:Key="StepMoveBrush" Color="#0F8077"/>
+  <SolidColorBrush x:Key="StepTextBrush" Color="#9A6400"/>
+  <SolidColorBrush x:Key="StepGroupBrush" Color="#A23A93"/>
 
   <!-- Lines -->
   <SolidColorBrush x:Key="HairlineBrush" Color="#260F3550"/>

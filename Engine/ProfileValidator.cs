@@ -11,13 +11,14 @@ public static class ProfileValidator
         if (!Enum.IsDefined(p.Behavior) || !Enum.IsDefined(p.TargetType) || !Enum.IsDefined(p.ExecutionMode)) throw new ArgumentException("Unknown macro mode.");
         if (p.Actions == null || p.Actions.Count > MaxActions) throw new ArgumentException($"A sequence can contain up to {MaxActions:N0} steps.");
         foreach (var action in p.Actions) ValidateAction(action);
+        StepGroups.Validate(p.Actions);
         if (p.PrimaryVk > 254 || p.PrimaryModifiers > 15) throw new ArgumentException("Invalid shortcut.");
         if (p.SpamIntervalMs is < 1 or > 3600000) throw new ArgumentException("Repeat interval must be between 1 and 3600000 ms.");
         if (p.StartDelayMs is < 0 or > 3600000) throw new ArgumentException("Start delay must be between 0 and 3600000 ms.");
         if (p.RepeatCount is < 0 or > 1000000) throw new ArgumentException("Repeat count must be between 0 and 1000000. Use 0 to loop.");
         if (p.Behavior == MacroBehaviorType.Sequence)
         {
-            if (p.Actions.Count < 1) throw new ArgumentException("Add at least one sequence step.");
+            if (!p.Actions.Any(a => !a.IsGroupMarker)) throw new ArgumentException("Add at least one sequence step.");
         }
         else if (p.TargetType == TargetInputType.Keyboard) KeyResolver.Resolve(p.TargetKey);
         else ValidateButton(p.TargetMouseButton);

@@ -56,7 +56,7 @@ public class MacroProfile : INotifyPropertyChanged
     {
         MacroBehaviorType.ClickSpam => $"{TargetLabel} every {SpamIntervalMs} ms{PointLabel}",
         MacroBehaviorType.PressAndHold => $"Hold {TargetLabel.ToLowerInvariant()}{PointLabel}",
-        _ => $"{Actions.Count} steps · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}"
+        _ => $"{Actions.Count(a => !a.IsGroupMarker)} steps · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}"
     } + ExecutionMode switch { ExecutionMode.Background => " · background", ExecutionMode.QuickSwitch => " · quick switch", _ => "" };
     private string PointLabel => UsePoint && TargetType == TargetInputType.Mouse ? $" at {PointX}, {PointY}" : "";
     [JsonIgnore] public string TargetLabel => TargetType == TargetInputType.Mouse ? $"{TargetMouseButton} click" : TargetKey;

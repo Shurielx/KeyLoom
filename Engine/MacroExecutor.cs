@@ -30,7 +30,10 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             var snapshot = profile.Snapshot();
             ProfileValidator.Validate(snapshot);
             var keys = snapshot.TargetType == TargetInputType.Keyboard ? KeyResolver.Resolve(snapshot.TargetKey) : [];
-            var stepKeys = snapshot.Actions.Select(a => a.ActionType is MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp ? KeyResolver.Resolve(a.KeyName) : Array.Empty<ushort>()).ToArray();
+            // Keys are resolved once per step object; group playback repeats the same objects.
+            var stepKeys = new Dictionary<MacroAction, ushort[]>(ReferenceEqualityComparer.Instance);
+            foreach (var a in snapshot.Actions.Where(a => a.ActionType is MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp))
+                stepKeys[a] = KeyResolver.Resolve(a.KeyName);
             IntPtr window = snapshot.NeedsWindow ? _windows.Find(snapshot.Window!) : IntPtr.Zero;
             if (snapshot.NeedsWindow && window == IntPtr.Zero)
                 throw new ArgumentException($"Target window '{snapshot.Window!.Label}' was not found. Open it or pick the window again.");
@@ -54,7 +57,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
         if (_task != null) await _task;
         _cts?.Dispose(); _cts = null; _task = null;
     }
-    private void Run(MacroProfile p, MacroProfile original, ushort[] keys, ushort[][] stepKeys, IntPtr window, CancellationToken token)
+    private void Run(MacroProfile p, MacroProfile original, ushort[] keys, Dictionary<MacroAction, ushort[]> stepKeys, IntPtr window, CancellationToken token)
     {
         ExecutionInput? input = null;
         long count = 0;
@@ -70,7 +73,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             Wait(p.StartDelayMs, token);
             var pointer = new PointerResolver(_windows, window, p);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
-                (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16)));
+                (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
             {
                 if (p.TargetType == TargetInputType.Mouse && p.UsePoint)
@@ -99,11 +102,11 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                         if (p.TargetType == TargetInputType.Mouse) input.Click(p.TargetMouseButton);
                         else input.Press(keys);
                     }
-                    else for (int i = 0; i < p.Actions.Count; i++)
+                    else foreach (var step in StepGroups.Expand(p.Actions))
                     {
                         token.ThrowIfCancellationRequested();
                         pointer.EnsureAlive();
-                        Execute(p.Actions[i], stepKeys[i], input, pointer, token);
+                        Execute(step, stepKeys.GetValueOrDefault(step, []), input, pointer, token);
                     }
                     count++;
                     if (progressClock.ElapsedMilliseconds >= 100)

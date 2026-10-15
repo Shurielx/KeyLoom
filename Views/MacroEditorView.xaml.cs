@@ -49,6 +49,7 @@ public partial class MacroEditorView : UserControl
         };
         _loadingStep = true; StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0; _loadingStep = false;
         BindSteps(_steps);
+        InitializeStepList();
         InitializeTarget();
         InitializeIcon();
         SetMode((int)profile.Behavior);
@@ -153,6 +154,7 @@ public partial class MacroEditorView : UserControl
         try
         {
             var step = ReadStep();
+            if (!_editRemembered) { Remember(); _editRemembered = true; }
             _committing = true;
             _steps[i] = step;
             ActionsListBox.SelectedIndex = i;
@@ -169,12 +171,26 @@ public partial class MacroEditorView : UserControl
     }
     private void Step_Selected(object sender, SelectionChangedEventArgs e)
     {
-        if (_committing) return;
+        if (_committing || _selecting) return;
+        _editRemembered = false;
+        ShowSelection();
+    }
+    /// <summary>One picked step opens the step editor; several open the bulk editor.</summary>
+    private void ShowSelection()
+    {
+        int count = ActionsListBox.SelectedItems.Count;
+        IsMultiSelect = count > 1;
+        int group = PickedGroup();
+        _groupStart = group;
+        StepEditor.Visibility = count == 1 && group < 0 ? Visibility.Visible : Visibility.Collapsed;
+        GroupEditor.Visibility = group >= 0 ? Visibility.Visible : Visibility.Collapsed;
+        BulkEditor.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        if (count > 1) { ShowStepHint(""); ShowBulk(); return; }
+        if (group >= 0) { ShowGroup(group); return; }
         int i = ActionsListBox.SelectedIndex;
-        StepEditor.Visibility = i >= 0 ? Visibility.Visible : Visibility.Collapsed;
         if (ActionsListBox.SelectedItem is not MacroAction a) return;
         _loadingStep = true;
-        StepIndexText.Text = $"Step {i + 1:N0}";
+        StepIndexText.Text = $"Step {_steps.Take(i).Count(s => !s.IsGroupMarker) + 1:N0}";
         StepTypeBox.SelectedValue = a.ActionType;
         StepMouseBox.SelectedIndex = Math.Max(0, Array.IndexOf(ProfileButtons, a.MouseButton));
         StepSpaceBox.SelectedIndex = (int)a.Space;
@@ -221,37 +237,13 @@ public partial class MacroEditorView : UserControl
     }
     private void InsertStep(MacroAction action)
     {
-        if (_steps.Count >= ProfileValidator.MaxActions) throw new ArgumentException($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps.");
-        int index = ActionsListBox.SelectedIndex >= 0 ? ActionsListBox.SelectedIndex + 1 : _steps.Count;
+        EnsureRoom(1);
+        Remember();
+        int index = InsertionAfter(SelectedIndices().LastOrDefault(-1));
         _steps.Insert(index, action); ActionsListBox.SelectedIndex = index;
         ActionsListBox.ScrollIntoView(action);
+        AnimateStep(action);
     }
-    private int IndexOf(object sender) => sender is FrameworkElement { Tag: MacroAction a } ? _steps.IndexOf(a) : -1;
-    private void RowUp_Click(object sender, RoutedEventArgs e) => Move(IndexOf(sender), -1);
-    private void RowDown_Click(object sender, RoutedEventArgs e) => Move(IndexOf(sender), 1);
-    private void RowDuplicate_Click(object sender, RoutedEventArgs e) => Attempt(() =>
-    {
-        int i = IndexOf(sender); if (i < 0) return;
-        ActionsListBox.SelectedIndex = i; InsertStep(_steps[i].Clone());
-    });
-    private void RowRemove_Click(object sender, RoutedEventArgs e) => RemoveStep(IndexOf(sender));
-    private void Steps_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Delete) { RemoveStep(ActionsListBox.SelectedIndex); e.Handled = true; }
-        else if (Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey is Key.Up or Key.Down) { Move(ActionsListBox.SelectedIndex, e.SystemKey == Key.Up ? -1 : 1); e.Handled = true; }
-    }
-    private void RemoveStep(int i)
-    {
-        if (i < 0 || i >= _steps.Count) return;
-        _steps.RemoveAt(i);
-        if (_steps.Count > 0) ActionsListBox.SelectedIndex = Math.Min(i, _steps.Count - 1);
-    }
-    private void Move(int i, int offset)
-    {
-        int next = i + offset;
-        if (i >= 0 && next >= 0 && next < _steps.Count) { _steps.Move(i, next); ActionsListBox.SelectedIndex = next; ActionsListBox.ScrollIntoView(_steps[next]); }
-    }
-
     private void Save_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
         if (_key != 0 && _others.Any(p => p.Id != Profile.Id && p.PrimaryVk == _key && p.PrimaryModifiers == _modifiers))

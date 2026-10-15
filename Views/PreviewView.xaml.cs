@@ -20,7 +20,8 @@ public partial class PreviewView : UserControl, IDisposable
     {
         InitializeComponent();
         windows ??= WindowSystem.Instance;
-        _steps = profile.Actions.ToArray();
+        // The preview follows what plays: groups expanded into their repeats and waits.
+        _steps = StepGroups.Expand(profile.Actions).ToArray();
         TitleText.Text = $"Preview · {profile.Name}";
         IntPtr window = profile.Window != null ? windows.Find(profile.Window) : IntPtr.Zero;
         var resolver = new PointerResolver(windows, window, profile);

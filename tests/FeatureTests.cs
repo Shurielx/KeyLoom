@@ -183,6 +183,68 @@ internal static partial class Program
         var shown = p.Snapshot(); shown.Name = "Collect and drag"; shown.Window = null;
         var editor = new MacroEditorView(p);
         Check(((FrameworkElement)editor.FindName("RunModePanel")).Visibility == Visibility.Collapsed, "run mode stays hidden until experimental features are enabled");
+        var steps = (ListBox)editor.FindName("ActionsListBox");
+        var number = new StepLayoutConverter();
+        string NumberOf(object step) => (string)number.Convert([step, steps.ItemsSource, editor.StepsRevision], typeof(string), "Number", System.Globalization.CultureInfo.InvariantCulture);
+        var third = steps.Items[2]; int revision = editor.StepsRevision;
+        steps.SelectedIndex = 2; Invoke(editor, "MoveSteps", new List<int> { 2 }, -1);
+        Check(NumberOf(third) == "2" && NumberOf(steps.Items[2]) == "3" && editor.StepsRevision != revision, "step numbers follow moves");
+        Invoke(editor, "Undo");
+        Check(steps.Items[2] is MacroAction { ActionType: MacroActionType.MousePosition, X: 420 } && steps.SelectedItems.Count == 1, "undo puts a moved step back");
+        var original = p.Actions.Select(a => a.DisplayText).ToArray();
+        string[] Shown() => steps.Items.Cast<MacroAction>().Select(a => a.DisplayText).ToArray();
+
+        // Pick every wait, change them together, then undo and redo.
+        foreach (var w in steps.Items.Cast<MacroAction>().Where(a => a.ActionType == MacroActionType.Delay).ToList()) steps.SelectedItems.Add(w);
+        steps.SelectedItems.Remove(steps.Items[2]);
+        Check(editor.IsMultiSelect && ((FrameworkElement)editor.FindName("BulkEditor")).Visibility == Visibility.Visible
+            && ((FrameworkElement)editor.FindName("StepEditor")).Visibility == Visibility.Collapsed && ((TextBlock)editor.FindName("BulkTitle")).Text.StartsWith("3"),
+            "picking several steps opens the bulk editor");
+        var bulkWait = (TextBox)editor.FindName("BulkWaitTextBox");
+        int[] Waits() => steps.Items.Cast<MacroAction>().Where(a => a.ActionType == MacroActionType.Delay).Select(a => a.DelayMs).ToArray();
+        bulkWait.Text = "100"; Invoke(editor, "BulkWait_Click", editor, new RoutedEventArgs());
+        Check(Waits().All(ms => ms == 100) && steps.SelectedItems.Count == 3, "bulk editor sets every picked wait and keeps the pick");
+        bulkWait.Text = "+20"; Invoke(editor, "BulkWait_Click", editor, new RoutedEventArgs());
+        bulkWait.Text = "x2"; Invoke(editor, "BulkWait_Click", editor, new RoutedEventArgs());
+        Check(Waits().All(ms => ms == 240), "bulk waits add and scale");
+        bulkWait.Text = "-500"; Invoke(editor, "BulkWait_Click", editor, new RoutedEventArgs());
+        Check(Waits().All(ms => ms == 240) && ((TextBlock)editor.FindName("ErrorText")).Text.Contains("delay"), "invalid bulk waits are reported and nothing changes");
+        Invoke(editor, "Undo"); Invoke(editor, "Undo"); Invoke(editor, "Undo");
+        Check(Shown().SequenceEqual(original) && steps.SelectedItems.Count == 3, "undo restores the waits and the pick");
+        Invoke(editor, "Redo");
+        Check(Waits().All(ms => ms == 100), "redo applies the change again");
+        Invoke(editor, "Undo");
+
+        // Copy, paste, duplicate and delete work on the whole pick.
+        steps.SelectedItems.Clear(); steps.SelectedItems.Add(steps.Items[3]); steps.SelectedItems.Add(steps.Items[6]);
+        Invoke(editor, "Copy", new List<int> { 3, 6 });
+        steps.SelectedItems.Clear(); steps.SelectedIndex = 9;
+        Invoke(editor, "Paste");
+        Check(steps.Items.Count == 12 && ((MacroAction)steps.Items[10]).ActionType == MacroActionType.MouseClick && ((MacroAction)steps.Items[11]).ActionType == MacroActionType.MouseDown
+            && steps.SelectedItems.Count == 2 && !ReferenceEquals(steps.Items[10], steps.Items[3]), "pasted steps land after the pick as independent copies");
+        Invoke(editor, "Duplicate", new List<int> { 10, 11 });
+        Check(steps.Items.Count == 14 && steps.SelectedItems.Contains(steps.Items[12]) && steps.SelectedItems.Contains(steps.Items[13]), "duplicate copies the whole pick");
+        Invoke(editor, "Delete", new List<int> { 10, 11, 12, 13 });
+        Check(Shown().SequenceEqual(original), "delete removes every picked step");
+
+        // Dropping steps into a gap moves them as one block, in order.
+        string[] Order(params int[] order) => order.Select(i => original[i]).ToArray();
+        Invoke(editor, "DropSteps", new List<int> { 1, 2 }, 5);
+        Check(Shown().SequenceEqual(Order(0, 3, 4, 1, 2, 5, 6, 7, 8, 9)) && steps.SelectedItems.Count == 2 && steps.SelectedIndex == 3, "dragging two steps down drops them in the gap");
+        Invoke(editor, "Undo");
+        Invoke(editor, "DropSteps", new List<int> { 3, 7, 9 }, 0);
+        Check(Shown().SequenceEqual(Order(3, 7, 9, 0, 1, 2, 4, 5, 6, 8)), "scattered steps drop together at the top, keeping their order");
+        Invoke(editor, "Undo");
+        Invoke(editor, "DropSteps", new List<int> { 4, 5 }, 6);
+        Invoke(editor, "DropSteps", new List<int> { 8 }, 10);
+        Check(Shown().SequenceEqual(Order(0, 1, 2, 3, 4, 5, 6, 7, 9, 8)), "drops next to the steps themselves change nothing; dropping at the end works");
+        Invoke(editor, "Undo");
+        Check(Shown().SequenceEqual(original), "undo reverts a drop");
+        var wait = StepView.From(new MacroAction { ActionType = MacroActionType.Delay, DelayMs = 100 });
+        var key = StepView.From(new MacroAction { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" });
+        var place = StepView.From(new MacroAction { ActionType = MacroActionType.MousePosition, X = 420, Y = 310, Space = CoordinateSpace.Window });
+        Check(wait.IsWait && wait.Detail.Contains("100") && key.IsKey && key.Detail == "Ctrl+C" && place.Detail.Contains("in window") && place.Tone == "Move",
+            "step rows split into a tone, a title and a readable detail");
         Check(((PathPreview)editor.FindName("Thumbnail")).Timeline?.HasPointer == true && ((TextBlock)editor.FindName("WindowText")).Text.Contains("Game"), "editor shows the target window and a route thumbnail");
         Render(editor, 800, 760, "editor-target.png");
         editor.AddStep(MacroActionType.MousePosition);

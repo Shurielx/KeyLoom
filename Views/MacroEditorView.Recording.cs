@@ -49,6 +49,7 @@ public partial class MacroEditorView
         if (recorded.Count + (append ? _steps.Count : 0) > ProfileValidator.MaxActions)
             throw new InvalidOperationException("Recording exceeds the sequence step limit.");
         bool firstRecording = _steps.Count == 0;
+        Remember();
         BindSteps(new ObservableCollection<MacroAction>((append ? _steps : Enumerable.Empty<MacroAction>()).Concat(recorded).Select(a => a.Clone())));
         ActionsListBox.SelectedIndex = append ? _steps.Count - recorded.Count : 0;
         ActionsListBox.ScrollIntoView(ActionsListBox.SelectedItem);

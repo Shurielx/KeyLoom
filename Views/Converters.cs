@@ -1,24 +1,126 @@
+using System.Collections;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
+using Keyloom.Engine;
 using Keyloom.Models;
 
 namespace Keyloom.Views;
 
-/// <summary>Picks the list icon for a sequence step.</summary>
-public sealed class StepIconConverter : IValueConverter
+/// <summary>How a sequence step reads in the list: a colour tone, an icon, a short title and the detail that matters.</summary>
+public sealed record StepView(string Tone, Geometry? Icon, string Title, string Detail, bool IsWait, bool IsKey, bool IsGroup = false, bool IsGroupEnd = false, bool Collapsed = false)
 {
-    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) => Application.Current?.TryFindResource(value switch
+    public static StepView From(MacroAction a)
     {
-        MacroActionType.MouseClick => "IconMouse",
-        MacroActionType.KeyPress => "IconKeyboard",
-        MacroActionType.MouseDown or MacroActionType.KeyDown => "IconHold",
-        MacroActionType.MouseUp or MacroActionType.KeyUp => "IconArrowUp",
-        MacroActionType.Delay => "IconClock",
-        MacroActionType.MouseMove => "IconMove",
-        MacroActionType.MousePosition => "IconTarget",
-        MacroActionType.MouseScroll => "IconScroll",
-        _ => "IconText"
-    });
+        string button = a.MouseButton switch { "X1" => "Back button", "X2" => "Forward button", var b => $"{b} button" };
+        return a.ActionType switch
+        {
+            MacroActionType.MouseClick => new("Pointer", Find("IconMouse"), "Click", button, false, false),
+            MacroActionType.MouseDown => new("Hold", Find("IconHold"), "Hold", button, false, false),
+            MacroActionType.MouseUp => new("Hold", Find("IconRelease"), "Release", button, false, false),
+            MacroActionType.KeyPress => new("Key", Find("IconKeyboard"), "Press", a.KeyName, false, true),
+            MacroActionType.KeyDown => new("Hold", Find("IconHold"), "Hold", a.KeyName, false, true),
+            MacroActionType.KeyUp => new("Hold", Find("IconRelease"), "Release", a.KeyName, false, true),
+            MacroActionType.Delay => new("Wait", Find("IconClock"), "Wait", $"{a.DelayMs:N0} ms", true, false),
+            MacroActionType.MouseMove => new("Move", Find("IconMove"), "Move by", $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} px", false, false),
+            MacroActionType.MousePosition => new("Move", Find("IconTarget"), "Move to", a.Space switch
+            {
+                CoordinateSpace.Window => $"{a.X}, {a.Y} · in window",
+                CoordinateSpace.Start => $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} · from start",
+                _ => $"{a.X}, {a.Y} · on screen"
+            }, false, false),
+            MacroActionType.MouseScroll => new("Move", Find("IconScroll"), "Scroll",
+                $"{Math.Abs(a.ScrollAmount)} notch{(Math.Abs(a.ScrollAmount) == 1 ? "" : "es")} {(a.ScrollAmount < 0 ? "down" : "up")}", false, false),
+            MacroActionType.GroupStart => new("Group", Find("IconGroup"), a.GroupName, string.Join(" · ", new[]
+            {
+                a.Runs > 1 ? $"×{a.Runs:N0}" : "", a.GapMs > 0 ? $"{a.GapMs:N0} ms between steps" : ""
+            }.Where(s => s.Length > 0)), false, false, IsGroup: true, Collapsed: a.Collapsed),
+            MacroActionType.GroupEnd => new("Group", null, "", "end of group", false, false, IsGroupEnd: true),
+            _ => new("Text", Find("IconText"), "Type", $"“{a.Text.Replace("\r", "").Replace("\n", " ⏎ ")}”", false, false)
+        };
+    }
+    private static Geometry? Find(string key) => Application.Current?.TryFindResource(key) as Geometry;
+}
+
+/// <summary>Wraps a step in its <see cref="StepView"/>.</summary>
+public sealed class StepViewConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is MacroAction a ? StepView.From(a) : null;
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+public enum StepLayoutPart { Number, Indent, Rail, Visibility, Children }
+
+/// <summary>
+/// Where a step sits in the list: its number (group markers have none), how far groups indent it, the group rail beside it,
+/// whether a collapsed group hides it, and for a group header how many steps it holds (for a group end, which group it closes).
+/// Values: the step, the list, and a revision that changes with every edit so the layout follows moves.
+/// </summary>
+public sealed class StepLayoutConverter : IMultiValueConverter
+{
+    public const double IndentStep = 22;
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        var part = parameter is StepLayoutPart p ? p : Enum.Parse<StepLayoutPart>((string)parameter);
+        if (values.Length < 2 || values[0] is not MacroAction step || values[1] is not IList<MacroAction> list || list.IndexOf(step) is not (>= 0 and var i))
+            return part switch { StepLayoutPart.Indent => new Thickness(), StepLayoutPart.Rail => StepRailInfo.None, StepLayoutPart.Visibility => Visibility.Visible, _ => "" };
+        var steps = (IReadOnlyList<MacroAction>)list;
+        int indent = StepGroups.DepthAt(steps, i) - (step.ActionType == MacroActionType.GroupEnd ? 1 : 0);
+        return part switch
+        {
+            StepLayoutPart.Number => step.IsGroupMarker ? "" : (steps.Take(i).Count(a => !a.IsGroupMarker) + 1).ToString("N0", culture),
+            StepLayoutPart.Indent => new Thickness(Math.Max(0, indent) * IndentStep, 0, 0, 0),
+            // A folded group draws no line down to steps that are hidden.
+            StepLayoutPart.Rail => new StepRailInfo(Math.Max(0, indent), step is { ActionType: MacroActionType.GroupStart, Collapsed: true } ? MacroActionType.Delay : step.ActionType),
+            StepLayoutPart.Visibility => StepGroups.IsHidden(steps, i) ? Visibility.Collapsed : Visibility.Visible,
+            _ => step.ActionType switch
+            {
+                MacroActionType.GroupStart => Children(steps, i),
+                MacroActionType.GroupEnd when StepGroups.StartOf(steps, i) is var start and >= 0 => $"end of {steps[start].GroupName}",
+                _ => ""
+            }
+        };
+    }
+    private static string Children(IReadOnlyList<MacroAction> steps, int start)
+    {
+        int end = StepGroups.EndOf(steps, start);
+        int count = (end < 0 ? steps.Skip(start + 1) : steps.Skip(start + 1).Take(end - start - 1)).Count(a => !a.IsGroupMarker);
+        return count == 1 ? "1 step" : $"{count:N0} steps";
+    }
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+public sealed record StepRailInfo(int Indent, MacroActionType Kind)
+{
+    public static readonly StepRailInfo None = new(0, MacroActionType.Delay);
+}
+
+/// <summary>Draws the vertical lines that tie a group's steps to its header, and the corner that closes it.</summary>
+public sealed class StepRail : FrameworkElement
+{
+    public static readonly DependencyProperty InfoProperty = DependencyProperty.Register(nameof(Info), typeof(StepRailInfo), typeof(StepRail),
+        new FrameworkPropertyMetadata(StepRailInfo.None, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty BrushProperty = DependencyProperty.Register(nameof(Brush), typeof(Brush), typeof(StepRail),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+    public StepRailInfo Info { get => (StepRailInfo)GetValue(InfoProperty); set => SetValue(InfoProperty, value); }
+    public Brush? Brush { get => (Brush?)GetValue(BrushProperty); set => SetValue(BrushProperty, value); }
+    /// <summary>Lines sit under the centre of the group header's icon tile.</summary>
+    private const double TileCentre = 12, Thickness = 1.5;
+    protected override void OnRender(DrawingContext dc)
+    {
+        if (Brush == null) return;
+        var pen = new Pen(Brush, Thickness);
+        double h = ActualHeight, mid = Math.Round(h / 2);
+        double X(int level) => level * StepLayoutConverter.IndentStep + TileCentre;
+        // Groups this row sits inside run straight through it.
+        for (int level = 0; level < Info.Indent; level++) dc.DrawLine(pen, new Point(X(level), -1), new Point(X(level), h + 1));
+        if (Info.Kind == MacroActionType.GroupStart) dc.DrawLine(pen, new Point(X(Info.Indent), mid + 9), new Point(X(Info.Indent), h + 1));
+        else if (Info.Kind == MacroActionType.GroupEnd)
+        {
+            double x = X(Info.Indent);
+            dc.DrawLine(pen, new Point(x, -1), new Point(x, mid));
+            dc.DrawLine(pen, new Point(x, mid), new Point(x + 10, mid));
+        }
+    }
 }

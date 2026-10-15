@@ -151,10 +151,12 @@ public partial class MacroEditorView
         _steps = steps;
         ActionsListBox.ItemsSource = _steps;
         _steps.CollectionChanged += Steps_Changed;
+        StepsRevision++;
         RefreshThumbnail();
     }
     private void Steps_Changed(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        StepsRevision++;
         // Coalesce bursts of edits into one rebuild.
         if (_thumbnailQueued) return;
         _thumbnailQueued = true;
@@ -163,12 +165,13 @@ public partial class MacroEditorView
     private void RefreshThumbnail()
     {
         _thumbnailQueued = false;
-        var timeline = MacroTimeline.Build(_steps);
+        var timeline = MacroTimeline.Build(StepGroups.PlayedCount(_steps) <= StepGroups.MaxPlayedSteps ? StepGroups.Expand(_steps).ToList() : _steps.Where(a => !a.IsGroupMarker).ToList());
         Thumbnail.Timeline = timeline;
         ThumbnailEmpty.Visibility = timeline.HasPointer ? Visibility.Collapsed : Visibility.Visible;
         ThumbnailInfo.Text = $"{timeline.Duration / 1000:0.0} s";
-        StepCountText.Text = _steps.Count == 0 ? "" : $"{_steps.Count:N0} · {timeline.Duration / 1000:0.0} s";
+        int count = _steps.Count(a => !a.IsGroupMarker);
+        StepCountText.Text = count == 0 ? "" : $"{count:N0} · {timeline.Duration / 1000:0.0} s";
         NoStepsText.Visibility = _steps.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (_steps.Count == 0) StepEditor.Visibility = Visibility.Collapsed;
+        if (_steps.Count == 0) StepEditor.Visibility = BulkEditor.Visibility = GroupEditor.Visibility = Visibility.Collapsed;
     }
 }
