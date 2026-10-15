@@ -152,7 +152,23 @@
                   <TextBlock Text="Show or hide" Style="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center" Margin="14,0,7,0"/>
                   <Border Style="{StaticResource Keycap}" Padding="5,0"><TextBlock Text="Ctrl + Shift + I"/></Border>
                 </StackPanel>
-                <TextBlock x:Name="VersionText" Style="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="Keyloom version"/>
+                <!-- The version opens About: what's new and whether a newer version is out -->
+                <Button x:Name="VersionButton" Click="About_Click" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" ToolTip="What's new and updates" AutomationProperties.Name="About Keyloom and updates">
+                  <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                      <Border x:Name="Chip" CornerRadius="9" Padding="7,1" Background="Transparent">
+                        <StackPanel Orientation="Horizontal">
+                          <Path Data="{StaticResource IconInfo}" Fill="{DynamicResource MutedBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                          <TextBlock x:Name="VersionText" Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" Style="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
+                        </StackPanel>
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource HoverFillBrush}"/><Setter TargetName="VersionText" Property="Foreground" Value="{DynamicResource AccentBrush}"/></Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource HoverFillBrush}"/></Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Button.Template>
+                </Button>
               </Grid>
             </Grid>
             <!-- Editor, settings and help pages -->

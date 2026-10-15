@@ -50,6 +50,7 @@ public partial class MacroEditorView : UserControl
         _loadingStep = true; StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0; _loadingStep = false;
         BindSteps(_steps);
         InitializeStepList();
+        InitializeGapButton();
         InitializeTarget();
         InitializeIcon();
         SetMode((int)profile.Behavior);

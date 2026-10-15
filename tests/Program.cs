@@ -37,6 +37,8 @@ internal static partial class Program
             RecorderHookTests();
             FeatureUiTests();
             GroupUiTests();
+            MenuUiTests();
+            UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();
             if (args.Contains("--bench")) Benchmarks();

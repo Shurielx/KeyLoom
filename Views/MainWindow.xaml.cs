@@ -29,7 +29,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Backdrop.Attach(this);
-        VersionText.Text = AppVersion.Display;
+        VersionButton.Content = AppVersion.Display;
         var loaded = _storage.LoadProfiles();
         _profiles = loaded.Profiles;
         StatusText.Text = loaded.Warning;
@@ -104,6 +104,7 @@ public partial class MainWindow : Window
     }
     private void Settings_Click(object sender, RoutedEventArgs e) => ShowPage(new SettingsView(), "Settings", "Appearance, features and where your macros live.");
     private void Help_Click(object sender, RoutedEventArgs e) => ShowPage(new HelpView(), "Help", "How Keyloom works, in a minute.");
+    private void About_Click(object sender, RoutedEventArgs e) => ShowPage(new AboutView(), "About Keyloom", "What's new, and whether a newer version is out.");
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key == Key.Escape && !e.Handled)

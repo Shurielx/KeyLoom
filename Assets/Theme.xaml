@@ -325,8 +325,16 @@
           <ContentPresenter ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/>
         </StackPanel>
         <TextBlock Text="{TemplateBinding InputGestureText}" Style="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <!-- Submenus open to the side -->
+        <Path x:Name="SubmenuArrow" Data="M0 0L4 4L0 8" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.4" Width="5" Height="8" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Collapsed"/>
+        <Popup IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" Placement="Right" HorizontalOffset="-4" VerticalOffset="-6" AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+          <Border Margin="0,0,8,14" Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="4" Effect="{DynamicResource PopupShadow}" TextElement.Foreground="{DynamicResource InkBrush}">
+            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+          </Border>
+        </Popup>
       </Grid>
       <ControlTemplate.Triggers>
+        <Trigger Property="HasItems" Value="True"><Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/></Trigger>
         <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Item" Property="Opacity" Value="1"/></Trigger>
         <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".45"/></Trigger>
       </ControlTemplate.Triggers>

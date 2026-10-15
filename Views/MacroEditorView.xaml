@@ -197,9 +197,11 @@
             <Grid Grid.Row="1">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
               <Grid>
-                <ListBox x:Name="ActionsListBox" MinHeight="168" MaxHeight="216" SelectionMode="Extended" SelectionChanged="Step_Selected" MouseDoubleClick="Steps_DoubleClick"
+                <ListBox x:Name="ActionsListBox" MinHeight="168" MaxHeight="216" SelectionMode="Extended" SelectionChanged="Step_Selected" MouseDoubleClick="Steps_DoubleClick" ContextMenuOpening="Steps_ContextMenuOpening"
                          PreviewMouseLeftButtonDown="Steps_MouseDown" PreviewMouseMove="Steps_MouseMove" PreviewMouseLeftButtonUp="Steps_MouseUp" LostMouseCapture="Steps_LostCapture"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">
+                  <!-- Filled when it opens, from what is picked -->
+                  <ListBox.ContextMenu><ContextMenu x:Name="StepMenu"/></ListBox.ContextMenu>
                   <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                       <Setter Property="Padding" Value="4,0"/>
@@ -347,9 +349,32 @@
                         </MultiDataTrigger.Conditions>
                         <Setter TargetName="Tools" Property="Visibility" Value="Visible"/>
                       </MultiDataTrigger>
+                      <!-- Group ends go with their group; they have nothing to pick or number. -->
+                      <DataTrigger Binding="{Binding DataContext.IsGroupEnd, ElementName=Tile}" Value="True">
+                        <Setter TargetName="Pick" Property="Visibility" Value="Hidden"/><Setter TargetName="Grip" Property="Visibility" Value="Hidden"/>
+                      </DataTrigger>
                     </DataTemplate.Triggers>
                   </DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
+                <!-- + on the line between two rows inserts a wait there -->
+                <Canvas x:Name="GapLayer">
+                  <Rectangle x:Name="GapLine" Canvas.Left="58" Height="1" Fill="{DynamicResource AccentBrush}" Opacity=".45" IsHitTestVisible="False" Visibility="Collapsed"/>
+                  <Button x:Name="GapButton" Canvas.Left="6" Height="16" Click="GapButton_Click" Cursor="Hand" Focusable="False" Visibility="Collapsed" ToolTip="Insert a wait here" AutomationProperties.Name="Insert a wait here">
+                    <Button.Template>
+                      <ControlTemplate TargetType="Button">
+                        <Border x:Name="Pill" CornerRadius="8" Padding="6,0,8,0" Background="{DynamicResource BlueButtonBrush}" Effect="{DynamicResource AccentGlow}">
+                          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconPlus}" Fill="White" Width="8" Height="8" Stretch="Uniform" Margin="0,0,4,0"/>
+                            <TextBlock Text="Wait" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
+                          </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Pill" Property="Opacity" Value=".85"/></Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                    </Button.Template>
+                  </Button>
+                </Canvas>
                 <!-- Drag feedback: where the steps will land and how many are moving -->
                 <Canvas x:Name="DropLayer" IsHitTestVisible="False" ClipToBounds="True">
                   <Grid x:Name="DropLine" Height="8" Canvas.Left="6" Visibility="Collapsed">

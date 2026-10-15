@@ -1,6 +1,6 @@
 # Keyloom
 
-Simple keyboard and mouse macros for Windows. **0.1-dev-3**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, smooth animations, and light and dark themes. Everything happens in one window: the editor, settings and help open as pages, and dialogs appear inside it.
+Simple keyboard and mouse macros for Windows. **0.1-dev-4**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, smooth animations, and light and dark themes. Everything happens in one window: the editor, settings and help open as pages, and dialogs appear inside it.
 
 ![Keyloom](docs/screenshot.png)
 
@@ -52,11 +52,26 @@ Running apps in an isolated virtual machine is not included; see [validation not
 
 Click **Record** in the macro editor, choose what to capture, then switch to your target window during the 3-second countdown. **F8** or the recording panel stops capture; the panel also supports pause/resume.
 
-Keep recorded delays or add your own with **Add step → Wait**. Select a step to edit it below the list; changes apply as you type, and invalid input is flagged instead of applied. Hover a step to move, duplicate or remove it (**Delete** and **Alt + ↑/↓** work too). New recordings default to one run.
+Keep recorded delays or add your own with **Add step → Wait**. Select a step to edit it below the list; changes apply as you type, and invalid input is flagged instead of applied. New recordings default to one run.
 
 Pointer positions can be recorded on the **screen**, **relative to the window** that is in front when recording starts, or **relative to the start point** (offsets from wherever the pointer is when the macro starts). **Simplify mouse path** drops samples on straight stretches while keeping clicks, holds and total timing exact.
 
 Capture is active only while recording. Keyloom's own controls and synthetic input are excluded. Recordings stay local and are saved only with the macro. Sequences are limited to 20,000 steps; recording stops after 10 active minutes or at the step limit.
+
+## Edit steps
+
+Each step shows its number, an icon and colour for its kind and the detail that matters; waits are small chips so the rhythm of a sequence is easy to see.
+
+- **Pick several** with Ctrl+click, Shift+click, Ctrl+A or the checkbox that appears on hover. The panel below then edits them together: waits take **100** (set), **+20** / **-20** (add) or **x1.5** (scale), and mouse steps can switch button.
+- **Drag** a row to move it; dragging a picked row moves the whole pick. **Alt + ↑/↓** moves from the keyboard.
+- **Right-click** for insert wait before / after / between picked steps, group, duplicate several times, copy, cut, paste and delete. Hover the line between two rows for **+ Wait**.
+- **Ctrl + C / X / V / D** copy, cut, paste and duplicate (also between macros), **Delete** removes, **Ctrl + Z / Y** undo and redo.
+
+**Groups** keep related steps together. Pick steps and press **Ctrl + G**: a group has a name, can **play several times** and can add a **wait between its steps**, so a click with 100 ms between repeats is one setting rather than a column of copies. Groups nest, fold away with the arrow or a double-click, and **Ctrl + Shift + G** ungroups. Macros with groups need Keyloom 0.1-dev-4 or newer.
+
+## Updates and changelog
+
+Click the version in the bottom-right corner to open **About**: a short list of what changed in each version ([CHANGELOG.md](CHANGELOG.md)) and whether a newer release is out. Full notes are on the release pages. The changelog that came with your version works offline; when GitHub can be reached, Keyloom shows the newest one and checks the [releases](https://github.com/Shurielx/KeyLoom/releases). Keyloom only contacts GitHub while the About page is open, and it never downloads or installs anything by itself.
 
 ## Build
 
