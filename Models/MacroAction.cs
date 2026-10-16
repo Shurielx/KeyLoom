@@ -45,8 +45,11 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Gone { get; set; }
     /// <summary>Stop the macro when the target is not found in time, instead of going on with the next step.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool StopIfMissing { get; set; }
-    /// <summary>What an If checks, in words: "Play button is on the screen".</summary>
-    [JsonIgnore] public string Condition => $"{TargetName} {(Gone ? "is not on the screen" : "is on the screen")}";
+    /// <summary>An If that asks the AI this yes-or-no question about the screen instead of looking for a target. Experimental.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Question { get; set; }
+    [JsonIgnore] public bool AsksAi => !string.IsNullOrWhiteSpace(Question);
+    /// <summary>What an If checks, in words: "Play button is on the screen", or "AI says yes to: Is the shop open?".</summary>
+    [JsonIgnore] public string Condition => AsksAi ? $"AI says {(Gone ? "no" : "yes")} to: {Question}" : $"{TargetName} {(Gone ? "is not on the screen" : "is on the screen")}";
     // Grids: Click on a cell and Drag a matching pair.
     /// <summary>Name of the macro's <see cref="ScreenGrid"/> the step reads.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Grid { get; set; }

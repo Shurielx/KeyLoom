@@ -132,6 +132,9 @@ public sealed class WindowsOcrReader : IGridReader
 public sealed class GridLocator(IScreen screen, IWindowSystem windows, IntPtr window, IEnumerable<ScreenGrid> grids, IGridReader reader)
 {
     private readonly Dictionary<string, ScreenGrid> _grids = grids.ToDictionary(g => g.Name, StringComparer.OrdinalIgnoreCase);
+    public bool Has(string? name) => _grids.ContainsKey(name ?? "");
+    /// <summary>Where the grid is on the screen now.</summary>
+    public (int X, int Y, int Width, int Height) Area(string? name) { var g = Get(name); return ScreenAreas.Resolve(screen, windows, window, g.Area, g.Name); }
     public ScreenGrid Get(string? name) => _grids.TryGetValue(name ?? "", out var g) ? g : throw new ArgumentException($"There is no grid called '{name}'.");
     public GridReading Read(string? name)
     {

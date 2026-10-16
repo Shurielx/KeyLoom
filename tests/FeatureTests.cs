@@ -140,7 +140,7 @@ internal static partial class Program
         for (int i = 0; i < 1000; i++) { large.PositionAt(i * 80); large.DelayAt(i * 80); large.StepAt(i * 80); }
         Check(clock.ElapsedMilliseconds < 500, $"20,000-step timeline builds and answers 3,000 queries in {clock.ElapsedMilliseconds} ms");
 
-        Check(AppVersion.Format("0.1-dev-3+abc123") == "0.1-dev-3" && AppVersion.Display == "0.3-dev-9", "version is shown as 0.3-dev-9 without build metadata");
+        Check(AppVersion.Format("0.1-dev-3+abc123") == "0.1-dev-3" && AppVersion.Display == "0.3-dev-10", "version is shown as 0.3-dev-10 without build metadata");
         string settingsPath = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         new AppSettings { ShowExperimental = true }.Save(settingsPath);
         Check(AppSettings.Load(settingsPath).ShowExperimental, "experimental setting round-trips");
@@ -297,7 +297,7 @@ internal static partial class Program
         Check(options.Options is { Space: CoordinateSpace.Start, Simplify: true }, "record options choose coordinate space and simplification");
         string settingsFile = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         var settingsView = new SettingsView(settingsFile);
-        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.3-dev-9", "settings show the version");
+        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.3-dev-10", "settings show the version");
         ((RadioButton)settingsView.FindName("DarkThemeRadio")).IsChecked = true;
         Check(ThemeManager.IsDark && AppSettings.Load(settingsFile).Theme == AppTheme.Dark, "choosing a theme applies and saves it right away");
         ((RadioButton)settingsView.FindName("LightThemeRadio")).IsChecked = true;

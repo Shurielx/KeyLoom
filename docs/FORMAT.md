@@ -78,7 +78,7 @@ Every step has `"do"`, which says what it does.
 | `waitUntil` | `target`, `until`, `timeoutMs`, `ifTimeUp` | `{ "do": "waitUntil", "target": "Loading", "until": "gone" }` |
 | `clickCell` | `grid`, `pick`, `value`, `button`, `ifTimeUp` | `{ "do": "clickCell", "grid": "Board", "pick": "highest" }` |
 | `dragPair` | `grid`, `glideMs`, `button`, `ifTimeUp` | `{ "do": "dragPair", "grid": "Board", "glideMs": 150 }` |
-| `if` | `target`, `when`, `timeoutMs`, `steps`, `else` | see [If](#if) |
+| `if` | `target` or `ask`, `when`, `timeoutMs`, `steps`, `else` | see [If](#if) |
 | `group` | `steps`, `repeat`, `gapMs`, `name`, `collapsed` | see below |
 
 - **Buttons:** `left`, `right`, `middle`, `back`, `forward`.
@@ -153,6 +153,14 @@ An `if` plays its `steps` only when its target is on the screen (`"when": "shows
   { "do": "wait", "ms": 500 }
 ], "else": [
   { "do": "press", "key": "R" }
+] }
+```
+
+**Asking the AI (experimental).** Instead of a `target`, an `if` can have `ask`: a yes-or-no question the AI answers by looking at the macro's `window`, or the whole screen. Its steps play when the answer is yes (`"when": "yes"`, the default) or no (`"when": "no"`); an answer that is neither counts as no. It needs AI turned on in Settings; the AI only answers, it never clicks or types.
+
+```json
+{ "do": "if", "ask": "Is a reward window open?", "steps": [
+  { "do": "clickOn", "target": "Claim" }
 ] }
 ```
 

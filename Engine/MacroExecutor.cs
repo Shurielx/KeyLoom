@@ -3,7 +3,7 @@ using Keyloom.Models;
 
 namespace Keyloom.Engine;
 
-public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null, IGridReader? gridReader = null) : IAsyncDisposable
+public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null, IGridReader? gridReader = null, Func<IAiVision?>? ai = null) : IAsyncDisposable
 {
     private readonly IInputDriver _driver = driver ?? new InputSimulator();
     private readonly IWindowSystem _windows = windows ?? WindowSystem.Instance;
@@ -11,6 +11,8 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
     private readonly Func<IntPtr, IInputDriver> _switchDriver = switchDriver ?? (window => new FocusSwitchDriver(driver ?? new InputSimulator(), window, windows));
     private readonly IScreen _screen = screen ?? ScreenCapture.Instance;
     private readonly IGridReader _gridReader = gridReader ?? WindowsOcrReader.Instance;
+    /// <summary>The AI, made when a macro first asks it; null while AI is off in Settings.</summary>
+    private readonly Func<IAiVision?> _ai = ai ?? (() => Services.AppSettings.Current.AiSetup is { } setup ? new AiVision(setup) : null);
     /// <summary>How often a step that looks for a target checks the screen again.</summary>
     public const int LookEveryMs = 50;
     /// <summary>A drag holds the button this long before it moves and after it arrives.</summary>
@@ -82,8 +84,9 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             var pointer = new PointerResolver(_windows, window, p);
             var targets = new TargetLocator(_screen, _windows, window, p.Targets);
             var grids = new GridLocator(_screen, _windows, window, p.Grids, _gridReader);
+            var eyes = new AiEyes(_ai, _screen, _windows, window);
             var script = p.Behavior == MacroBehaviorType.Script
-                ? new MacroScript(p.Script, input, pointer, targets, grids, _windows, _screen, window, line => ScriptLogged?.Invoke(line), token) : null;
+                ? new MacroScript(p.Script, input, pointer, targets, grids, eyes, _windows, _screen, window, line => ScriptLogged?.Invoke(line), token) : null;
             using var timer = new TimerResolution(p.Behavior == MacroBehaviorType.Script || p.Behavior != MacroBehaviorType.PressAndHold &&
                 (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.GlideMs > 0 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
@@ -118,7 +121,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     {
                         if (!script.Run(count + 1)) { count++; break; }
                     }
-                    else foreach (var step in StepGroups.Expand(p.Actions, block => Holds(block, targets, token)))
+                    else foreach (var step in StepGroups.Expand(p.Actions, block => block.AsksAi ? eyes.Holds(block, token) : Holds(block, targets, token)))
                     {
                         token.ThrowIfCancellationRequested();
                         pointer.EnsureAlive();

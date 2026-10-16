@@ -41,6 +41,7 @@ public sealed partial class MacroScript
     private readonly PointerResolver _pointer;
     private readonly TargetLocator _targets;
     private readonly GridLocator _grids;
+    private readonly AiEyes _eyes;
     private readonly IWindowSystem _windows;
     private readonly IScreen _screen;
     private readonly IntPtr _window;
@@ -50,9 +51,9 @@ public sealed partial class MacroScript
     private readonly Random _random = new();
 
     internal MacroScript(string code, ExecutionInput input, PointerResolver pointer, TargetLocator targets, GridLocator grids,
-        IWindowSystem windows, IScreen screen, IntPtr window, Action<string> log, CancellationToken token)
+        AiEyes eyes, IWindowSystem windows, IScreen screen, IntPtr window, Action<string> log, CancellationToken token)
     {
-        _input = input; _pointer = pointer; _targets = targets; _grids = grids; _windows = windows; _screen = screen; _window = window; _log = log; _token = token;
+        _input = input; _pointer = pointer; _targets = targets; _grids = grids; _eyes = eyes; _windows = windows; _screen = screen; _window = window; _log = log; _token = token;
         _engine = new Jint.Engine(o =>
         {
             o.CancellationToken(token);
@@ -204,6 +205,9 @@ public sealed partial class MacroScript
             o.Set("pairFrom", pair?.From ?? -1); o.Set("pairTo", pair?.To ?? -1);
             return o;
         });
+        Function("ask", a => Ask(a, "ask", ""));
+        Function("askYesNo", a => AiVision.YesNo(Ask(a, "askYesNo", "\nAnswer only yes or no.")) == true);
+        Function("askNumber", a => AiVision.NumberIn(Ask(a, "askNumber", "\nAnswer only with the number.")) is { } n ? n : JsValue.Null);
         Function("log", a =>
         {
             _log(string.Join(" ", a.Select(Show)));
@@ -223,6 +227,39 @@ public sealed partial class MacroScript
     {
         if (ms > 0 && _token.WaitHandle.WaitOne(ms)) _token.ThrowIfCancellationRequested();
         _token.ThrowIfCancellationRequested();
+    }
+    /// <summary>
+    /// Asks the AI about the screen. The second argument says where it looks: nothing for the target window or the whole
+    /// screen, a target or grid name, an area { x, y, width, height }, or false for no picture at all.
+    /// </summary>
+    private string Ask(JsValue[] a, string name, string ending)
+    {
+        string question = Text(a, 0, name, $"a question, such as {name}(\"How many coins are there?\")");
+        (int X, int Y, int Width, int Height)? area = null;
+        bool look = true;
+        if (a.Length > 1 && !a[1].IsUndefined() && !a[1].IsNull())
+        {
+            var where = a[1];
+            if (where.IsBoolean()) look = where.AsBoolean();
+            else if (where.IsString())
+            {
+                string thing = where.AsString();
+                if (_grids.Has(thing)) area = _grids.Area(thing);
+                else
+                {
+                    try { area = _targets.SearchArea(_targets.Get(thing)); }
+                    catch (ArgumentException) { throw new ScriptUsageException($"{name}(): this macro has no target or grid called '{thing}'."); }
+                }
+            }
+            else if (where is ObjectInstance o && o.Get("width").IsNumber() && o.Get("height").IsNumber())
+            {
+                var (x, y, _) = Point([where], 0, name);
+                area = (x, y, (int)o.Get("width").AsNumber(), (int)o.Get("height").AsNumber());
+            }
+            else throw new ScriptUsageException($"{name}() looks at a target or grid by name, an area {{ x, y, width, height }}, or nothing with false.");
+        }
+        _input.Settle();
+        return _eyes.Ask(question + ending, area, look, _token);
     }
     private JsValue Watch(JsValue[] a, string name, bool gone)
     {
@@ -368,6 +405,9 @@ public sealed partial class MacroScript
         new("Screen", "clickOn", "clickOn(target, button?)", "Finds the target and clicks its middle. Gives true when it was there.", "clickOn(\"Play\")"),
         new("Screen", "colorAt", "colorAt(x, y) · colorAt(point)", "The color of one pixel, as \"#RRGGBB\".", "if (colorAt(20, 900) === \"#3FBF3F\") log(\"full health\")"),
         new("Grids", "readGrid", "readGrid(grid)", "Reads the numbers in a grid. Gives a grid with at(row, column), highest(), lowest(), find(number), empty(), pair() and cells(). Each cell has row, column, value, x and y, so click(cell) works.", "const board = readGrid(\"Board\")\nconst top = board.highest()\nif (top) click(top)"),
+        new("AI", "ask", "ask(question, where?)", "Asks the AI about the screen and gives back its answer as text. It looks at the target window, or the whole screen; give a target or grid name or { x, y, width, height } to show it less, or false to show it nothing. Needs AI on in Settings.", "const name = ask(\"What is the name of the open shop?\")\nlog(name)"),
+        new("AI", "askYesNo", "askYesNo(question, where?)", "Asks a yes-or-no question about the screen. Gives true for yes and false for anything else.", "if (askYesNo(\"Is a boss on the screen?\")) press(\"Q\")"),
+        new("AI", "askNumber", "askNumber(question, where?)", "Asks for a number on the screen, like coins or health. Gives the number, or null when there is none.", "const coins = askNumber(\"How many coins does the top bar show?\")\nif (coins !== null && coins >= 500) clickOn(\"Buy\")"),
         new("Other", "log", "log(...things)", "Writes to the Output under the script, to see what the script sees.", "log(\"score\", 42)"),
         new("Other", "stop", "stop(message?)", "Ends the macro. With a message, Keyloom shows it.", "stop(\"Out of energy\")"),
         new("Other", "random", "random(min, max)", "A whole number from min to max, both included.", "wait(random(200, 400))"),

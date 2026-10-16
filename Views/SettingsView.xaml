@@ -83,6 +83,53 @@
             </StackPanel>
           </Grid>
         </CheckBox>
+        <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,14"/>
+        <CheckBox x:Name="AiBox" Style="{StaticResource Switch}" Checked="Ai_Changed" Unchecked="Ai_Changed">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,12,0" VerticalAlignment="Top"><Path Data="{StaticResource IconAi}" Style="{StaticResource AccentIcon}"/></Border>
+            <StackPanel Grid.Column="1">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="AI" FontWeight="SemiBold"/>
+                <Border Style="{StaticResource Pill}" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock Text="Experimental" FontSize="10.5"/></Border>
+              </StackPanel>
+              <TextBlock Style="{StaticResource Hint}" FontSize="12" Margin="0,3,0,0"
+                         Text="Lets a running macro ask an AI about the screen: an If that plays when the AI says yes, and ask() in scripts. The AI only looks and answers. It never clicks, types or changes your macros."/>
+            </StackPanel>
+          </Grid>
+        </CheckBox>
+        <!-- Which AI, shown while AI is on -->
+        <StackPanel x:Name="AiPanel" Margin="46,14,0,0" Visibility="Collapsed">
+          <Border Style="{StaticResource SegmentBar}" HorizontalAlignment="Left">
+            <StackPanel Orientation="Horizontal">
+              <RadioButton x:Name="OllamaRadio" GroupName="AiProvider" Style="{StaticResource Segment}" Content="Ollama, on this PC" Checked="AiProvider_Changed"/>
+              <RadioButton x:Name="OpenRouterRadio" GroupName="AiProvider" Style="{StaticResource Segment}" Content="OpenRouter, online" Checked="AiProvider_Changed"/>
+            </StackPanel>
+          </Border>
+          <TextBlock x:Name="AiProviderHint" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+          <StackPanel x:Name="OllamaPanel">
+            <TextBlock Text="Ollama address" Style="{StaticResource FieldLabel}" Margin="0,12,0,4"/>
+            <TextBox x:Name="OllamaUrlTextBox" LostKeyboardFocus="AiField_Changed" AutomationProperties.Name="Ollama address"/>
+          </StackPanel>
+          <StackPanel x:Name="OpenRouterPanel">
+            <TextBlock Text="OpenRouter key" Style="{StaticResource FieldLabel}" Margin="0,12,0,4"/>
+            <PasswordBox x:Name="OpenRouterKeyBox" MinHeight="32" Padding="8,6" VerticalContentAlignment="Center" LostKeyboardFocus="AiField_Changed" AutomationProperties.Name="OpenRouter key"
+                         Background="{DynamicResource FieldBrush}" Foreground="{DynamicResource InkBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" CaretBrush="{DynamicResource InkBrush}"/>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,4,0,0" Text="Make one at openrouter.ai, under Keys. Keyloom keeps it encrypted for your Windows account."/>
+          </StackPanel>
+          <TextBlock Text="Model" Style="{StaticResource FieldLabel}" Margin="0,12,0,4"/>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <ComboBox x:Name="AiModelBox" IsEditable="True" LostKeyboardFocus="AiField_Changed" SelectionChanged="AiModel_Picked" AutomationProperties.Name="AI model"/>
+            <Button Grid.Column="1" Content="Load models" Click="LoadModels_Click" Padding="10,4" Margin="8,0,0,0" ToolTip="Lists the models that can look at pictures"/>
+          </Grid>
+          <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <Button x:Name="AiTestButton" Click="AiTest_Click" Padding="10,4">
+              <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconAi}" Style="{StaticResource AccentIcon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="Try it"/></StackPanel>
+            </Button>
+          </StackPanel>
+          <TextBlock x:Name="AiStatusText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+        </StackPanel>
         </StackPanel>
       </Border>
 

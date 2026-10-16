@@ -25,6 +25,12 @@ public partial class SettingsView : UserControl
         ExperimentalBox.IsChecked = settings.ShowExperimental;
         BuilderBox.IsChecked = settings.MacroBuilder;
         ScriptsBox.IsChecked = settings.Scripts;
+        AiBox.IsChecked = settings.Ai;
+        (settings.AiProvider == Engine.AiProvider.OpenRouter ? OpenRouterRadio : OllamaRadio).IsChecked = true;
+        OllamaUrlTextBox.Text = settings.OllamaUrl;
+        OpenRouterKeyBox.Password = Secret.Reveal(settings.OpenRouterKey);
+        AiModelBox.Text = settings.AiModel;
+        ShowAi();
         (settings.Theme switch { AppTheme.Light => LightThemeRadio, AppTheme.Dark => DarkThemeRadio, _ => SystemThemeRadio }).IsChecked = true;
         IndicatorBox.IsChecked = settings.ShowRunIndicator;
         SoundBox.IsChecked = settings.ClickSounds;
@@ -53,6 +59,84 @@ public partial class SettingsView : UserControl
     {
         if (!_loading) Save(s => s.Scripts = ScriptsBox.IsChecked == true);
     }
+    private void Ai_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        Save(s => s.Ai = AiBox.IsChecked == true);
+        ShowAi();
+    }
+    private Engine.AiProvider PickedProvider => OpenRouterRadio.IsChecked == true ? Engine.AiProvider.OpenRouter : Engine.AiProvider.Ollama;
+    private void ShowAi()
+    {
+        AiPanel.Visibility = AiBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        bool online = PickedProvider == Engine.AiProvider.OpenRouter;
+        OllamaPanel.Visibility = online ? Visibility.Collapsed : Visibility.Visible;
+        OpenRouterPanel.Visibility = online ? Visibility.Visible : Visibility.Collapsed;
+        AiProviderHint.Text = online
+            ? "Reaches models like Claude and Gemini over the internet. What the AI is shown, a picture of the window or screen, goes to OpenRouter and the model's maker, and each question costs a little."
+            : "Runs models on your PC, free and offline: nothing leaves it. Install Ollama from ollama.com and get a model that can see, such as: ollama pull gemma3";
+    }
+    private void AiProvider_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        // Model names differ between the two, so a model from the other one is not kept.
+        AiModelBox.ItemsSource = null; AiModelBox.Text = "";
+        Save(s => { s.AiProvider = PickedProvider; s.AiModel = ""; });
+        AiStatusText.Text = "";
+        ShowAi();
+    }
+    private void AiModel_Picked(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_loading && AiModelBox.SelectedItem is string model) Save(s => s.AiModel = model);
+    }
+    private void AiField_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        string url = OllamaUrlTextBox.Text.Trim(), key = OpenRouterKeyBox.Password.Trim(), model = AiModelBox.Text.Trim();
+        if (url.Length > 0 && !Uri.TryCreate(url, UriKind.Absolute, out _)) { AiStatusText.Text = "The Ollama address should look like http://localhost:11434."; return; }
+        Save(s =>
+        {
+            s.OllamaUrl = url.Length > 0 ? url : Engine.AiVision.DefaultOllamaUrl;
+            s.OpenRouterKey = Secret.Hide(key);
+            s.AiModel = model;
+        });
+    }
+    private Engine.AiSetup TypedSetup => new(PickedProvider, AiModelBox.Text.Trim(), OllamaUrlTextBox.Text.Trim(), OpenRouterKeyBox.Password.Trim());
+    private async void LoadModels_Click(object sender, RoutedEventArgs e)
+    {
+        AiStatusText.Text = "Loading models...";
+        try
+        {
+            var models = await Engine.AiVision.ModelsAsync(TypedSetup, AiHttp.Value);
+            string typed = AiModelBox.Text;
+            AiModelBox.ItemsSource = models;
+            AiModelBox.Text = typed;
+            AiStatusText.Text = models.Count == 0
+                ? PickedProvider == Engine.AiProvider.Ollama ? "Ollama has no models yet. Get one that can see, such as: ollama pull gemma3" : "No models that can look at pictures were found."
+                : $"{models.Count:N0} model{(models.Count == 1 ? "" : "s")} that can look at pictures. Pick one from the list.";
+            if (models.Count > 0) AiModelBox.IsDropDownOpen = true;
+        }
+        catch (InvalidOperationException ex) { AiStatusText.Text = ex.Message; }
+    }
+    /// <summary>Asks the model a short question about a small picture, to show that the setup works.</summary>
+    private async void AiTest_Click(object sender, RoutedEventArgs e)
+    {
+        AiField_Changed(sender, e);
+        var setup = TypedSetup;
+        AiStatusText.Text = $"Asking {setup.Model}...";
+        AiTestButton.IsEnabled = false;
+        try
+        {
+            // A plain blue square: easy to answer, and nothing from the screen is sent.
+            var blue = new Engine.PixelImage(64, 64, Enumerable.Repeat(0xFF2060E0u, 64 * 64).ToArray());
+            var clock = Stopwatch.StartNew();
+            string answer = await Task.Run(() => new Engine.AiVision(setup, AiHttp.Value).Ask("What color is this picture? Answer with one word.", blue, CancellationToken.None));
+            AiStatusText.Text = $"It works. Asked what color a blue square is, {setup.Model} said \"{answer}\" in {clock.Elapsed.TotalSeconds:N1} s.";
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException) { AiStatusText.Text = ex.Message; }
+        finally { AiTestButton.IsEnabled = true; }
+    }
+    private static readonly Lazy<System.Net.Http.HttpClient> AiHttp = new(() => Engine.AiVision.Client());
     private void Builder_Changed(object sender, RoutedEventArgs e)
     {
         if (!_loading) Save(s => s.MacroBuilder = BuilderBox.IsChecked == true);

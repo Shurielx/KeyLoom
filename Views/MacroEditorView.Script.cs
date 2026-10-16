@@ -37,6 +37,7 @@ public partial class MacroEditorView
     private void InitializeScript()
     {
         ScriptRadio.Visibility = AppSettings.Current.Scripts || Profile.Behavior == MacroBehaviorType.Script ? Visibility.Visible : Visibility.Collapsed;
+        AddAiIfItem.Visibility = AppSettings.Current.Ai ? Visibility.Visible : Visibility.Collapsed;
         ScriptBox.Text = Profile.Script;
         ScriptBox.Options.ConvertTabsToSpaces = true;
         ScriptBox.Options.IndentationSize = 2;

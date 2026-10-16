@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Keyloom.Engine;
 using Keyloom.Models;
+using Keyloom.Services;
 
 namespace Keyloom.Views;
 
@@ -50,10 +51,20 @@ public partial class MacroEditorView
         bool hasElse = end >= 0 && end + 1 < _steps.Count && _steps[end + 1] is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else };
         AddElseButton.Visibility = kind == BlockKind.If && !hasElse ? Visibility.Visible : Visibility.Collapsed;
         PlaceTargetOptions(kind == BlockKind.If);
-        IfTargetHost.Visibility = kind == BlockKind.If ? Visibility.Visible : Visibility.Collapsed;
+        IfTargetHost.Visibility = kind == BlockKind.If && !head.AsksAi ? Visibility.Visible : Visibility.Collapsed;
+        IfAskPanel.Visibility = kind == BlockKind.If && head.AsksAi ? Visibility.Visible : Visibility.Collapsed;
+        GroupIconPath.Data = (System.Windows.Media.Geometry)FindResource(kind == BlockKind.If ? head.AsksAi ? "IconAi" : "IconTarget" : "IconGroup");
         if (kind != BlockKind.If) return;
         bool loading = _loadingStep;
         _loadingStep = true;
+        if (head.AsksAi)
+        {
+            if (IfQuestionTextBox.Text != head.Question) IfQuestionTextBox.Text = head.Question;
+            IfAnswerBox.SelectedIndex = head.Gone ? 1 : 0;
+            AskResultText.Text = "";
+            _loadingStep = loading;
+            return;
+        }
         ShowIfOptions();
         TargetBox.SelectedItem = _targets.FirstOrDefault(t => string.Equals(t.Name, head.Target, StringComparison.OrdinalIgnoreCase))?.Name;
         UntilBox.SelectedIndex = head.Gone ? 1 : 0;
@@ -68,6 +79,7 @@ public partial class MacroEditorView
         string steps = $"{inside:N0} {(inside == 1 ? "step" : "steps")}";
         return head.Block switch
         {
+            BlockKind.If when head.AsksAi => $"Plays its {steps} only when the AI answers {(head.Gone ? "no" : "yes")}. It asks each time the macro gets here.",
             BlockKind.If => $"Plays its {steps} only when {head.Condition}" + (head.TimeoutMs > 0 ? $", looking for up to {head.TimeoutMs:N0} ms." : ", checked once."),
             BlockKind.Else => $"Plays its {steps} when the If above does not.",
             _ => ""
@@ -80,9 +92,17 @@ public partial class MacroEditorView
         try
         {
             var copy = _steps[_groupStart].Clone();
-            copy.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException("Pick what the If looks for, or take a new picture or color from the screen.");
-            copy.Gone = UntilBox.SelectedIndex == 1;
-            copy.TimeoutMs = Number(TimeoutTextBox.Text, "Time to look");
+            if (copy.AsksAi)
+            {
+                copy.Question = IfQuestionTextBox.Text.Trim().Length > 0 ? IfQuestionTextBox.Text.Trim() : throw new ArgumentException("Write a yes-or-no question for the AI.");
+                copy.Gone = IfAnswerBox.SelectedIndex == 1;
+            }
+            else
+            {
+                copy.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException("Pick what the If looks for, or take a new picture or color from the screen.");
+                copy.Gone = UntilBox.SelectedIndex == 1;
+                copy.TimeoutMs = Number(TimeoutTextBox.Text, "Time to look");
+            }
             var check = _steps.ToList(); check[_groupStart] = copy;
             StepGroups.Validate(check);
             if (!_editRemembered) { Remember(); _editRemembered = true; }
@@ -100,6 +120,46 @@ public partial class MacroEditorView
     {
         Attempt(() => MakeBlock(PickedBlock(), BlockKind.If));
         if (_targets.Count == 0 && IfPicked) Dispatcher.BeginInvoke(() => CaptureAsync(false));
+    }
+    /// <summary>Puts the picked steps in an If that asks the AI, and opens its question.</summary>
+    private void AddAiIf_Click(object sender, RoutedEventArgs e) => Attempt(() =>
+    {
+        MakeBlock(PickedBlock(), BlockKind.If);
+        if (!IfPicked) return;
+        var head = _steps[_groupStart].Clone();
+        head.Target = null; head.Question = "Is a shop window open?";
+        _committing = true;
+        try { _steps[_groupStart] = head; ActionsListBox.SelectedItem = head; }
+        finally { _committing = false; }
+        ShowSelection();
+        Dispatcher.BeginInvoke(() => { IfQuestionTextBox.Focus(); IfQuestionTextBox.SelectAll(); }, System.Windows.Threading.DispatcherPriority.Loaded);
+    });
+    private void IfQuestion_Changed(object sender, EventArgs e)
+    {
+        if (!_loadingStep && IsInitialized && IfPicked) CommitIf();
+    }
+    /// <summary>Asks the If's question now, so the answer can be checked before the macro runs.</summary>
+    private async void AskNow_Click(object sender, RoutedEventArgs e)
+    {
+        string question = IfQuestionTextBox.Text.Trim();
+        if (question.Length == 0) return;
+        if (AppSettings.Current.AiSetup is not { } setup) { AskResultText.Text = AiEyes.OffMessage; return; }
+        AskResultText.Text = $"Asking {setup.Model}...";
+        try
+        {
+            var answer = await OutOfTheWay(async () =>
+            {
+                IntPtr window = _window != null ? WindowSystem.Instance.Find(_window) : IntPtr.Zero;
+                var picture = new AiEyes(() => null, ScreenCapture.Instance, WindowSystem.Instance, window).Everything;
+                var shot = ScreenCapture.Instance.Capture(picture.X, picture.Y, picture.Width, picture.Height);
+                return await Task.Run(() => new AiVision(setup).Ask(question + "\nAnswer only yes or no.", shot, CancellationToken.None));
+            });
+            if (answer == null) return;
+            bool? yes = AiVision.YesNo(answer);
+            bool plays = yes == true != (IfAnswerBox.SelectedIndex == 1);
+            AskResultText.Text = $"The AI answered \"{answer}\", so the steps {(plays ? "would play" : "would not play")} now.";
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException) { AskResultText.Text = ex.Message; }
     }
     /// <summary>Adds an empty Else right after the picked If and picks it.</summary>
     private void AddElse_Click(object sender, RoutedEventArgs e) => Attempt(() =>

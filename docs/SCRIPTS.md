@@ -48,12 +48,32 @@ Points are on the screen, in pixels. Anything with an `x` and a `y` is a point: 
 | `clickOn(target, button?)` | Clicks the middle of the target. `true` when it was there. |
 | `colorAt(x, y)`, `colorAt(point)` | The color of one pixel, like `"#3FBF3F"`. |
 | `readGrid(grid)` | Reads the numbers in a grid. See below. |
+| `ask(question, where?)` | Asks the AI about the screen; gives its answer as text. Needs AI on in Settings. |
+| `askYesNo(question, where?)` | `true` when the AI answers yes, `false` for anything else. |
+| `askNumber(question, where?)` | The number the AI answers, or `null`. |
 | `log(...things)` | Writes to Output. |
 | `stop(message?)` | Ends the macro, showing the message if there is one. |
 | `random(min, max)` | A whole number from min to max, both included. |
 | `memory`, `run` | What carries over between runs, and the run number. |
 
 Targets and grids are the ones listed beside the script; add them there with **New picture**, **New color** and **New grid**, and use them by name in quotes.
+
+### Asking the AI
+
+With **Settings → Features → AI** on, `ask`, `askYesNo` and `askNumber` show the AI a picture and pass on its answer. The AI only answers; it cannot click, type or change the macro. `where` says what it sees:
+
+- nothing: the target window, or every screen when the macro has none
+- a target or grid name: just that part, like `askNumber("How many coins?", "Coin bar")`
+- `{ x, y, width, height }`: that area of the screen
+- `false`: no picture, only the question
+
+Each question takes a moment (often a second or more), and with OpenRouter each costs a little, so ask when it matters rather than in a tight loop.
+
+```js
+if (askYesNo("Is a reward window open?")) {
+  clickOn("Claim")
+}
+```
 
 ### Grids
 

@@ -2,6 +2,16 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-10 · 2026-10-17
+
+### Added
+- AI (experimental): macros can ask about the screen
+- Ollama on this PC, or OpenRouter for Claude and Gemini
+- If the AI says yes: steps play on the AI's answer
+- Scripts: ask, askYesNo and askNumber
+- Load models, Try it and Ask it now to check the setup
+- The AI only looks and answers, it never clicks
+
 ## 0.3-dev-9 · 2026-10-17
 
 ### Added

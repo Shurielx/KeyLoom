@@ -171,6 +171,7 @@
                     <MenuItem Header="Click a cell in a grid..." Tag="ClickCell" Click="AddGridStep_Click" ToolTip="Reads the numbers in a grid and clicks the highest, the lowest, a given number or an empty cell"><MenuItem.Icon><Path Data="{StaticResource IconGrid}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Drag a matching pair in a grid..." Tag="DragPair" Click="AddGridStep_Click" ToolTip="Reads the numbers in a grid and drags one of two equal numbers onto the other, lowest first"><MenuItem.Icon><Path Data="{StaticResource IconGrid}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="If something is on the screen..." Click="AddIf_Click" ToolTip="Plays the picked steps only when a picture or a color is on the screen, with an Else for when it is not"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                    <MenuItem x:Name="AddAiIfItem" Header="If the AI says yes..." Click="AddAiIf_Click" Visibility="Collapsed" ToolTip="Experimental: plays the picked steps only when the AI, looking at the screen, answers yes to your question"><MenuItem.Icon><Path Data="{StaticResource IconAi}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Group" Click="AddGroup_Click" InputGestureText="Ctrl+G" ToolTip="Groups the picked steps, or adds an empty group"><MenuItem.Icon><Path Data="{StaticResource IconGroup}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                   </ContextMenu>
                 </Button.ContextMenu>
@@ -626,6 +627,21 @@
               </Grid>
               <!-- An If: what it checks, using the same target fields as Click on target -->
               <ContentControl x:Name="IfTargetHost" Focusable="False" IsTabStop="False"/>
+              <!-- An If that asks the AI a question about the screen -->
+              <StackPanel x:Name="IfAskPanel" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                  <TextBlock Text="Question for the AI" Style="{StaticResource FieldLabel}" Margin="0"/>
+                  <Border Style="{StaticResource Pill}" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock Text="Experimental" FontSize="10.5"/></Border>
+                </StackPanel>
+                <TextBox x:Name="IfQuestionTextBox" Margin="0,6,0,0" TextWrapping="Wrap" MinHeight="56" VerticalContentAlignment="Top" MaxLength="2000" TextChanged="IfQuestion_Changed" AutomationProperties.Name="Question for the AI"/>
+                <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0" Text="Ask something with a yes or no answer, like: Is a shop window open? The AI looks at the target window, or at the whole screen, and only answers."/>
+                <TextBlock Text="Plays its steps when the answer is" Style="{StaticResource StackLabel}"/>
+                <ComboBox x:Name="IfAnswerBox" SelectedIndex="0" SelectionChanged="IfQuestion_Changed" AutomationProperties.Name="Answer that plays the steps"><ComboBoxItem Content="Yes"/><ComboBoxItem Content="No"/></ComboBox>
+                <Button Click="AskNow_Click" Padding="10,4" Margin="0,10,0,0" HorizontalAlignment="Left" ToolTip="Asks the AI now, with Keyloom out of the way, and shows its answer">
+                  <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconAi}" Style="{StaticResource AccentIcon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="Ask it now"/></StackPanel>
+                </Button>
+                <TextBlock x:Name="AskResultText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+              </StackPanel>
               <Button x:Name="AddElseButton" Click="AddElse_Click" Padding="10,4" Margin="0,12,0,0" HorizontalAlignment="Left" ToolTip="Adds steps that play when this If does not">
                 <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconPlus}" Style="{StaticResource Icon}" Width="10" Height="10" Margin="0,0,7,0"/><TextBlock Text="Add Else"/></StackPanel>
               </Button>

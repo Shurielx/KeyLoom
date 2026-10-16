@@ -219,7 +219,8 @@ public static class MacroFile
             {
                 var test = new StepDto
                 {
-                    Do = "if", Target = a.Target, When = a.Gone ? "gone" : "shows", TimeoutMs = a.TimeoutMs > 0 ? a.TimeoutMs : null,
+                    Do = "if", Target = a.AsksAi ? null : a.Target, Ask = a.AsksAi ? a.Question : null,
+                    When = a.AsksAi ? (a.Gone ? "no" : null) : a.Gone ? "gone" : "shows", TimeoutMs = a.TimeoutMs > 0 && !a.AsksAi ? a.TimeoutMs : null,
                     Name = NullIfEmpty(a.Name), Collapsed = a.Collapsed ? true : null, Steps = new()
                 };
                 current.Add(test); open.Push(current); current = test.Steps;
@@ -364,12 +365,21 @@ public static class MacroFile
                     case "if":
                         into.Add(new()
                         {
-                            ActionType = MacroActionType.GroupStart, Block = BlockKind.If, Target = Need(s.Target, "target", "\"Play button\""),
-                            Gone = (s.When ?? "shows").ToLowerInvariant() switch
-                            {
-                                "shows" => false, "gone" => true,
-                                _ => throw new ArgumentException($"unknown \"when\" \"{s.When}\". Use \"shows\" or \"gone\".")
-                            },
+                            ActionType = MacroActionType.GroupStart, Block = BlockKind.If,
+                            Target = s.Ask != null ? (s.Target == null ? null : throw new ArgumentException("an \"if\" takes a \"target\" or an \"ask\", not both."))
+                                : Need(s.Target, "target", "\"Play button\""),
+                            Question = s.Ask != null ? (s.Ask.Trim().Length > 0 ? s.Ask.Trim() : throw new ArgumentException("\"ask\" needs a yes-or-no question.")) : null,
+                            Gone = s.Ask != null
+                                ? (s.When ?? "yes").ToLowerInvariant() switch
+                                {
+                                    "yes" => false, "no" => true,
+                                    _ => throw new ArgumentException($"unknown \"when\" \"{s.When}\". An \"if\" that asks takes \"yes\" or \"no\".")
+                                }
+                                : (s.When ?? "shows").ToLowerInvariant() switch
+                                {
+                                    "shows" => false, "gone" => true,
+                                    _ => throw new ArgumentException($"unknown \"when\" \"{s.When}\". Use \"shows\" or \"gone\".")
+                                },
                             TimeoutMs = s.TimeoutMs ?? 0, Name = NullIfEmpty(s.Name), Collapsed = s.Collapsed ?? false
                         });
                         AddSteps(into, s.Steps ?? new(), path);
@@ -515,6 +525,7 @@ public static class MacroFile
         public string? Target { get; set; }
         public string? Until { get; set; }
         public string? When { get; set; }
+        public string? Ask { get; set; }
         public string? Grid { get; set; }
         public string? Pick { get; set; }
         public long? Value { get; set; }

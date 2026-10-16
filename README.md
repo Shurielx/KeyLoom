@@ -30,7 +30,7 @@ Repeat a click, hold a key, or build a sequence of steps and play it with a shor
 - Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
 - Clicks land where you picked them inside a window, and follow it when it moves. Games get a moment to see the cursor before the click.
 - Steps can find a picture or a color on the screen: click it wherever it is, wait until it shows up or goes away, or play some steps only if it is there.
-- **Experimental:** build a macro right on the screen, write macros as scripts, and run modes for games that keep your mouse free.
+- **Experimental:** build a macro right on the screen, write macros as scripts, ask an AI about the screen, and run modes for games that keep your mouse free.
 - Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
 - Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
 
@@ -138,6 +138,26 @@ if (board.highest()) click(board.highest())
 - Scripts reach only the keyboard, mouse and screen, through Keyloom. They cannot open files, go online or start programs.
 
 The full list is in [docs/SCRIPTS.md](docs/SCRIPTS.md).
+
+</details>
+
+<details>
+<summary><b>AI (experimental)</b></summary>
+<br>
+
+Turn on **Settings → Features → AI** and pick where the AI runs:
+
+- **Ollama, on this PC**: free, offline, nothing leaves your PC. Install [Ollama](https://ollama.com) and a model that can see, such as `ollama pull gemma3`.
+- **OpenRouter, online**: models like Claude and Gemini, with a key from openrouter.ai. Keyloom keeps the key encrypted for your Windows account. The pictures the AI is shown go to OpenRouter and the model's maker, and each question costs a little.
+
+**Load models** lists the models that can look at pictures, and **Try it** asks one about a blue square, so you know it works before a macro needs it.
+
+Then a macro can ask about the screen while it runs:
+
+- **Add step → If the AI says yes...** puts steps in an If with a yes-or-no question, like *Is a reward window open?* The AI looks at the target window, or the whole screen. **Ask it now** shows what it would answer.
+- Scripts have `ask()`, `askYesNo()` and `askNumber()`; see [docs/SCRIPTS.md](docs/SCRIPTS.md).
+
+The AI only looks and answers. It never clicks, types or writes macros; what happens next is always up to your steps or script.
 
 </details>
 
