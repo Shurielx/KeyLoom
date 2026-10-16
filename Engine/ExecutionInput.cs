@@ -1,7 +1,15 @@
+using System.Diagnostics;
+
 namespace Keyloom.Engine;
 
-internal sealed class ExecutionInput(IInputDriver driver)
+/// <param name="pointerSettleMs">How long a button press waits after the pointer moved; see <see cref="Models.MacroProfile.PointerSettleMs"/>.</param>
+/// <param name="cursor">Where the real pointer is, for a glide that starts before any position is known.</param>
+internal sealed class ExecutionInput(Func<(int X, int Y)> cursor, IInputDriver driver, int pointerSettleMs = 0)
 {
+    /// <summary>A gliding cursor takes a step about this often; close to one frame on a 120 Hz screen.</summary>
+    private const int GlideStepMs = 8;
+    private readonly Stopwatch _sinceMove = new();
+    private (int X, int Y)? _position;
     private readonly HashSet<ushort> _keys = new();
     private readonly HashSet<string> _buttons = new();
     private readonly HashSet<char> _characters = new();
@@ -18,6 +26,7 @@ internal sealed class ExecutionInput(IInputDriver driver)
     public void MouseDown(string button)
     {
         if (_buttons.Contains(button)) return;
+        SettlePointer();
         driver.Mouse(button, true); _buttons.Add(button);
     }
     public void MouseUp(string button)
@@ -45,8 +54,40 @@ internal sealed class ExecutionInput(IInputDriver driver)
             driver.Character(ch, false); _characters.Remove(ch);
         }
     }
-    public void Move(int x, int y) => driver.Move(x, y);
-    public void Position(int x, int y) => driver.Position(x, y);
+    public void Move(int x, int y)
+    {
+        driver.Move(x, y);
+        if (x != 0 || y != 0) { _position = null; _sinceMove.Restart(); }
+    }
+    public void Position(int x, int y)
+    {
+        driver.Position(x, y);
+        // Clicking the same point again, as repeat input does, needs no wait.
+        if (_position != (x, y)) _sinceMove.Restart();
+        _position = (x, y);
+    }
+    /// <summary>Moves the cursor in a straight line to a spot over a time, so the app sees it travel instead of jump.</summary>
+    public void Glide(int x, int y, int milliseconds, CancellationToken token)
+    {
+        var (fromX, fromY) = _position ?? cursor();
+        var clock = Stopwatch.StartNew();
+        while (clock.ElapsedMilliseconds < milliseconds)
+        {
+            double t = clock.Elapsed.TotalMilliseconds / milliseconds;
+            var at = ((int)Math.Round(fromX + (x - fromX) * t), (int)Math.Round(fromY + (y - fromY) * t));
+            if (at != _position) Position(at.Item1, at.Item2);
+            if (token.WaitHandle.WaitOne(GlideStepMs)) token.ThrowIfCancellationRequested();
+        }
+        Position(x, y);
+    }
+    /// <summary>Waits out the rest of the settle time after the last move; a Wait step in between already did.</summary>
+    private void SettlePointer()
+    {
+        if (!_sinceMove.IsRunning) return;
+        long left = pointerSettleMs - _sinceMove.ElapsedMilliseconds;
+        _sinceMove.Reset();
+        if (left > 0) Thread.Sleep((int)left);
+    }
     public void Scroll(int amount) => driver.Scroll(amount);
     /// <summary>Called when the macro waits; a quick-switch driver gives focus back unless something is still held.</summary>
     public void Settle()

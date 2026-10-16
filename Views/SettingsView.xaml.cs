@@ -23,6 +23,7 @@ public partial class SettingsView : UserControl
         _path = path; _profiles = profiles ?? []; _usage = usage;
         var settings = AppSettings.Current;
         ExperimentalBox.IsChecked = settings.ShowExperimental;
+        BuilderBox.IsChecked = settings.MacroBuilder;
         (settings.Theme switch { AppTheme.Light => LightThemeRadio, AppTheme.Dark => DarkThemeRadio, _ => SystemThemeRadio }).IsChecked = true;
         IndicatorBox.IsChecked = settings.ShowRunIndicator;
         (settings.IndicatorPlace switch { IndicatorPlace.TopRight => PlaceTopRightRadio, IndicatorPlace.BottomRight => PlaceBottomRightRadio, _ => PlaceTopRadio }).IsChecked = true;
@@ -45,6 +46,10 @@ public partial class SettingsView : UserControl
     private void Experimental_Changed(object sender, RoutedEventArgs e)
     {
         if (!_loading) Save(s => s.ShowExperimental = ExperimentalBox.IsChecked == true);
+    }
+    private void Builder_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_loading) Save(s => s.MacroBuilder = BuilderBox.IsChecked == true);
     }
     private void Indicator_Changed(object sender, RoutedEventArgs e)
     {

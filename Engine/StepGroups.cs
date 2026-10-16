@@ -107,22 +107,26 @@ public static class StepGroups
     /// <summary>
     /// When each step first plays in one run, in milliseconds from the start, counting waits and the waits groups add.
     /// Group markers take the time of the step after them. With more played steps than <see cref="MaxPlayedSteps"/>
-    /// the times count each step once.
+    /// the times count each step once. With <paramref name="clickDelayMs"/>, the first click or hold after a cursor move
+    /// starts no earlier than that long after the move, as it plays.
     /// </summary>
-    public static double[] StartTimes(IReadOnlyList<MacroAction> steps)
+    public static double[] StartTimes(IReadOnlyList<MacroAction> steps, int clickDelayMs = 0)
     {
         var times = new double[steps.Count];
         var index = new Dictionary<MacroAction, int>(ReferenceEqualityComparer.Instance);
         for (int i = 0; i < steps.Count; i++) if (!steps[i].IsGroupMarker) index.TryAdd(steps[i], i);
         var seen = new bool[steps.Count];
         int left = index.Count;
-        double time = 0;
+        double time = 0, moved = double.NegativeInfinity;
         var played = PlayedCount(steps) <= MaxPlayedSteps ? Expand(steps) : steps.Where(a => !a.IsGroupMarker);
         foreach (var step in played)
         {
             if (left == 0) break;
+            bool press = step.ActionType is MacroActionType.MouseClick or MacroActionType.MouseDown;
+            if (press) { time = Math.Max(time, moved + clickDelayMs); moved = double.NegativeInfinity; }
             if (index.TryGetValue(step, out int i) && !seen[i]) { seen[i] = true; times[i] = time; left--; }
-            if (step.ActionType == MacroActionType.Delay) time += step.DelayMs;
+            time += step.DurationMs;
+            if (step.ActionType is MacroActionType.MousePosition or MacroActionType.MouseMove) moved = time;
         }
         double next = time;
         for (int i = steps.Count - 1; i >= 0; i--)

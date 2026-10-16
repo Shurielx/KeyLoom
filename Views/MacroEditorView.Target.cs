@@ -21,6 +21,7 @@ public partial class MacroEditorView
         _pointX = Profile.PointX; _pointY = Profile.PointY;
         UsePointBox.IsChecked = Profile.UsePoint;
         ScaleBox.IsChecked = Profile.ScaleWithWindow;
+        RestoreCursorBox.IsChecked = Profile.RestoreCursor;
         (Profile.ExecutionMode switch { ExecutionMode.Background => BackgroundModeRadio, ExecutionMode.QuickSwitch => SwitchModeRadio, _ => StandardModeRadio }).IsChecked = true;
         Unloaded += (_, _) => { _picker?.Dispose(); _picker = null; };
     }
@@ -41,6 +42,7 @@ public partial class MacroEditorView
         ClearWindowButton.IsEnabled = ScaleBox.IsEnabled = _window != null;
         RunModePanel.Visibility = ShowRunMode ? Visibility.Visible : Visibility.Collapsed;
         TestButton.Visibility = RunMode != ExecutionMode.Standard ? Visibility.Visible : Visibility.Collapsed;
+        RestoreCursorBox.Visibility = RunMode == ExecutionMode.QuickSwitch ? Visibility.Visible : Visibility.Collapsed;
         RunModeHint.Text = RunMode switch
         {
             ExecutionMode.Background => "Sends input to the target window only, so your mouse stays free. Many games, Roblox included, ignore it. Test it first.",
@@ -172,6 +174,7 @@ public partial class MacroEditorView
         p.PointX = _pointX; p.PointY = _pointY;
         p.ScaleWithWindow = ScaleBox.IsChecked == true;
         p.ExecutionMode = RunMode;
+        p.RestoreCursor = RestoreCursorBox.IsChecked == true;
     }
     private void TestBackground_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
@@ -181,7 +184,7 @@ public partial class MacroEditorView
         var probe = new MacroProfile { Window = _window, ScaleWithWindow = ScaleBox.IsChecked == true };
         var resolver = new PointerResolver(WindowSystem.Instance, window, probe);
         bool quick = RunMode == ExecutionMode.QuickSwitch;
-        IInputDriver driver = quick ? new FocusSwitchDriver(new InputSimulator(), window) : new WindowMessageDriver(window);
+        IInputDriver driver = quick ? new FocusSwitchDriver(new InputSimulator(), window) { RestoreCursor = RestoreCursorBox.IsChecked == true } : new WindowMessageDriver(window);
         string sent;
         if (Mode != 2 && KeyboardTarget)
         {
@@ -206,10 +209,20 @@ public partial class MacroEditorView
     });
     private async void Preview_Click(object sender, RoutedEventArgs e)
     {
+        if (SheetLayer.For(this) is { IsOpen: true }) return;
         Say("");
         var p = new MacroProfile { Name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : "Macro", Actions = new(_steps.Select(a => a.Clone())) };
         ApplyTarget(p);
         if (SheetLayer.For(this) is { } sheets) await sheets.ShowAsync(new PreviewView(p, null, TestRun == null ? null : RunTestAsync), 680);
+    }
+    private List<MacroAction> _played = [];
+    /// <summary>Rings the spots of the picked steps on the route, every time a group plays them.</summary>
+    private void ShowRouteFocus()
+    {
+        var picked = new HashSet<MacroAction>(ActionsListBox.SelectedItems.Cast<MacroAction>(), ReferenceEqualityComparer.Instance);
+        // A picked group rings everything inside it.
+        foreach (int i in WholeGroups(SelectedIndices())) picked.Add(_steps[i]);
+        Thumbnail.Highlight = picked.Count == 0 ? [] : Enumerable.Range(0, _played.Count).Where(i => picked.Contains(_played[i])).ToHashSet();
     }
     private void BindSteps(ObservableCollection<MacroAction> steps)
     {
@@ -235,8 +248,10 @@ public partial class MacroEditorView
         var index = new Dictionary<MacroAction, int>(ReferenceEqualityComparer.Instance);
         for (int i = 0; i < _steps.Count; i++) if (!_steps[i].IsGroupMarker) index.TryAdd(_steps[i], i);
         var played = (StepGroups.PlayedCount(_steps) <= StepGroups.MaxPlayedSteps ? StepGroups.Expand(_steps) : _steps.Where(a => !a.IsGroupMarker)).ToList();
+        _played = played;
         var timeline = MacroTimeline.Build(played);
         Thumbnail.Timeline = timeline;
+        ShowRouteFocus();
         // One position is a spot, not a route; the strip already shows it.
         bool route = timeline.Points.Select(p => (p.X, p.Y)).Distinct().Skip(1).Any();
         PreviewCard.Visibility = route ? Visibility.Visible : Visibility.Collapsed;

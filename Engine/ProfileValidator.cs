@@ -15,6 +15,7 @@ public static class ProfileValidator
         if (p.PrimaryVk > 254 || p.PrimaryModifiers > 15) throw new ArgumentException("Invalid shortcut.");
         if (p.SpamIntervalMs is < 1 or > 3600000) throw new ArgumentException("Repeat interval must be between 1 and 3600000 ms.");
         if (p.StartDelayMs is < 0 or > 3600000) throw new ArgumentException("Start delay must be between 0 and 3600000 ms.");
+        if (p.PointerSettleMs is < 0 or > 1000) throw new ArgumentException("Click delay after moving must be between 0 and 1000 ms.");
         if (p.RepeatCount is < 0 or > 1000000) throw new ArgumentException("Repeat count must be between 0 and 1000000. Use 0 to loop.");
         if (p.Behavior == MacroBehaviorType.Sequence)
         {
@@ -62,6 +63,7 @@ public static class ProfileValidator
             case MacroActionType.Delay when a.DelayMs is < 1 or > 3600000: throw new ArgumentException("Step delay must be between 1 and 3600000 ms.");
             case MacroActionType.MouseMove when Math.Abs((long)a.X) > 10000 || Math.Abs((long)a.Y) > 10000: throw new ArgumentException("Relative mouse movement is limited to 10000 px per axis.");
             case MacroActionType.MousePosition when !Enum.IsDefined(a.Space) || Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000: throw new ArgumentException("Pointer coordinates are out of range.");
+            case MacroActionType.MousePosition when a.GlideMs is < 0 or > 60000: throw new ArgumentException("A cursor can glide for 0 to 60000 ms.");
             case MacroActionType.MouseScroll when a.ScrollAmount is < -100 or > 100 or 0: throw new ArgumentException("Use a scroll amount from -100 to 100, excluding 0.");
             case MacroActionType.Text when string.IsNullOrEmpty(a.Text) || a.Text.Length > 10000: throw new ArgumentException("Text steps must contain between 1 and 10000 characters.");
         }

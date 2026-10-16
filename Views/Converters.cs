@@ -24,12 +24,12 @@ public sealed record StepView(string Tone, Geometry? Icon, string Title, string 
             MacroActionType.KeyUp => new("Hold", Find("IconRelease"), "Release", a.KeyName, false, true),
             MacroActionType.Delay => new("Wait", Find("IconClock"), "Wait", $"{a.DelayMs:N0} ms", true, false),
             MacroActionType.MouseMove => new("Move", Find("IconMove"), "Move by", $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} px", false, false),
-            MacroActionType.MousePosition => new("Move", Find("IconTarget"), "Move to", a.Space switch
+            MacroActionType.MousePosition => new("Move", Find("IconTarget"), a.GlideMs > 0 ? "Glide to" : "Cursor to", a.Space switch
             {
                 CoordinateSpace.Window => $"{a.X}, {a.Y} · in window",
                 CoordinateSpace.Start => $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} · from start",
                 _ => $"{a.X}, {a.Y} · on screen"
-            }, false, false),
+            } + (a.GlideMs > 0 ? $" · {a.GlideMs:N0} ms" : ""), false, false),
             MacroActionType.MouseScroll => new("Move", Find("IconScroll"), "Scroll",
                 $"{Math.Abs(a.ScrollAmount)} notch{(Math.Abs(a.ScrollAmount) == 1 ? "" : "es")} {(a.ScrollAmount < 0 ? "down" : "up")}", false, false),
             MacroActionType.GroupStart => new("Group", Find("IconGroup"), a.GroupName, string.Join(" · ", new[]

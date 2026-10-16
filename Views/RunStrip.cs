@@ -44,7 +44,7 @@ public sealed class RunStrip : FrameworkElement
         for (int i = 0; i < played.Count; i++)
         {
             _times[i] = time;
-            if (played[i].ActionType == MacroActionType.Delay) time += played[i].DelayMs;
+            time += played[i].DurationMs;
         }
         _duration = time;
         InvalidateVisual();

@@ -64,16 +64,16 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
         var progressClock = Stopwatch.StartNew();
         try
         {
-            input = new ExecutionInput(p.ExecutionMode switch
+            input = new ExecutionInput(_windows.Cursor, p.ExecutionMode switch
             {
                 ExecutionMode.Background => _backgroundDriver(window),
-                ExecutionMode.QuickSwitch => _switchDriver(window),
+                ExecutionMode.QuickSwitch => _switchDriver(window) is var quick && quick is FocusSwitchDriver focus ? WithCursor(focus, p.RestoreCursor) : quick,
                 _ => _driver
-            });
+            }, p.PointerSettleMs);
             Wait(p.StartDelayMs, token);
             var pointer = new PointerResolver(_windows, window, p);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
-                (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
+                (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.GlideMs > 0 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
             {
                 if (p.TargetType == TargetInputType.Mouse && p.UsePoint)
@@ -144,10 +144,17 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             case MacroActionType.MouseMove: input.Move(a.X, a.Y); break;
             case MacroActionType.MousePosition:
                 var (x, y) = pointer.Resolve(a.Space, a.X, a.Y);
-                input.Position(x, y); break;
+                if (a.GlideMs > 0) input.Glide(x, y, a.GlideMs, token);
+                else input.Position(x, y);
+                break;
             case MacroActionType.MouseScroll: input.Scroll(a.ScrollAmount); break;
             case MacroActionType.Text: input.Text(a.Text, token); break;
         }
+    }
+    private static FocusSwitchDriver WithCursor(FocusSwitchDriver driver, bool restore)
+    {
+        driver.RestoreCursor = restore;
+        return driver;
     }
     private static void Wait(int milliseconds, CancellationToken token)
     {

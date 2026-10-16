@@ -35,7 +35,7 @@ public partial class PreviewView : UserControl, IDisposable
         var resolver = new PointerResolver(windows, window, profile);
         _timeline = MacroTimeline.Build(_steps, (space, x, y) => resolver.Resolve(space, x, y));
         _starts = new double[_steps.Count];
-        for (int i = 0, t = 0; i < _steps.Count; i++) { _starts[i] = t; if (_steps[i].ActionType == MacroActionType.Delay) t += _steps[i].DelayMs; }
+        for (int i = 0, t = 0; i < _steps.Count; i++) { _starts[i] = t; t += _steps[i].DurationMs; }
         Route.Timeline = _timeline;
         Route.Visibility = _timeline.HasPointer ? Visibility.Visible : Visibility.Collapsed;
         NowPanel.Visibility = _timeline.HasPointer ? Visibility.Collapsed : Visibility.Visible;

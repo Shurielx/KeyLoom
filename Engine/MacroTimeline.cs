@@ -3,7 +3,9 @@ using Keyloom.Models;
 namespace Keyloom.Engine;
 
 public enum TimelineEventKind { Click, Down, Up, Scroll, Key, Text }
-public readonly record struct TimelinePoint(double Time, double X, double Y);
+/// <param name="Step">The step that put the pointer here, or -1.</param>
+/// <param name="Glides">The pointer travels here from the point before in a straight line, instead of jumping.</param>
+public readonly record struct TimelinePoint(double Time, double X, double Y, int Step = -1, bool Glides = false);
 public readonly record struct TimelineEvent(double Time, double X, double Y, TimelineEventKind Kind, int Step);
 public readonly record struct TimelineDelay(double Start, double Duration, int Step);
 
@@ -47,10 +49,16 @@ public sealed class MacroTimeline
             {
                 case MacroActionType.Delay:
                     delays.Add(new(time, a.DelayMs, i)); time += a.DelayMs; break;
+                case MacroActionType.MousePosition when a.GlideMs > 0 && known:
+                    // A glide leaves from where the pointer is and arrives when its time is up.
+                    points.Add(new(time, x, y, i));
+                    time += a.GlideMs;
+                    (x, y) = resolve(a.Space, a.X, a.Y); Place(i, glides: true); break;
                 case MacroActionType.MousePosition:
-                    (x, y) = resolve(a.Space, a.X, a.Y); Place(); break;
+                    time += a.GlideMs;
+                    (x, y) = resolve(a.Space, a.X, a.Y); Place(i); break;
                 case MacroActionType.MouseMove:
-                    x += a.X; y += a.Y; Place(); break;
+                    x += a.X; y += a.Y; Place(i); break;
                 default:
                     var kind = a.ActionType switch
                     {
@@ -64,13 +72,13 @@ public sealed class MacroTimeline
             }
         }
         return new(points, events, delays, time);
-        void Place()
+        void Place(int step, bool glides = false)
         {
             // Inputs before the first known position happen wherever the pointer starts; draw them at the first position.
             if (!known) foreach (int e in pending) events[e] = events[e] with { X = x, Y = y };
             known = true; pending.Clear();
-            if (points.Count > 0 && points[^1].Time == time) points[^1] = new(time, x, y);
-            else points.Add(new(time, x, y));
+            // Moves without a wait between them share a time but are all kept, so the route still passes every one.
+            points.Add(new(time, x, y, step, glides));
         }
     }
     /// <summary>Planned pointer position at a time: the last position reached, since playback jumps between samples.</summary>
@@ -81,6 +89,12 @@ public sealed class MacroTimeline
         if (i < 0) i = ~i - 1;
         while (i + 1 < _pointTimes.Length && _pointTimes[i + 1] == time) i++;
         var p = Points[Math.Max(0, i)];
+        // Part way through a glide, the pointer is on the line between its ends.
+        if (i >= 0 && i + 1 < Points.Count && Points[i + 1] is { Glides: true } next && next.Time > p.Time)
+        {
+            double t = (time - p.Time) / (next.Time - p.Time);
+            return (p.X + (next.X - p.X) * t, p.Y + (next.Y - p.Y) * t);
+        }
         return (p.X, p.Y);
     }
     /// <summary>The delay running at a time, with how far through it playback is (0..1).</summary>

@@ -38,6 +38,7 @@ public partial class MacroEditorView : UserControl
         SelectButton(profile.TargetMouseButton);
         TargetKeyTextBox.Text = profile.TargetKey;
         StartDelayTextBox.Text = profile.StartDelayMs.ToString();
+        SettleTextBox.Text = profile.PointerSettleMs.ToString();
         IntervalTextBox.Text = profile.SpamIntervalMs.ToString();
         RunsTextBox.Text = profile.RepeatCount.ToString();
         StepTypeBox.ItemsSource = new[]
@@ -45,9 +46,9 @@ public partial class MacroEditorView : UserControl
             new StepChoice(MacroActionType.MouseClick, "Click"), new(MacroActionType.MouseDown, "Hold button"),
             new(MacroActionType.MouseUp, "Release button"), new(MacroActionType.KeyPress, "Press key"),
             new(MacroActionType.KeyDown, "Hold key"), new(MacroActionType.KeyUp, "Release key"),
-            new(MacroActionType.Delay, "Wait"), new(MacroActionType.MouseMove, "Move pointer by"),
+            new(MacroActionType.Delay, "Wait"), new(MacroActionType.MouseMove, "Move cursor by"),
             new(MacroActionType.MouseScroll, "Scroll"), new(MacroActionType.Text, "Type text"),
-            new(MacroActionType.MousePosition, "Move pointer to")
+            new(MacroActionType.MousePosition, "Cursor position")
         };
         _loadingStep = true; StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0; _loadingStep = false;
         BindSteps(_steps);
@@ -57,6 +58,7 @@ public partial class MacroEditorView : UserControl
         InitializeIcon();
         SetMode((int)profile.Behavior);
         InitializeRecording();
+        InitializeBuilder();
         MoreToggle.IsChecked = profile.Window != null && profile.Behavior == MacroBehaviorType.Sequence || profile.ExecutionMode != ExecutionMode.Standard;
         Loaded += (_, _) => { if (isNew) { MacroNameTextBox.Focus(); MacroNameTextBox.SelectAll(); } };
     }
@@ -105,6 +107,8 @@ public partial class MacroEditorView : UserControl
         KeyLabel.Visibility = KeyPanel.Visibility = keyboard ? Visibility.Visible : Visibility.Collapsed;
         IntervalPanel.Visibility = RunsPanel.Visibility = hold ? Visibility.Collapsed : Visibility.Visible;
         IntervalLabel.Text = sequence ? "Pause between runs" : "Every";
+        // Only pointer input can follow a move.
+        SettlePanel.Visibility = sequence || !keyboard ? Visibility.Visible : Visibility.Collapsed;
         ModeHintText.Visibility = hold ? Visibility.Visible : Visibility.Collapsed;
         UpdateTargetUi();
         UpdateIconPreview();
@@ -186,6 +190,7 @@ public partial class MacroEditorView : UserControl
         GroupEditor.Visibility = group >= 0 ? Visibility.Visible : Visibility.Collapsed;
         BulkEditor.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
         Strip.Picked = count == 1 ? ActionsListBox.SelectedIndex : -1;
+        ShowRouteFocus();
         if (count > 1) { ShowStepHint(""); ShowBulk(); return; }
         if (group >= 0) { ShowGroup(group); return; }
         int i = ActionsListBox.SelectedIndex;
@@ -196,6 +201,7 @@ public partial class MacroEditorView : UserControl
         StepMouseBox.SelectedIndex = Math.Max(0, Array.IndexOf(ProfileButtons, a.MouseButton));
         StepSpaceBox.SelectedIndex = (int)a.Space;
         ThenClickBox.IsChecked = HasClickAfter(i);
+        GlideTextBox.Text = a.GlideMs.ToString();
         StepValueTextBox.Text = a.ActionType switch
         {
             MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",
@@ -217,7 +223,11 @@ public partial class MacroEditorView : UserControl
             var parts = value.Split(',');
             if (parts.Length != 2) throw new ArgumentException("Enter the position as x, y.");
             a.X = Number(parts[0], "X"); a.Y = Number(parts[1], "Y");
-            if (StepType == MacroActionType.MousePosition) a.Space = (CoordinateSpace)Math.Max(0, StepSpaceBox.SelectedIndex);
+            if (StepType == MacroActionType.MousePosition)
+            {
+                a.Space = (CoordinateSpace)Math.Max(0, StepSpaceBox.SelectedIndex);
+                a.GlideMs = Number(GlideTextBox.Text, "Glide");
+            }
         }
         ProfileValidator.ValidateAction(a); return a;
     }
@@ -265,6 +275,7 @@ public partial class MacroEditorView : UserControl
         p.TargetMouseButton = SelectedButton;
         p.TargetKey = TargetKeyTextBox.Text.Trim();
         p.StartDelayMs = Number(StartDelayTextBox.Text, "Start delay");
+        p.PointerSettleMs = Number(SettleTextBox.Text, "Click delay after moving");
         p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, "Interval");
         p.RepeatCount = p.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, "Runs");
         p.Actions = new(_steps.Select(a => a.Clone()));

@@ -21,13 +21,16 @@ public sealed class PathPreview : FrameworkElement
     private static readonly Pen WhitePen = Frozen(new Pen(Brushes.White, 1.5));
     private static readonly Pen HoldPen = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromRgb(210, 65, 47))), 1.5));
     private readonly VisualCollection _layers;
-    private readonly DrawingVisual _route = new(), _marker = new();
+    private static readonly Pen FocusPen = Frozen(new Pen(Accent, 2.5));
+    private static readonly Pen FocusHalo = Frozen(new Pen(Frozen(new SolidColorBrush(Color.FromArgb(0xC0, 255, 255, 255))), 5.5));
+    private readonly DrawingVisual _route = new(), _focus = new(), _marker = new();
+    private IReadOnlyCollection<int> _highlight = [];
     private MacroTimeline? _timeline;
     private Func<double, double, Point>? _map;
     private double _time;
     public PathPreview()
     {
-        _layers = new(this) { _route, _marker };
+        _layers = new(this) { _route, _focus, _marker };
         // The route is drawn into a texture once, so playback only composes it instead of re-tessellating every frame.
         _route.CacheMode = new BitmapCache();
         Loaded += (_, _) => Services.ThemeManager.Changed += Redraw;
@@ -37,6 +40,8 @@ public sealed class PathPreview : FrameworkElement
     public Func<double, double, Point>? Map { get => _map; set { _map = value; Redraw(); } }
     public MacroTimeline? Timeline { get => _timeline; set { _timeline = value; Redraw(); } }
     public bool ShowMarker { get; set; } = true;
+    /// <summary>Timeline step indices whose spots are ringed, like the steps picked in the list.</summary>
+    public IReadOnlyCollection<int> Highlight { get => _highlight; set { _highlight = value; DrawFocus(); } }
     public double Time
     {
         get => _time;
@@ -45,7 +50,7 @@ public sealed class PathPreview : FrameworkElement
     protected override int VisualChildrenCount => _layers.Count;
     protected override Visual GetVisualChild(int index) => _layers[index];
     protected override void OnRenderSizeChanged(SizeChangedInfo info) { base.OnRenderSizeChanged(info); Redraw(); }
-    public void Redraw() { DrawRoute(); DrawMarker(); }
+    public void Redraw() { DrawRoute(); DrawFocus(); DrawMarker(); }
     private Point Project(double x, double y)
     {
         if (_map != null) return _map(x, y);
@@ -95,6 +100,20 @@ public sealed class PathPreview : FrameworkElement
         dc.DrawGeometry(null, HoldPen, holds);
         dc.DrawGeometry(ClickFill, WhitePen, clicks);
         dc.DrawEllipse(StartFill, WhitePen, Project(t.Points[0].X, t.Points[0].Y), 4.5, 4.5);
+    }
+    private void DrawFocus()
+    {
+        using var dc = _focus.RenderOpen();
+        if (_highlight.Count == 0 || _timeline is not { HasPointer: true } t || ActualWidth <= 0) return;
+        var spots = new HashSet<(int, int)>();
+        foreach (var p in t.Points) if (_highlight.Contains(p.Step)) spots.Add(((int)p.X, (int)p.Y));
+        foreach (var e in t.Events) if (_highlight.Contains(e.Step) && e.Kind is not (TimelineEventKind.Key or TimelineEventKind.Text)) spots.Add(((int)e.X, (int)e.Y));
+        foreach (var (x, y) in spots.Take(200))
+        {
+            var p = Project(x, y);
+            dc.DrawEllipse(null, FocusHalo, p, 9, 9);
+            dc.DrawEllipse(null, FocusPen, p, 9, 9);
+        }
     }
     private void DrawMarker()
     {

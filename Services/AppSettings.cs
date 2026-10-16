@@ -8,6 +8,8 @@ namespace Keyloom.Services;
 public sealed class AppSettings
 {
     public bool ShowExperimental { get; set; }
+    /// <summary>Experimental: shows Build on screen in the editor.</summary>
+    public bool MacroBuilder { get; set; }
     public AppTheme Theme { get; set; }
     /// <summary>Keeps a small "running" card on screen while a macro runs.</summary>
     public bool ShowRunIndicator { get; set; } = true;
@@ -30,7 +32,7 @@ public sealed class AppSettings
     }
     public AppSettings With(Action<AppSettings> change)
     {
-        var next = new AppSettings { ShowExperimental = ShowExperimental, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace };
+        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace };
         change(next); return next;
     }
     public void Save(string? path = null)

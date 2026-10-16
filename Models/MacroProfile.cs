@@ -31,8 +31,16 @@ public class MacroProfile : INotifyPropertyChanged
     public int SpamIntervalMs { get; set; } = 50;
     public int StartDelayMs { get; set; } = 500;
     public int RepeatCount { get; set; }
+    /// <summary>
+    /// Wait after the pointer moves before a button is pressed. Games read input once per frame, and a press in the
+    /// same frame as the jump can land at the old spot or be missed. 0 presses right away.
+    /// </summary>
+    public int PointerSettleMs { get; set; } = DefaultPointerSettleMs;
+    public const int DefaultPointerSettleMs = 20;
     public ObservableCollection<MacroAction> Actions { get; set; } = new();
     public ExecutionMode ExecutionMode { get; set; }
+    /// <summary>Quick switch puts your cursor back where it was each time it hands the window back.</summary>
+    public bool RestoreCursor { get; set; } = true;
     public WindowTarget? Window { get; set; }
     /// <summary>Repeat and hold modes use PointX, PointY (window client coordinates) instead of the current pointer.</summary>
     public bool UsePoint { get; set; }
@@ -117,8 +125,8 @@ public class MacroProfile : INotifyPropertyChanged
         FallbackVk = FallbackVk, FallbackModifiers = FallbackModifiers,
         Behavior = Behavior, TargetType = TargetType, TargetMouseButton = TargetMouseButton,
         TargetKey = TargetKey, SpamIntervalMs = SpamIntervalMs, StartDelayMs = StartDelayMs,
-        RepeatCount = RepeatCount, Actions = new(Actions.Select(a => a.Clone())),
-        ExecutionMode = ExecutionMode, Window = Window, UsePoint = UsePoint, PointX = PointX, PointY = PointY,
+        RepeatCount = RepeatCount, PointerSettleMs = PointerSettleMs, Actions = new(Actions.Select(a => a.Clone())),
+        ExecutionMode = ExecutionMode, RestoreCursor = RestoreCursor, Window = Window, UsePoint = UsePoint, PointX = PointX, PointY = PointY,
         ScaleWithWindow = ScaleWithWindow, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
     };
     /// <summary>True when execution needs the target window to be found first.</summary>

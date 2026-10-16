@@ -125,6 +125,9 @@
                 <Button Click="Record_Click" Margin="0,0,6,0" Padding="11,4" ToolTip="Record mouse and keyboard input">
                   <StackPanel Orientation="Horizontal"><Grid Width="10" Height="10" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Fill="{DynamicResource RecordHaloBrush}"/><Ellipse Width="6" Height="6" Fill="{DynamicResource RecordBrush}"/></Grid><TextBlock Text="Record"/></StackPanel>
                 </Button>
+                <Button x:Name="BuilderButton" Click="Builder_Click" Margin="0,0,6,0" Padding="11,4" Visibility="Collapsed" ToolTip="Experimental: place points, clicks and waits right on the screen">
+                  <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconFlask}" Style="{StaticResource AccentIcon}" Width="10" Height="11" Margin="0,0,7,0"/><TextBlock Text="Build on screen"/></StackPanel>
+                </Button>
                 <Button Click="Preview_Click" Margin="0,0,6,0" Padding="11,4" ToolTip="Watch what happens and when, without sending any input">
                   <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconPlay}" Style="{StaticResource AccentIcon}" Width="9" Height="10" Margin="0,0,7,0"/><TextBlock Text="Preview"/></StackPanel>
                 </Button>
@@ -139,8 +142,8 @@
                       <MenuItem Header="Press a key" Tag="KeyPress" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconKeyboard}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                       <MenuItem Header="Wait" Tag="Delay" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconClock}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                       <MenuItem Header="Type text" Tag="Text" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconText}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
-                      <MenuItem Header="Move pointer to" Tag="MousePosition" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
-                      <MenuItem Header="Move pointer by" Tag="MouseMove" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconMove}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                      <MenuItem Header="Cursor position" Tag="MousePosition" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                      <MenuItem Header="Move cursor by" Tag="MouseMove" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconMove}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                       <MenuItem Header="Scroll" Tag="MouseScroll" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconScroll}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                       <Separator/>
                       <MenuItem Header="Hold or release a button" Tag="MouseDown" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconHold}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
@@ -149,7 +152,7 @@
                       <MenuItem Header="Group" Click="AddGroup_Click" InputGestureText="Ctrl+G" ToolTip="Groups the picked steps, or adds an empty group"><MenuItem.Icon><Path Data="{StaticResource IconGroup}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                       <Separator/>
                       <MenuItem Header="Click at a point in a window..." Tag="Click" Click="PickPoint_Click" ToolTip="Adds a move to the point and a click"><MenuItem.Icon><Path Data="{StaticResource IconCursorMove}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
-                      <MenuItem Header="Move to a point in a window..." Tag="Move" Click="PickPoint_Click" ToolTip="Adds only the move, without a click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                      <MenuItem Header="Cursor to a point in a window..." Tag="Move" Click="PickPoint_Click" ToolTip="Adds only the move, without a click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     </ContextMenu>
                   </Button.ContextMenu>
                 </Button>
@@ -497,6 +500,9 @@
                   <Button Click="RepickPoint_Click" Padding="10,4" Margin="0,0,14,0" ToolTip="Click the new spot in the target window. Esc cancels.">
                     <StackPanel Orientation="Horizontal"><Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3"/><Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}"/></Grid><TextBlock Text="Pick the point again"/></StackPanel>
                   </Button>
+                  <TextBlock Text="Glide" Style="{StaticResource InlineLabel}"/>
+                  <TextBox x:Name="GlideTextBox" Width="56" Text="0" TextChanged="StepField_Changed" ToolTip="0 jumps straight there. More moves the cursor along a line over that time, so the app sees it travel."/>
+                  <TextBlock Text="ms" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
                   <CheckBox x:Name="ThenClickBox" Content="Click after moving" VerticalAlignment="Center" Checked="ThenClick_Changed" Unchecked="ThenClick_Changed" ToolTip="Adds or removes a click right after this move"/>
                 </StackPanel>
                 <TextBlock x:Name="StepHintText" Style="{StaticResource Hint}" Margin="0,7,0,0"/>
@@ -519,9 +525,14 @@
                 <TextBox x:Name="RunsTextBox" Width="64" ToolTip="0 repeats until you stop it"/>
                 <TextBlock Text="0 = until stopped" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="6,0,0,0"/>
               </StackPanel>
-              <StackPanel Orientation="Horizontal">
+              <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
                 <TextBlock Text="Start after" Style="{StaticResource InlineLabel}"/>
                 <TextBox x:Name="StartDelayTextBox" Width="72"/>
+                <TextBlock Text="ms" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+              </StackPanel>
+              <StackPanel x:Name="SettlePanel" Orientation="Horizontal" ToolTip="Clicks and holds wait at least this long after the cursor arrives, so games see it there first. A Wait step before the click counts toward it. 0 clicks right away.">
+                <TextBlock Text="Click delay after moving" Style="{StaticResource InlineLabel}"/>
+                <TextBox x:Name="SettleTextBox" Width="56"/>
                 <TextBlock Text="ms" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,0,0"/>
               </StackPanel>
             </WrapPanel>
@@ -561,6 +572,8 @@
                 </Border>
               </Grid>
               <TextBlock x:Name="RunModeHint" Style="{StaticResource Hint}" Margin="28,8,0,0"/>
+              <CheckBox x:Name="RestoreCursorBox" Content="Put my cursor back after each step" Margin="28,10,0,0" IsChecked="True"
+                        ToolTip="When the macro hands your window back, your cursor returns to where you left it, so you can keep working. Off leaves it where the macro clicked."/>
               <Button x:Name="TestButton" Content="Send a test input" Click="TestBackground_Click" Margin="28,10,0,0" HorizontalAlignment="Left" ToolTip="Send one input to the target window in this mode"/>
             </StackPanel>
           </Border>

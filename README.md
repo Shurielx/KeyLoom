@@ -24,10 +24,12 @@ Repeat a click, hold a key, or build a sequence of steps and play it with a shor
 |---|---|
 | **Repeat** | Click or press a key again and again, as often as every 1 ms. |
 | **Hold** | Keep a key or mouse button held down until you stop it. |
-| **Sequence** | Clicks, keys, waits, pointer moves, scrolling and text, recorded or built step by step. |
+| **Sequence** | Clicks, holds, keys, waits, cursor moves, scrolling and text, recorded or built step by step. |
 
 - One window: the editor, settings and help open as pages, and dialogs appear inside it.
 - Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
+- Clicks land where you picked them inside a window, and follow it when it moves. Games get a moment to see the cursor before the click.
+- **Experimental:** build a macro right on the screen, and run modes for games that keep your mouse free.
 - Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
 - Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
 
@@ -60,21 +62,46 @@ Steps read like a table: the number, what the step does and **when it starts** i
 
 **Test run** plays the macro once for real, without saving it. Keyloom steps out of the way while it runs and comes back when it's done.
 
-## Clicking inside another window
+## Cursor positions and other windows
 
 **Pick point** lets you click once inside another window. Keyloom remembers the window and the spot, so clicks follow it when the window moves, and can scale with it when it's resized. The click you pick with never reaches the app; Esc cancels.
 
-- In a sequence, **Add step** offers **Click at a point** (a move and a click) or **Move to a point** (just the move).
-- Select a *Move to* step to **pick its point again**, or tick **Click after moving** to add or remove the click after it.
+- **Add step → Click at a point** adds a cursor position and a click; **Cursor to a point** adds only the cursor position.
+- Pick a *Cursor position* step to **pick its point again**, add or remove the **click after moving**, or set **Glide** to move the cursor there over that many milliseconds instead of jumping.
+- **Click delay after moving** (next to the run settings, 20 ms by default) makes a click or hold wait at least that long after the cursor arrives. Games read input once per frame; without it, a click can land before the game sees the cursor there. A Wait step before the click counts toward it, and 0 clicks right away.
+
+<details>
+<summary><b>Macro builder (experimental)</b></summary>
+<br>
+
+Turn on **Settings → Features → Macro builder**. **Build on screen** in the steps card then hides Keyloom and covers the screen with the macro's points, numbered in the order they play. Each point is a cursor position and whatever happens there: clicks, holds, waits, keys or text. It works, but it is still rough around the edges.
+
+- **Left click** picks a point and drags it; Ctrl+click picks more. Nothing is added by accident.
+- **Right click** on empty space adds a point there (*Click here*, *Hold here*, *Cursor here*) or steps at the end. Right click on a point adds steps to it, switches between jumping and gliding there, groups, duplicates or deletes it.
+- A **dashed** line jumps the cursor to the next point, a **solid** one glides it. The time on a line is how long the macro stays at a point before going on; click it to change it.
+- The **panel** shows the picked point as a small timeline: how the cursor gets there, each step with the time it starts after the cursor arrives, and the wait before the next point. A hold is one row, like *Hold Left for 200 ms*; for keys, click the field and press the key. **All steps** lists the whole macro with start times, groups and the click delay. Drag the panel by its title or hide it with **H**.
+- A **group** plays its points together: *Repeat* sets how many times in a row, *Extra wait* adds a pause after every step inside it (usually 0).
+
+| Keys | In the builder |
+|---|---|
+| <kbd>Esc</kbd> | Unpick, then finish |
+| <kbd>Delete</kbd> | Delete the picked points |
+| <kbd>Ctrl</kbd> + <kbd>G</kbd> / <kbd>D</kbd> / <kbd>A</kbd> | Group, duplicate, pick all |
+| <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo |
+| <kbd>H</kbd> | Hide or show the panel |
+
+**Done** puts the steps in the editor and brings Keyloom back; one Ctrl+Z there brings back what was there before.
+
+</details>
 
 <details>
 <summary><b>Run modes for games (experimental)</b></summary>
 <br>
 
-Turn on **Settings → Experimental features**, then choose a run mode under **More options** in the editor. Both need a target window picked with **Pick point**; **Send a test input** checks that it reacts.
+Turn on **Settings → Features → Experimental features**, then choose a run mode under **More options** in the editor. Both need a target window picked with **Pick point**; **Send a test input** checks that it reacts.
 
 - **Background** sends clicks and keys straight to the window, so your own mouse and keyboard stay free. Many games, Roblox included, ignore it.
-- **Quick switch** works with those games. For each input it brings the window forward for about 70 ms, sends real input at the point, then hands focus and the pointer back. Best for inputs a second or more apart. The game can sit behind other windows or on another monitor, but not minimized.
+- **Quick switch** works with those games. For each burst of input it brings the window forward for a moment, sends real input at the point, then hands your window back. With **Put my cursor back after each step** (on by default) your cursor returns to where you left it, so you can keep working between steps. Best for inputs a second or more apart. The game can sit behind other windows or on another monitor, but not minimized.
 
 </details>
 
@@ -117,5 +144,5 @@ dotnet run --project Keyloom.csproj
 - Builds are unsigned while Keyloom is in development, so Windows may ask before the first start.
 - Some apps reject synthetic input, and some games forbid automation in their rules. Check before you use it there.
 - One macro runs at a time. Sequences hold up to 20,000 steps; recordings stop after 10 active minutes.
-- Macros with groups need Keyloom 0.1-dev-4 or newer.
+- Macros with groups need Keyloom 0.1-dev-4 or newer. Older versions play a glide as a jump and skip the click delay.
 - See the [validation notes](docs/VALIDATION.md) for what has been tested.

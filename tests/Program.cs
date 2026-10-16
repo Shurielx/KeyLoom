@@ -27,6 +27,7 @@ internal static partial class Program
             RecordingTests().GetAwaiter().GetResult();
             FeatureEngineTests().GetAwaiter().GetResult();
             GroupEngineTests().GetAwaiter().GetResult();
+            BuilderEngineTests().GetAwaiter().GetResult();
             StorageTests();
             PolishEngineTests();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -41,6 +42,7 @@ internal static partial class Program
             MenuUiTests();
             PolishUiTests();
             DeleteAllUndoTests();
+            BuilderUiTests();
             UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();

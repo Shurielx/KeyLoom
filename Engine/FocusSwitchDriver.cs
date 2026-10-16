@@ -34,6 +34,8 @@ public sealed class FocusSwitchDriver : IInputDriver, IBurstDriver
     private bool _engaged;
     private IntPtr _previous;
     private (int X, int Y) _cursor;
+    /// <summary>Puts your cursor back where it was when focus is handed back. Off leaves it where the macro moved it.</summary>
+    public bool RestoreCursor { get; set; } = true;
     public int X { get; private set; }
     public int Y { get; private set; }
 
@@ -77,7 +79,7 @@ public sealed class FocusSwitchDriver : IInputDriver, IBurstDriver
         _engaged = false;
         if (_previous == IntPtr.Zero) return;
         _focus.Pause(SettleMs);
-        _focus.SetCursor(_cursor.X, _cursor.Y);
+        if (RestoreCursor) _focus.SetCursor(_cursor.X, _cursor.Y);
         _focus.Activate(_previous);
     }
 }

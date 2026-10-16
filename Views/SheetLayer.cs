@@ -21,7 +21,16 @@ public sealed class SheetLayer : Grid
     {
         var scrim = new Border();
         scrim.SetResourceReference(Border.BackgroundProperty, "ScrimBrush");
-        scrim.MouseLeftButtonDown += (_, _) => Close(content, false);
+        // Closes on release, and only for a press that began on the backdrop. Closing on the press let the release
+        // fall through to whatever lay underneath, like the route card, which opened the sheet straight back up.
+        bool pressed = false;
+        scrim.MouseLeftButtonDown += (_, e) => { pressed = true; e.Handled = true; };
+        scrim.MouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            if (pressed) Close(content, false);
+            pressed = false;
+        };
         var surface = new Border { Child = content, BorderThickness = new(1), CornerRadius = new(12), Padding = new(18, 16, 18, 16) };
         surface.SetResourceReference(Border.BackgroundProperty, "SheetBrush");
         surface.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");

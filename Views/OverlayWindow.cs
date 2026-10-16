@@ -24,9 +24,11 @@ public abstract class OverlayWindow : Window
     {
         base.OnSourceInitialized(e);
         var hwnd = new WindowInteropHelper(this).Handle;
-        // Transparent to hit testing, layered, tool window, no activation.
-        SetWindowLong(hwnd, -20, GetWindowLong(hwnd, -20) | 0x20 | 0x80000 | 0x80 | 0x08000000);
+        // Transparent to hit testing, layered, tool window, no activation. Interactive overlays keep only the tool window style.
+        SetWindowLong(hwnd, -20, GetWindowLong(hwnd, -20) | (ClickThrough ? 0x20 | 0x80000 | 0x80 | 0x08000000 : 0x80));
     }
+    /// <summary>False for overlays you work in, like the builder: they take clicks and keyboard focus.</summary>
+    protected virtual bool ClickThrough => true;
     /// <summary>Pixels per DIP for this window's current monitor.</summary>
     protected double Scale => VisualTreeHelper.GetDpi(this).DpiScaleX;
     /// <summary>Places the window over a rectangle in physical pixels; skipped when unchanged.</summary>
@@ -42,4 +44,6 @@ public abstract class OverlayWindow : Window
     protected Size LocalSize => new(_bounds.Width / Scale, _bounds.Height / Scale);
     /// <summary>Converts a screen pixel to a position inside this window in DIPs.</summary>
     protected Point ToLocal(double x, double y) => new((x - _bounds.X) / Scale, (y - _bounds.Y) / Scale);
+    /// <summary>Converts a position inside this window in DIPs back to a screen pixel.</summary>
+    protected (int X, int Y) ToScreen(Point local) => ((int)Math.Round(_bounds.X + local.X * Scale), (int)Math.Round(_bounds.Y + local.Y * Scale));
 }

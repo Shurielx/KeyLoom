@@ -2,6 +2,24 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.2-dev-1 · 2026-10-16
+
+### New
+- Macro builder (experimental): build macros on the screen
+- Builder: right click adds clicks, holds, keys and waits
+- Builder: a timeline per point and a list of all steps
+- Cursor position can glide there instead of jumping
+- Quick switch can put your cursor back after each step
+- Picking a step rings its spot on the route
+
+### Changed
+- Clicks wait 20 ms after a move so games see it (settable)
+- Move to is now called Cursor position
+
+### Fixed
+- Clicking beside Preview no longer reopens it
+- Route shows every move, also without waits between them
+
 ## 0.1-dev-6 · 2026-10-16
 
 ### Fixed
