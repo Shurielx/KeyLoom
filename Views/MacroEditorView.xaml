@@ -3,6 +3,7 @@
   <UserControl.Resources>
     <local:StepViewConverter x:Key="StepView"/>
     <local:StepLayoutConverter x:Key="StepLayout"/>
+    <local:HiddenWhenTrueConverter x:Key="HiddenWhenTrue"/>
     <Style x:Key="RowTool" TargetType="Button" BasedOn="{StaticResource IconButton}">
       <Setter Property="Width" Value="24"/><Setter Property="Height" Value="24"/><Setter Property="MinHeight" Value="0"/><Setter Property="Margin" Value="1,0,0,0"/>
     </Style>
@@ -15,6 +16,15 @@
     </Style>
     <Style x:Key="InspectorTitle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
       <Setter Property="FontSize" Value="14"/>
+    </Style>
+    <!-- A More options section: a line above it, what it holds while closed, and its own surface while open -->
+    <Style x:Key="MoreSection" TargetType="Border">
+      <Setter Property="BorderThickness" Value="0,1,0,0"/><Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
+      <Setter Property="Margin" Value="0,16,0,0"/><Setter Property="Padding" Value="0,10,0,0"/>
+    </Style>
+    <Style x:Key="MoreBox" TargetType="Border">
+      <Setter Property="Margin" Value="0,8,0,0"/><Setter Property="Padding" Value="12,0,12,12"/><Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}"/><Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style x:Key="Unit" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
       <Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="6,0,0,0"/>
@@ -426,8 +436,14 @@
                   <StackPanel Orientation="Horizontal"><Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3"/><Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}"/></Grid><TextBlock Text="Pick the point again"/></StackPanel>
                 </Button>
                 <CheckBox x:Name="ThenClickBox" Content="Click after moving" Margin="0,10,0,0" Checked="ThenClick_Changed" Unchecked="ThenClick_Changed" ToolTip="Adds or removes a click right after this move"/>
-                <ToggleButton x:Name="StepMoreToggle" Style="{StaticResource Disclosure}" Content="More options" Margin="0,12,0,0" HorizontalAlignment="Left"/>
-                <StackPanel Visibility="{Binding IsChecked, ElementName=StepMoreToggle, Converter={StaticResource BoolToVisibility}}">
+                <Border Style="{StaticResource MoreSection}">
+                <StackPanel>
+                <ToggleButton x:Name="StepMoreToggle" Style="{StaticResource Disclosure}" Content="More options" HorizontalAlignment="Left"/>
+                <TextBlock Text="Where x, y count from, and gliding" Style="{StaticResource Muted}" FontSize="12" Margin="22,2,0,0">
+                  <TextBlock.Visibility><Binding Path="IsChecked" ElementName="StepMoreToggle" Converter="{StaticResource HiddenWhenTrue}"/></TextBlock.Visibility>
+                </TextBlock>
+                <Border Style="{StaticResource MoreBox}" Visibility="{Binding IsChecked, ElementName=StepMoreToggle, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
                   <TextBlock Text="Measured from" Style="{StaticResource StackLabel}"/>
                   <ComboBox x:Name="StepSpaceBox" SelectedIndex="0" SelectionChanged="StepField_Changed" AutomationProperties.Name="Measured from"><ComboBoxItem Content="The screen"/><ComboBoxItem Content="The target window"/><ComboBoxItem Content="Where the macro started"/></ComboBox>
                   <TextBlock Text="Glide" Style="{StaticResource StackLabel}"/>
@@ -436,6 +452,9 @@
                     <TextBlock Text="ms · 0 jumps there" Style="{StaticResource Unit}"/>
                   </StackPanel>
                 </StackPanel>
+                </Border>
+                </StackPanel>
+                </Border>
               </StackPanel>
             </StackPanel>
 
@@ -471,6 +490,24 @@
                 </StackPanel>
               </WrapPanel>
               <TextBlock x:Name="GroupHintText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+              <!-- What the group does in one sentence, its timing, and the steps inside it -->
+              <Border x:Name="GroupInfo" Style="{StaticResource MoreBox}" Padding="12,10" Margin="0,12,0,0">
+                <StackPanel>
+                  <TextBlock x:Name="GroupSummaryText" TextWrapping="Wrap"/>
+                  <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel><TextBlock Text="Starts at" Style="{StaticResource Muted}" FontSize="11.5"/><TextBlock x:Name="GroupStartText" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular"/></StackPanel>
+                    <StackPanel Grid.Column="1"><TextBlock Text="One pass" Style="{StaticResource Muted}" FontSize="11.5"/><TextBlock x:Name="GroupPassText" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular"/></StackPanel>
+                    <StackPanel Grid.Column="2"><TextBlock Text="All passes" Style="{StaticResource Muted}" FontSize="11.5"/><TextBlock x:Name="GroupTotalText" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular"/></StackPanel>
+                  </Grid>
+                  <TextBlock Text="Inside" Style="{StaticResource Muted}" FontSize="11.5" Margin="0,10,0,4"/>
+                  <ItemsControl x:Name="GroupStepsList">
+                    <ItemsControl.ItemTemplate><DataTemplate>
+                      <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" Margin="0,1"/>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
             </StackPanel>
 
             <!-- Several picked steps, changed together -->
@@ -545,8 +582,14 @@
               </StackPanel>
               <TextBlock x:Name="ModeHintText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,12,0,0" Text="The input stays held until you stop this macro."/>
 
-              <ToggleButton x:Name="MoreToggle" Style="{StaticResource Disclosure}" Content="More options" Margin="0,16,0,0" HorizontalAlignment="Left"/>
-              <StackPanel x:Name="OptionsPanel" Visibility="{Binding IsChecked, ElementName=MoreToggle, Converter={StaticResource BoolToVisibility}}">
+              <Border Style="{StaticResource MoreSection}">
+              <StackPanel>
+              <ToggleButton x:Name="MoreToggle" Style="{StaticResource Disclosure}" Content="More options" HorizontalAlignment="Left"/>
+              <TextBlock x:Name="MoreSummary" Style="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,2,0,0">
+                <TextBlock.Visibility><Binding Path="IsChecked" ElementName="MoreToggle" Converter="{StaticResource HiddenWhenTrue}"/></TextBlock.Visibility>
+              </TextBlock>
+              <Border Style="{StaticResource MoreBox}" Visibility="{Binding IsChecked, ElementName=MoreToggle, Converter={StaticResource BoolToVisibility}}">
+              <StackPanel x:Name="OptionsPanel">
                 <TextBlock Text="Start after" Style="{StaticResource StackLabel}"/>
                 <StackPanel Orientation="Horizontal">
                   <TextBox x:Name="StartDelayTextBox" Width="80" AutomationProperties.Name="Start after"/>
@@ -585,6 +628,9 @@
                   <Button x:Name="TestButton" Content="Send a test input" Click="TestBackground_Click" Margin="0,10,0,0" HorizontalAlignment="Left" ToolTip="Send one input to the target window in this mode"/>
                 </StackPanel>
               </StackPanel>
+              </Border>
+              </StackPanel>
+              </Border>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

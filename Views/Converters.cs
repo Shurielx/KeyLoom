@@ -142,3 +142,10 @@ public sealed class StepRail : FrameworkElement
         }
     }
 }
+
+/// <summary>Collapses an element while a toggle is on, like the summary under an open More options.</summary>
+public sealed class HiddenWhenTrueConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is true ? Visibility.Collapsed : Visibility.Visible;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
+}

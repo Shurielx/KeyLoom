@@ -27,6 +27,18 @@ public sealed class WindowSystem : IWindowSystem
     [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr window, out RECT rect);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr window, out RECT rect);
     [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT point);
+    [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr window, int command);
+    /// <summary>
+    /// Brings a minimized window back to its place. Windows parks minimized windows near -32000, -32000, so anything drawn
+    /// on them would land far off the screen. Returns false when the window stays minimized.
+    /// </summary>
+    public static bool Unminimize(IntPtr window)
+    {
+        if (window == IntPtr.Zero || !IsIconic(window)) return true;
+        ShowWindow(window, 9);
+        return !IsIconic(window);
+    }
     [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(POINT point);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr window, uint flags);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);

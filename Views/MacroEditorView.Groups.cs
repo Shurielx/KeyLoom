@@ -156,6 +156,7 @@ public partial class MacroEditorView
     {
         _stepError = error;
         GroupHintText.SetResourceReference(TextBlock.ForegroundProperty, error.Length > 0 ? "DangerTextBrush" : "MutedBrush");
+        GroupHintText.Visibility = Visibility.Visible;
         if (error.Length > 0) { GroupHintText.Text = error; return; }
         if (_groupStart < 0 || _groupStart >= _steps.Count) return;
         int end = StepGroups.EndOf(_steps, _groupStart);
@@ -165,6 +166,37 @@ public partial class MacroEditorView
         double seconds = MacroTimeline.Build(played).Duration / 1000;
         GroupHintText.Text = inside == 0 ? "Empty group. Drag steps into it, or pick steps and press Ctrl+G."
             : $"{inside:N0} {(inside == 1 ? "step" : "steps")} inside · plays {played.Count:N0} steps in {seconds:0.0} s";
+        ShowGroupInfo(group, inside, played.Count);
+    }
+    /// <summary>Spells out what the group does, when it starts, how long a pass takes and which steps it holds.</summary>
+    private void ShowGroupInfo(List<MacroAction> group, int inside, int playedCount)
+    {
+        var head = group[0];
+        GroupInfo.Visibility = inside == 0 ? Visibility.Collapsed : Visibility.Visible;
+        // The details say it all; the one-line hint stays for empty groups and mistakes.
+        GroupHintText.Visibility = inside == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (inside == 0) return;
+        var once = group.Select(a => a.Clone()).ToList();
+        once[0].Repeat = 0;
+        double pass = MacroTimeline.Build(StepGroups.Expand(once).ToList()).Duration, total = MacroTimeline.Build(StepGroups.Expand(group).ToList()).Duration;
+        GroupSummaryText.Text = $"Plays its {inside:N0} {(inside == 1 ? "step" : "steps")} {(head.Runs == 1 ? "once" : $"{head.Runs:N0} times")}"
+            + (head.GapMs > 0 ? $", waiting {head.GapMs:N0} ms between steps{(head.Runs > 1 ? " and between passes" : "")}." : ".")
+            + (playedCount > inside ? $" That is {playedCount:N0} steps in a run." : "");
+        GroupStartText.Text = (string)new StepLayoutConverter().Convert([head, _steps, StepsRevision], typeof(string), "Time", System.Globalization.CultureInfo.CurrentCulture);
+        GroupPassText.Text = StepLayoutConverter.FormatTime(pass);
+        GroupTotalText.Text = StepLayoutConverter.FormatTime(total);
+        // The group's own steps, nested groups as one line each.
+        var lines = new List<string>();
+        for (int i = 1, depth = 0; i < group.Count - 1; i++)
+        {
+            var a = group[i];
+            if (a.ActionType == MacroActionType.GroupEnd) { depth--; continue; }
+            if (depth == 0) lines.Add((a.ActionType == MacroActionType.GroupStart ? "" : "· ") + a.DisplayText);
+            if (a.ActionType == MacroActionType.GroupStart) depth++;
+        }
+        const int Shown = 8;
+        if (lines.Count > Shown) lines = [.. lines.Take(Shown - 1), $"and {lines.Count - Shown + 1:N0} more"];
+        GroupStepsList.ItemsSource = lines;
     }
     private void GroupField_Changed(object sender, TextChangedEventArgs e)
     {

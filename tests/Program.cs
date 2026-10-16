@@ -23,6 +23,13 @@ internal static partial class Program
     {
         try
         {
+            if (args.Contains("--live"))
+            {
+                var live = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+                live.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
+                live.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Theme.xaml", UriKind.Relative) });
+                LiveScreens(); live.Shutdown(); return 0;
+            }
             EngineTests().GetAwaiter().GetResult();
             RecordingTests().GetAwaiter().GetResult();
             FeatureEngineTests().GetAwaiter().GetResult();
@@ -231,6 +238,19 @@ internal static partial class Program
         Check(Grid.GetRow(inspector) == 1 && Grid.GetColumn(inspector) == 0 && inspector.ActualHeight <= 760 * 0.45 + 1, "narrow editors put the inspector under the steps and keep the steps in view");
         Render(narrowEditor, 900, 760, "editor-wide.png");
         Check(Grid.GetColumn(inspector) == 1, "wide editors put the inspector beside the steps");
+        var grouped = Profile(MacroBehaviorType.Sequence);
+        grouped.Actions = new()
+        {
+            KeyStep("Q"),
+            new() { ActionType = MacroActionType.GroupStart, Name = "Burst", Repeat = 3, GapMs = 50 },
+            new() { ActionType = MacroActionType.MouseClick }, new() { ActionType = MacroActionType.Delay, DelayMs = 100 }, KeyStep("E"),
+            new() { ActionType = MacroActionType.GroupEnd }
+        };
+        var groupEditor = new MacroEditorView(grouped);
+        ((ListBox)groupEditor.FindName("ActionsListBox")).SelectedIndex = 1;
+        Render(groupEditor, 900, 760, "editor-group.png");
+        Check(((TextBlock)groupEditor.FindName("GroupSummaryText")).Text.StartsWith("Plays its 3 steps 3 times, waiting 50 ms")
+            && ((ItemsControl)groupEditor.FindName("GroupStepsList")).Items.Count == 3, "a picked group explains what it does and lists its steps");
         var validationEditor = new MacroEditorView(Profile(MacroBehaviorType.Sequence));
         Invoke(validationEditor, "Save_Click", validationEditor, new RoutedEventArgs());
         Check(((TextBlock)validationEditor.FindName("ErrorText")).Text.Contains("sequence"), "editor blocks saving an empty sequence");

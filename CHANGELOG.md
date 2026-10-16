@@ -2,6 +2,16 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-3 · 2026-10-16
+
+### Fixed
+- Preview and Route open with their content, not only a shade
+- Builder shows its points when the target window is minimized
+
+### Changed
+- More options is set apart and says what it holds
+- A picked group shows what it does, its timing and its steps
+
 ## 0.3-dev-2 · 2026-10-16
 
 ### Changed

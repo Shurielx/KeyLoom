@@ -41,6 +41,7 @@ public partial class MacroEditorView
         WindowText.ToolTip = _window == null ? null : $"{_window.Label}\nClass: {_window.ClassName}\nClient size when picked: {_window.ClientWidth} × {_window.ClientHeight}";
         ClearWindowButton.IsEnabled = ScaleBox.IsEnabled = _window != null;
         RunModePanel.Visibility = ShowRunMode ? Visibility.Visible : Visibility.Collapsed;
+        MoreSummary.Text = "Start delay" + (SettlePanel.Visibility == Visibility.Visible ? ", click delay" : "") + ", target window" + (ShowRunMode ? ", run mode" : "");
         TestButton.Visibility = RunMode != ExecutionMode.Standard ? Visibility.Visible : Visibility.Collapsed;
         RestoreCursorBox.Visibility = RunMode == ExecutionMode.QuickSwitch ? Visibility.Visible : Visibility.Collapsed;
         RunModeHint.Text = RunMode switch

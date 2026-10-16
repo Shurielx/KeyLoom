@@ -189,6 +189,10 @@ internal static partial class Program
         var windowSheets = (SheetLayer)window.FindName("Sheets");
         Check(routeCard.IsVisible && windowSheets.Top is PreviewView, "clicking the route card opens the preview");
         windowSheets.CloseTop(false); Pump(200);
+        routeCard.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent)); Pump(300);
+        var reopened = (FrameworkElement)((Grid)windowSheets.Children[^1]).Children[1];
+        Check(reopened.ActualWidth > 100 && reopened.ActualHeight > 100, "a sheet opened a second time has its size, not only the backdrop");
+        windowSheets.CloseTop(false); Pump(200);
         window.Close();
 
         // Picking a step rings its spot on the route.

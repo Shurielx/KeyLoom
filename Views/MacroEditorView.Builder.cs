@@ -22,6 +22,14 @@ public partial class MacroEditorView
         var p = new MacroProfile { Actions = new(_steps.Select(a => a.Clone())) };
         ApplyTarget(p);
         IntPtr window = _window != null ? WindowSystem.Instance.Find(_window) : IntPtr.Zero;
+        string note = "";
+        if (!WindowSystem.Unminimize(window))
+        {
+            window = IntPtr.Zero;
+            note = $"{_window!.Label} stays minimized, so its points are drawn from the top-left of the screen. Restore it to see them in place.";
+        }
+        else if (_window != null && window == IntPtr.Zero && _steps.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window))
+            note = $"{_window.Label} is not open, so its points are drawn from the top-left of the screen. Open it to see them in place.";
         // The builder covers the monitor the target window is on, or the one Keyloom is on.
         IntPtr place = window != IntPtr.Zero ? window : Window.GetWindow(this) is { } own ? new WindowInteropHelper(own).Handle : IntPtr.Zero;
         var screen = (place != IntPtr.Zero ? System.Windows.Forms.Screen.FromHandle(place) : System.Windows.Forms.Screen.PrimaryScreen!).Bounds;
@@ -39,6 +47,7 @@ public partial class MacroEditorView
         };
         _builder = builder;
         builder.Show();
+        if (note.Length > 0) Say(note);
         if (host != null) host.WindowState = WindowState.Minimized;
     });
     /// <summary>Takes the steps from the builder as one change, so one Ctrl+Z brings back what was there before.</summary>

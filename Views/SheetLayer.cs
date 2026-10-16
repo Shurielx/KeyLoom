@@ -14,7 +14,22 @@ public sealed class SheetLayer : Grid
 {
     private sealed record Open(FrameworkElement Content, Grid Layer, TaskCompletionSource<bool> Done, IInputElement? Focus);
     private readonly List<Open> _open = new();
-    public SheetLayer() { Visibility = Visibility.Collapsed; }
+    public SheetLayer()
+    {
+        Visibility = Visibility.Collapsed;
+        SizeChanged += (_, _) => { foreach (var open in _open) Fit(open.Layer.Children[1] as FrameworkElement); };
+    }
+    /// <summary>
+    /// Keeps a sheet inside the window. Set by hand, not bound to ActualWidth: a binding made while the layer was collapsed
+    /// read 0 and kept it, so a sheet opened a second time had no size and only the backdrop showed.
+    /// </summary>
+    private void Fit(FrameworkElement? card)
+    {
+        if (card == null) return;
+        var room = new Size(ActualWidth > 0 ? ActualWidth : (Parent as FrameworkElement)?.ActualWidth ?? 0, ActualHeight > 0 ? ActualHeight : (Parent as FrameworkElement)?.ActualHeight ?? 0);
+        card.MaxWidth = room.Width > 48 ? room.Width - 48 : double.PositiveInfinity;
+        card.MaxHeight = room.Height > 48 ? room.Height - 48 : double.PositiveInfinity;
+    }
     public bool IsOpen => _open.Count > 0;
     public FrameworkElement? Top => _open.Count > 0 ? _open[^1].Content : null;
     public Task<bool> ShowAsync(FrameworkElement content, double width = 440)
@@ -48,9 +63,7 @@ public sealed class SheetLayer : Grid
         KeyboardNavigation.SetTabNavigation(card, KeyboardNavigationMode.Cycle);
         KeyboardNavigation.SetControlTabNavigation(card, KeyboardNavigationMode.Cycle);
         var layer = new Grid { Children = { scrim, card } };
-        // Keep the sheet inside the window when the window is small.
-        card.SetBinding(MaxWidthProperty, new System.Windows.Data.Binding(nameof(ActualWidth)) { Source = this, Converter = Inset.Instance });
-        card.SetBinding(MaxHeightProperty, new System.Windows.Data.Binding(nameof(ActualHeight)) { Source = this, Converter = Inset.Instance });
+        Fit(card);
         var done = new TaskCompletionSource<bool>();
         _open.Add(new(content, layer, done, Keyboard.FocusedElement));
         Children.Add(layer);
@@ -119,11 +132,5 @@ public sealed class SheetLayer : Grid
         open.Focus?.Focus();
         open.Done.TrySetResult(result);
         return true;
-    }
-    private sealed class Inset : System.Windows.Data.IValueConverter
-    {
-        public static readonly Inset Instance = new();
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => Math.Max(0, (double)value - 48);
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
     }
 }
