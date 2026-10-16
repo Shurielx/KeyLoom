@@ -421,12 +421,12 @@ public sealed class MacroBuilderWindow : OverlayWindow
         header.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var title = new DockPanel { VerticalAlignment = VerticalAlignment.Center };
-        var flask = Icon("IconFlask", 12);
+        var flask = Glyph("IconFlask", 12);
         flask.Margin = new(0, 0, 8, 0);
         DockPanel.SetDock(flask, Dock.Left); title.Children.Add(flask);
         title.Children.Add(new TextBlock { Text = $"Builder · {_name}", FontSize = 14, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
         header.Children.Add(title);
-        var help = Icon("IconHelp", 13);
+        var help = Glyph("IconHelp", 13);
         help.Margin = new(0, 0, 4, 0);
         help.Cursor = Cursors.Help;
         help.ToolTip = "Left click picks a point and drags it; Ctrl+click picks more.\nRight click adds points and steps.\nA dashed line jumps the cursor, a solid one glides it.\nH hides this panel, Esc finishes, Ctrl+Z undoes.";
@@ -592,7 +592,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
         // The wait before the next point closes the timeline.
         string next = k + 1 < _points.Count ? $"point {k + 2}" : "the next run";
         var then = new DockPanel { Margin = new(0, 14, 0, 0), LastChildFill = true };
-        var clock = Icon("IconClock", 12);
+        var clock = Glyph("IconClock", 12);
         clock.Margin = new(0, 0, 8, 0);
         DockPanel.SetDock(clock, Dock.Left); then.Children.Add(clock);
         if (trailing >= 0)
@@ -720,7 +720,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
         var row = RowGrid(start);
         row.Margin = new(depth * 14, 4, 0, 4);
         AddCell(row, 0, Muted(time, new()));
-        AddCell(row, 1, Icon("IconGroup", 12));
+        AddCell(row, 1, Glyph("IconGroup", 12));
         var text = new TextBlock { Text = $"{g.GroupName}{(g.Runs > 1 ? $" · repeats {g.Runs:N0}×" : "")}{(g.GapMs > 0 ? $" · +{g.GapMs:N0} ms between steps" : "")}", FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = "Show its first point and the group's settings" };
         Grid.SetColumnSpan(text, 2);
         AddCell(row, 2, text);
@@ -741,7 +741,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
         box.SetResourceReference(Border.BackgroundProperty, "SurfaceAltBrush");
         box.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
         var top = new DockPanel { Margin = new(0, 0, 0, 6) };
-        var icon = Icon("IconGroup", 12);
+        var icon = Glyph("IconGroup", 12);
         icon.Margin = new(0, 0, 8, 0);
         DockPanel.SetDock(icon, Dock.Left); top.Children.Add(icon);
         var ungroup = IconButton("IconClose", "Ungroup: keep the steps, drop the group", () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, start))));
@@ -775,7 +775,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
     private Button AddButton(Func<int> at, int point, string text)
     {
         var button = new Button { Padding = new(10, 4, 10, 4), Margin = new(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Also on right click" };
-        button.Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { Icon("IconPlus", 9), new TextBlock { Text = text, Margin = new(7, 0, 0, 0) } } };
+        button.Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { Glyph("IconPlus", 9), new TextBlock { Text = text, Margin = new(7, 0, 0, 0) } } };
         button.Click += (_, _) =>
         {
             CommitEdits();
@@ -832,7 +832,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
                 MacroActionType.Text => ("IconText", "Type"),
                 _ => ("IconInfo", "Step")
             };
-        AddCell(row, 1, Icon(icon, 12));
+        AddCell(row, 1, Glyph(icon, 12));
         AddCell(row, 2, new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
         AddCell(row, 3, unit.IsHold ? HoldEditor(unit) : Editor(unit.Start, a));
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(6, 0, 0, 0) };
@@ -1013,7 +1013,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
         surface.SetResourceReference(TextElement.ForegroundProperty, "InkBrush");
         return surface;
     }
-    private static Path Icon(string icon, double size) => new()
+    private static Path Glyph(string icon, double size) => new()
     {
         Data = (Geometry)Application.Current.FindResource(icon), Width = size, Height = size,
         VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left,
