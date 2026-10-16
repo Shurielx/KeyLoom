@@ -1,83 +1,110 @@
+<div align="center">
+
+<img src="Assets/keyloom.svg" width="96" alt="Keyloom icon">
+
 # Keyloom
 
-Simple keyboard and mouse macros for Windows. **0.1-dev-4**, with a modern Aero interface: Windows 11 acrylic glass, soft depth, smooth animations, and light and dark themes. Everything happens in one window: the editor, settings and help open as pages, and dialogs appear inside it.
+**Keyboard and mouse macros for Windows.**<br>
+Repeat a click, hold a key, or build a sequence of steps and play it with a shortcut.
 
-![Keyloom](docs/screenshot.png)
+[![Release](https://img.shields.io/github/v/release/Shurielx/KeyLoom?include_prereleases&label=release&color=0f6cbd)](https://github.com/Shurielx/KeyLoom/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/Shurielx/KeyLoom/build.yml?branch=main&label=build)](https://github.com/Shurielx/KeyLoom/actions/workflows/build.yml)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0f6cbd)
+![.NET 10](https://img.shields.io/badge/.NET-10-512bd4)
 
-## Use
+[Download](https://github.com/Shurielx/KeyLoom/releases) · [Changelog](CHANGELOG.md) · [Build from source](#build)
 
-Download the Windows x64 ZIP from [Releases](https://github.com/Shurielx/KeyLoom/releases), extract it, and run `Keyloom.exe`. No .NET installation, administrator access, or special keyboard is required.
+<img src="docs/screenshot.png" width="760" alt="Keyloom macro list">
 
-1. Click **New macro**, name it, and choose **Repeat**, **Hold**, or **Sequence**.
-2. Set your input, timing, and optional shortcut. Less common settings sit under **More options**.
-3. Press **Start** or use the shortcut. Press it again to stop.
+</div>
 
-Sequences support clicks, key combinations, key down/up, delays, relative movement, pointer positions, scroll, and Unicode text. Use **1 run** to execute once or **0** to loop. One macro runs at a time.
+## What it does
 
-- **Ctrl + Shift + F12** — stop all macros.
-- **Ctrl + Shift + I** — show or hide Keyloom.
-- Closing the window keeps it in the tray; use the tray menu to exit.
+| | |
+|---|---|
+| **Repeat** | Click or press a key again and again, as often as every 1 ms. |
+| **Hold** | Keep a key or mouse button held down until you stop it. |
+| **Sequence** | Clicks, keys, waits, pointer moves, scrolling and text, recorded or built step by step. |
 
-Profiles are stored in `%APPDATA%\Keyloom`, with a backup on save. Existing KeychronHUD profiles are imported automatically.
+- One window: the editor, settings and help open as pages, and dialogs appear inside it.
+- Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
+- Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
+- Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
 
-## Icons and themes
+## Get started
 
-Click the icon next to a macro's name to choose how it looks in the list: automatic (follows the macro type), mouse, keyboard, a moving pointer, one or two characters such as **K**, **2** or **P1**, or your own picture. Pictures are cropped to a square and copied into `%APPDATA%\Keyloom\icons`, so moving or deleting the original file does not matter.
+1. Download the Windows x64 ZIP from [Releases](https://github.com/Shurielx/KeyLoom/releases), extract it and run `Keyloom.exe`. No installer, no admin rights, no .NET install.
+2. Click **New macro**, give it a name and pick **Repeat**, **Hold** or **Sequence**.
+3. Set a shortcut, then press **Start** or the shortcut. Press it again to stop.
 
-**Settings → Theme** switches between **System**, **Light** and **Dark** right away. System follows the Windows app mode.
+In the list, click a macro's **name**, **icon** or **shortcut** to change it right there. The pencil opens the full editor.
 
-## Pick a point
+## Sequences
 
-**Pick point** in the macro editor lets you click once inside another window. Keyloom remembers that window and the point relative to its content, so clicks follow the window when it moves. Choose whether positions keep their pixel distance or **scale** when the window is resized. The picking click is not passed to the app; Esc or right-click cancels.
+<img src="docs/steps.png" width="640" alt="Sequence editor with the step list, route and run strip">
 
-- **Repeat / Hold** — use **Pick point** next to *Click at a chosen point* (or *Hold at…*) to use it instead of the current pointer.
-- **Sequence** — choose **Add step → Click a point in a window…**; the point is added as a *Move pointer … in window* step plus a click.
+Steps read like a table: the number, what the step does and **when it starts** in a run, counting the waits before it. Under the list, the **run strip** shows the whole run on one line, every input at its time. Hover a mark to see the step, click it to jump there. When the macro moves the pointer, its route sits beside the list.
 
-If the target window is not open, the macro reports it instead of starting; if it closes while running, the macro stops.
+- **Record** your mouse and keyboard, or add steps by hand with **Add step**.
+- **Pick several** steps with Ctrl or Shift and change them together: waits take `100`, `+20`, `-20` or `x1.5`.
+- **Drag** rows to reorder them, or use **Alt + ↑ / ↓**.
+- **Groups** (Ctrl + G) repeat their steps and can add a wait between them, so a click every 100 ms is one setting instead of a column of copies.
+- **Right-click** to insert waits, duplicate several times, copy, cut and paste. Hover the line between two rows for **+ Wait**.
+- **Ctrl + Z / Y** undo and redo. Copied steps can be pasted into another macro.
 
-## Preview
+### Preview and test run
 
-Sequences show a route thumbnail in the editor. **Preview** plays it with a moving marker, click pulses and a countdown for each wait, with a timeline, pause and 0.25×–4× speed. **Show on screen** draws the route exactly where it will run; the overlay lets your clicks through. Preview never moves the pointer or sends input, and it shows planned positions, not a guaranteed result.
+<img src="docs/preview.png" width="560" alt="Preview of a sequence">
 
-## Run modes (experimental)
+**Preview** is a dry run. It plays the route with a moving marker and a countdown for each wait, or, when nothing moves the pointer, shows the step playing now with the ones before and after it. It never moves your pointer or sends input. **Show on screen** draws the route exactly where it will run.
 
-Turn on **Settings → Experimental features** to get **Run mode** under **More options** in the editor. Both modes below let you keep using your PC while a macro runs, and both need a target window chosen with **Pick point**. Use **Send a test input** to check that the target reacts.
+**Test run** plays the macro once for real, without saving it. Keyloom steps out of the way while it runs and comes back when it's done.
 
-- **Background** sends clicks and keys straight to the target window as window messages, so your own mouse and keyboard stay free. Many games, Roblox included, ignore these messages.
-- **Quick switch** is for those games. For each input it brings the target window to the front for a moment (about 70 ms), sends real input at the chosen point, then gives focus and the pointer back to whatever you were using. It works best for inputs a second or more apart, such as staying active in a game. The target must not be minimized, but it can sit behind other windows or on another monitor. Hold macros are not available in this mode, and a key you press during the switch may reach the game.
+## Clicking inside another window
 
-Running apps in an isolated virtual machine is not included; see [validation notes](docs/VALIDATION.md).
+**Pick point** lets you click once inside another window. Keyloom remembers the window and the spot, so clicks follow it when the window moves, and can scale with it when it's resized. The click you pick with never reaches the app; Esc cancels.
 
-## Record
+- In a sequence, **Add step** offers **Click at a point** (a move and a click) or **Move to a point** (just the move).
+- Select a *Move to* step to **pick its point again**, or tick **Click after moving** to add or remove the click after it.
 
-Click **Record** in the macro editor, choose what to capture, then switch to your target window during the 3-second countdown. **F8** or the recording panel stops capture; the panel also supports pause/resume.
+<details>
+<summary><b>Run modes for games (experimental)</b></summary>
+<br>
 
-Keep recorded delays or add your own with **Add step → Wait**. Select a step to edit it below the list; changes apply as you type, and invalid input is flagged instead of applied. New recordings default to one run.
+Turn on **Settings → Experimental features**, then choose a run mode under **More options** in the editor. Both need a target window picked with **Pick point**; **Send a test input** checks that it reacts.
 
-Pointer positions can be recorded on the **screen**, **relative to the window** that is in front when recording starts, or **relative to the start point** (offsets from wherever the pointer is when the macro starts). **Simplify mouse path** drops samples on straight stretches while keeping clicks, holds and total timing exact.
+- **Background** sends clicks and keys straight to the window, so your own mouse and keyboard stay free. Many games, Roblox included, ignore it.
+- **Quick switch** works with those games. For each input it brings the window forward for about 70 ms, sends real input at the point, then hands focus and the pointer back. Best for inputs a second or more apart. The game can sit behind other windows or on another monitor, but not minimized.
 
-Capture is active only while recording. Keyloom's own controls and synthetic input are excluded. Recordings stay local and are saved only with the macro. Sequences are limited to 20,000 steps; recording stops after 10 active minutes or at the step limit.
+</details>
 
-## Edit steps
+## While a macro runs
 
-Each step shows its number, an icon and colour for its kind and the detail that matters; waits are small chips so the rhythm of a sequence is easy to see.
+The macro's row shows how long it has been running and how many repeats it made, and a small card on screen says what runs and how to stop it. The card lets clicks through. Move it, or turn it into a short notice, under **Settings → While a macro runs**.
 
-- **Pick several** with Ctrl+click, Shift+click, Ctrl+A or the checkbox that appears on hover. The panel below then edits them together: waits take **100** (set), **+20** / **-20** (add) or **x1.5** (scale), and mouse steps can switch button.
-- **Drag** a row to move it; dragging a picked row moves the whole pick. **Alt + ↑/↓** moves from the keyboard.
-- **Right-click** for insert wait before / after / between picked steps, group, duplicate several times, copy, cut, paste and delete. Hover the line between two rows for **+ Wait**.
-- **Ctrl + C / X / V / D** copy, cut, paste and duplicate (also between macros), **Delete** removes, **Ctrl + Z / Y** undo and redo.
+**Settings → Usage** keeps simple statistics: how often each macro started, how long it ran, how many repeats it made and when you last used it. Test runs don't count, and **Reset** starts over.
 
-**Groups** keep related steps together. Pick steps and press **Ctrl + G**: a group has a name, can **play several times** and can add a **wait between its steps**, so a click with 100 ms between repeats is one setting rather than a column of copies. Groups nest, fold away with the arrow or a double-click, and **Ctrl + Shift + G** ungroups. Macros with groups need Keyloom 0.1-dev-4 or newer.
+## Shortcuts
 
-## Updates and changelog
+| Keys | Action |
+|---|---|
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F12</kbd> | Stop all macros |
+| <kbd>F8</kbd> | Stop recording |
+| <kbd>Esc</kbd> | Cancel picking, close a dialog or leave the editor |
+| <kbd>Ctrl</kbd> + <kbd>G</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd> | Group / ungroup picked steps |
+| <kbd>Ctrl</kbd> + <kbd>C</kbd> <kbd>X</kbd> <kbd>V</kbd> <kbd>D</kbd> | Copy, cut, paste, duplicate steps |
+| <kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Ctrl</kbd> + <kbd>Y</kbd> | Undo / redo |
+| <kbd>Delete</kbd>, <kbd>Alt</kbd> + <kbd>↑</kbd> <kbd>↓</kbd> | Remove or move steps |
 
-Click the version in the bottom-right corner to open **About**: a short list of what changed in each version ([CHANGELOG.md](CHANGELOG.md)) and whether a newer release is out. Full notes are on the release pages. The changelog that came with your version works offline; when GitHub can be reached, Keyloom shows the newest one and checks the [releases](https://github.com/Shurielx/KeyLoom/releases). Keyloom only contacts GitHub while the About page is open, and it never downloads or installs anything by itself.
+Macro shortcuts need Ctrl, Alt or Win with a key, or an F-key on its own.
+
+## Your data
+
+Macros, settings, icons and usage live in `%APPDATA%\Keyloom`, with a backup of your macros on every save. Existing KeychronHUD profiles are imported automatically. Closing the window keeps Keyloom in the tray; use the tray menu to exit.
 
 ## Build
 
-Requires Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-
-For local use, double-click **Start Keyloom.bat**. It builds the current source and opens the app, so you do not need to download release builds. Close a running copy from its tray menu before rebuilding.
+Requires Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). For local use, double-click **Start Keyloom.bat**: it builds the current source and opens the app.
 
 ```powershell
 dotnet build Keyloom.csproj -c Release
@@ -85,4 +112,10 @@ dotnet run --project tests/Keyloom.Tests.csproj -c Release
 dotnet run --project Keyloom.csproj
 ```
 
-Alpha builds are unsigned. Some apps reject synthetic input, and game rules may restrict automation. See [validation notes](docs/VALIDATION.md) for what was tested.
+## Good to know
+
+- Builds are unsigned while Keyloom is in development, so Windows may ask before the first start.
+- Some apps reject synthetic input, and some games forbid automation in their rules. Check before you use it there.
+- One macro runs at a time. Sequences hold up to 20,000 steps; recordings stop after 10 active minutes.
+- Macros with groups need Keyloom 0.1-dev-4 or newer.
+- See the [validation notes](docs/VALIDATION.md) for what has been tested.

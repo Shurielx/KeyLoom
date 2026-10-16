@@ -12,23 +12,23 @@
     <Setter Property="Background" Value="{DynamicResource ShellBrush}"/>
     <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
     <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
-    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontSize" Value="13"/>
     <Setter Property="UseLayoutRounding" Value="True"/>
     <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
     <Setter Property="Icon" Value="/Keyloom;component/Assets/keyloom.ico"/>
   </Style>
   <Style x:Key="Muted" TargetType="TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/><Setter Property="FontSize" Value="12"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/><Setter Property="FontSize" Value="12.5"/>
   </Style>
   <Style x:Key="Hint" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
-    <Setter Property="FontSize" Value="11"/><Setter Property="TextWrapping" Value="Wrap"/>
+    <Setter Property="FontSize" Value="12"/><Setter Property="TextWrapping" Value="Wrap"/>
   </Style>
   <Style x:Key="FieldLabel" TargetType="TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource LabelBrush}"/><Setter Property="FontSize" Value="12"/><Setter Property="Margin" Value="0,0,0,6"/>
+    <Setter Property="Foreground" Value="{DynamicResource LabelBrush}"/><Setter Property="FontSize" Value="12.5"/><Setter Property="Margin" Value="0,0,0,6"/>
   </Style>
   <Style x:Key="SectionTitle" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI"/>
-    <Setter Property="FontSize" Value="13"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource SectionBrush}"/>
+    <Setter Property="FontSize" Value="14"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource SectionBrush}"/>
   </Style>
   <Style x:Key="PageTitle" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI"/>
@@ -51,7 +51,7 @@
     <Style.Triggers>
       <EventTrigger RoutedEvent="FrameworkElement.Loaded">
         <BeginStoryboard><Storyboard>
-          <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28" EasingFunction="{StaticResource EaseOut}"/>
+          <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28" EasingFunction="{StaticResource EaseOut}" FillBehavior="Stop"/>
           <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="14" To="0" Duration="0:0:0.42" EasingFunction="{StaticResource EaseOutStrong}"/>
         </Storyboard></BeginStoryboard>
       </EventTrigger>
@@ -62,6 +62,17 @@
     <Setter Property="Control.Template"><Setter.Value><ControlTemplate>
       <Border Margin="-3" CornerRadius="8" BorderThickness="2" BorderBrush="{DynamicResource AccentBrush}" SnapsToDevicePixels="True"/>
     </ControlTemplate></Setter.Value></Setter>
+  </Style>
+
+  <!-- Popups draw their shadow on a separate layer behind the content: text inside an element with an Effect
+       is rendered through an intermediate bitmap and loses its crisp edges on 100% scale displays. -->
+  <Style x:Key="PopupShadowLayer" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource PopupBrush}"/><Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Effect" Value="{DynamicResource PopupShadow}"/><Setter Property="IsHitTestVisible" Value="False"/>
+  </Style>
+  <Style x:Key="PopupSurface" TargetType="Border">
+    <Setter Property="Background" Value="{DynamicResource PopupBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="4"/>
   </Style>
 
   <!-- Buttons -->
@@ -99,11 +110,11 @@
   </Style>
   <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
     <Setter Property="Background" Value="{DynamicResource BlueButtonBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource BlueButtonBorderBrush}"/>
-    <Setter Property="Foreground" Value="White"/><Setter Property="Effect" Value="{DynamicResource AccentGlow}"/>
+    <Setter Property="Foreground" Value="White"/>
   </Style>
   <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
     <Setter Property="Background" Value="{DynamicResource StopBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource StopBorderBrush}"/>
-    <Setter Property="Foreground" Value="White"/><Setter Property="Effect" Value="{DynamicResource DangerGlow}"/>
+    <Setter Property="Foreground" Value="White"/>
   </Style>
   <!-- Transparent button for icons and quiet text actions -->
   <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -197,7 +208,7 @@
     <Setter Property="Padding" Value="12,10"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
     <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
-      <Grid x:Name="Root" RenderTransformOrigin=".5,.5">
+      <Grid x:Name="Root" RenderTransformOrigin=".5,.5" RenderOptions.ClearTypeHint="Enabled">
         <Grid.RenderTransform><ScaleTransform x:Name="Scale"/></Grid.RenderTransform>
         <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" CornerRadius="10"/>
         <Border x:Name="Hover" Background="{DynamicResource ListHoverBrush}" BorderBrush="{DynamicResource HoverBorderBrush}" BorderThickness="1" CornerRadius="10" Opacity="0"/>
@@ -230,7 +241,7 @@
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox">
-      <Grid x:Name="Root" SnapsToDevicePixels="True">
+      <Grid x:Name="Root" SnapsToDevicePixels="True" RenderOptions.ClearTypeHint="Enabled">
         <Border x:Name="Field" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6">
           <ScrollViewer x:Name="PART_ContentHost" Margin="1,0"/>
         </Border>
@@ -282,9 +293,10 @@
         </ToggleButton>
         <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" Margin="10,5,30,5" IsHitTestVisible="False" VerticalAlignment="Center"/>
         <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" VerticalOffset="2" HorizontalOffset="-8" AllowsTransparency="True" PopupAnimation="Slide" Focusable="False">
-          <Border Margin="8,0,8,14" Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="4" Effect="{DynamicResource PopupShadow}" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
-            <ScrollViewer MaxHeight="280"><ItemsPresenter/></ScrollViewer>
-          </Border>
+          <Grid Margin="8,0,8,14" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+            <Border Style="{StaticResource PopupShadowLayer}"/>
+            <Border Style="{StaticResource PopupSurface}"><ScrollViewer MaxHeight="280"><ItemsPresenter/></ScrollViewer></Border>
+          </Grid>
         </Popup>
       </Grid>
       <ControlTemplate.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".5"/></Trigger></ControlTemplate.Triggers>
@@ -308,11 +320,12 @@
   <!-- Menus (Add step) -->
   <Style TargetType="ContextMenu">
     <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/><Setter Property="HasDropShadow" Value="False"/>
-    <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/><Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/><Setter Property="FontSize" Value="13"/>
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ContextMenu">
-      <Border Margin="8,2,8,14" Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="4" Effect="{DynamicResource PopupShadow}">
-        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
-      </Border>
+      <Grid Margin="8,2,8,14">
+        <Border Style="{StaticResource PopupShadowLayer}"/>
+        <Border Style="{StaticResource PopupSurface}"><StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/></Border>
+      </Grid>
     </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="MenuItem">
@@ -328,9 +341,10 @@
         <!-- Submenus open to the side -->
         <Path x:Name="SubmenuArrow" Data="M0 0L4 4L0 8" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.4" Width="5" Height="8" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Collapsed"/>
         <Popup IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" Placement="Right" HorizontalOffset="-4" VerticalOffset="-6" AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
-          <Border Margin="0,0,8,14" Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="4" Effect="{DynamicResource PopupShadow}" TextElement.Foreground="{DynamicResource InkBrush}">
-            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
-          </Border>
+          <Grid Margin="0,0,8,14" TextElement.Foreground="{DynamicResource InkBrush}">
+            <Border Style="{StaticResource PopupShadowLayer}"/>
+            <Border Style="{StaticResource PopupSurface}"><StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/></Border>
+          </Grid>
         </Popup>
       </Grid>
       <ControlTemplate.Triggers>
@@ -361,6 +375,7 @@
     </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="ListBoxItem">
+    <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
     <Setter Property="Padding" Value="12,6"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -503,6 +518,10 @@
   </Style>
 
   <!-- Slim scrollbars that widen on hover -->
+  <!-- Scrolled content is drawn on its own layer; this keeps ClearType text there too. -->
+  <Style TargetType="ScrollViewer">
+    <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+  </Style>
   <Style x:Key="ScrollThumb" TargetType="Thumb">
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Thumb">
       <Border Background="Transparent"><Border x:Name="Bar" CornerRadius="3" Background="{DynamicResource ScrollThumbBrush}"/></Border>
@@ -548,9 +567,10 @@
   <Style TargetType="ToolTip">
     <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToolTip">
-      <Border Margin="6,2,6,10" Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="9,5" Effect="{DynamicResource PopupShadow}">
-        <ContentPresenter TextElement.FontSize="12"/>
-      </Border>
+      <Grid Margin="6,2,6,10">
+        <Border Style="{StaticResource PopupShadowLayer}" CornerRadius="6"/>
+        <Border Style="{StaticResource PopupSurface}" CornerRadius="6" Padding="9,5"><ContentPresenter TextElement.FontSize="12.5"/></Border>
+      </Grid>
     </ControlTemplate></Setter.Value></Setter>
     <Setter Property="HasDropShadow" Value="False"/>
   </Style>
@@ -578,7 +598,7 @@
     <Setter Property="Padding" Value="7,2"/>
     <Setter Property="Margin" Value="0,0,4,0"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
-    <Setter Property="TextElement.FontSize" Value="11"/>
+    <Setter Property="TextElement.FontSize" Value="12"/>
     <Setter Property="TextElement.FontFamily" Value="Segoe UI Variable Text Semibold, Segoe UI"/>
     <Setter Property="TextElement.Foreground" Value="{DynamicResource InkSoftBrush}"/>
   </Style>
@@ -587,6 +607,61 @@
     <Setter Property="CornerRadius" Value="10"/>
     <Setter Property="Width" Value="40"/><Setter Property="Height" Value="40"/>
   </Style>
+  <!-- A key cap that is also a button: click, then press the new keys -->
+  <Style x:Key="KeycapButton" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource KeycapBorderBrush}"/><Setter Property="Foreground" Value="{DynamicResource InkSoftBrush}"/>
+    <Setter Property="FontSize" Value="12"/><Setter Property="FontFamily" Value="Segoe UI Variable Text Semibold, Segoe UI"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+      <Grid>
+        <Border Background="{DynamicResource KeycapBrush}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1,1,1,2" CornerRadius="5"/>
+        <Border x:Name="Hover" Background="{DynamicResource HoverFillBrush}" BorderBrush="{DynamicResource HoverBorderBrush}" BorderThickness="1,1,1,2" CornerRadius="5" Opacity="0"/>
+        <ContentPresenter Margin="8,2" TextElement.Foreground="{TemplateBinding Foreground}"/>
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+          <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+        </Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <!-- Text you can click to edit: a faint fill on hover says so -->
+  <Style x:Key="EditableChip" TargetType="Border">
+    <Setter Property="Background" Value="Transparent"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Padding" Value="5,1"/>
+    <Setter Property="Margin" Value="-5,-1,0,-1"/><Setter Property="Cursor" Value="IBeam"/>
+    <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource SubtleFillBrush}"/></Trigger></Style.Triggers>
+  </Style>
+  <!-- The macro icon in the list, which opens the icon picker -->
+  <Style x:Key="RowIconButton" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand"/><Setter Property="Width" Value="40"/><Setter Property="Height" Value="40"/><Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+      <Grid>
+        <Border Style="{StaticResource IconTile}"/>
+        <ContentPresenter/>
+        <Border x:Name="Ring" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource AccentBrush}" Opacity="0"/>
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Ring" Storyboard.TargetProperty="Opacity" To=".7" Duration="0:0:0.12"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+          <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Ring" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+        </Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <!-- Sets the tone colour for a step; icon tile and title pick it up through TextElement.Foreground. -->
+    <Style x:Key="StepTone" TargetType="Grid">
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource MutedBrush}"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding Tone}" Value="Pointer"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepPointerBrush}"/></DataTrigger>
+        <DataTrigger Binding="{Binding Tone}" Value="Key"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepKeyBrush}"/></DataTrigger>
+        <DataTrigger Binding="{Binding Tone}" Value="Hold"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepHoldBrush}"/></DataTrigger>
+        <DataTrigger Binding="{Binding Tone}" Value="Move"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepMoveBrush}"/></DataTrigger>
+        <DataTrigger Binding="{Binding Tone}" Value="Text"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepTextBrush}"/></DataTrigger>
+        <DataTrigger Binding="{Binding Tone}" Value="Group"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepGroupBrush}"/></DataTrigger>
+      </Style.Triggers>
+    </Style>
   <Style x:Key="Banner" TargetType="Border">
     <Setter Property="Background" Value="{DynamicResource DangerFillBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}"/>
     <Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="12,8"/>

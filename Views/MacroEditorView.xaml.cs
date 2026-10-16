@@ -18,6 +18,8 @@ public partial class MacroEditorView : UserControl
     }
     public MacroProfile Profile { get; }
     public bool IsNew { get; }
+    /// <summary>Plays a macro once with real input; set by the window that hosts the editor.</summary>
+    public Func<MacroProfile, Task>? TestRun { get; init; }
     public event Action? Saved;
     public event Action? Cancelled;
     private readonly IEnumerable<MacroProfile> _others;
@@ -84,13 +86,10 @@ public partial class MacroEditorView : UserControl
         e.Handled = true;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (key == Key.Escape || key == Key.Tab) { Keyboard.ClearFocus(); MacroNameTextBox.Focus(); return; }
-        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin) return;
+        if (Shortcut.IsModifier(key)) return;
         uint vk = (uint)KeyInterop.VirtualKeyFromKey(key), modifiers = Shortcut.CurrentModifiers();
         if (vk == 0) return;
-        if (Shortcut.IsReserved(modifiers, vk)) { Say("This shortcut is reserved for Keyloom.", true); return; }
-        bool functionKey = vk is >= 0x70 and <= 0x87;
-        if (!functionKey && (modifiers & (Shortcut.Control | Shortcut.Alt | Shortcut.Win)) == 0)
-        { Say("Use Ctrl, Alt, or Win with a key, or choose an F1–F24 key.", true); return; }
+        if (Shortcut.Problem(modifiers, vk) is { } problem) { Say(problem, true); return; }
         _key = vk; _modifiers = modifiers; Say(""); UpdateShortcut();
     }
 
@@ -127,7 +126,7 @@ public partial class MacroEditorView : UserControl
         if (StepValueTextBox == null) return;
         bool mouse = StepType is MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp;
         StepMouseBox.Visibility = mouse ? Visibility.Visible : Visibility.Collapsed;
-        StepSpaceBox.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
+        StepSpaceBox.Visibility = MoveOptions.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
         StepValueTextBox.Visibility = mouse ? Visibility.Collapsed : Visibility.Visible;
         StepValueTextBox.AcceptsReturn = StepType == MacroActionType.Text;
         StepValueTextBox.TextWrapping = StepType == MacroActionType.Text ? TextWrapping.Wrap : TextWrapping.NoWrap;
@@ -186,6 +185,7 @@ public partial class MacroEditorView : UserControl
         StepEditor.Visibility = count == 1 && group < 0 ? Visibility.Visible : Visibility.Collapsed;
         GroupEditor.Visibility = group >= 0 ? Visibility.Visible : Visibility.Collapsed;
         BulkEditor.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        Strip.Picked = count == 1 ? ActionsListBox.SelectedIndex : -1;
         if (count > 1) { ShowStepHint(""); ShowBulk(); return; }
         if (group >= 0) { ShowGroup(group); return; }
         int i = ActionsListBox.SelectedIndex;
@@ -195,6 +195,7 @@ public partial class MacroEditorView : UserControl
         StepTypeBox.SelectedValue = a.ActionType;
         StepMouseBox.SelectedIndex = Math.Max(0, Array.IndexOf(ProfileButtons, a.MouseButton));
         StepSpaceBox.SelectedIndex = (int)a.Space;
+        ThenClickBox.IsChecked = HasClickAfter(i);
         StepValueTextBox.Text = a.ActionType switch
         {
             MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",
@@ -249,23 +250,29 @@ public partial class MacroEditorView : UserControl
     {
         if (_key != 0 && _others.Any(p => p.Id != Profile.Id && p.PrimaryVk == _key && p.PrimaryModifiers == _modifiers))
             throw new ArgumentException("Another macro already uses this shortcut.");
-        if (Mode == 2 && _stepError.Length > 0) throw new ArgumentException($"{StepIndexText.Text}: {_stepError}");
-        Profile.Name = MacroNameTextBox.Text.Trim();
-        Profile.PrimaryVk = _key; Profile.PrimaryModifiers = _modifiers;
-        Profile.FallbackVk = 0; Profile.FallbackModifiers = 0;
-        Profile.Behavior = (MacroBehaviorType)Mode;
-        Profile.TargetType = KeyboardTarget ? TargetInputType.Keyboard : TargetInputType.Mouse;
-        Profile.TargetMouseButton = SelectedButton;
-        Profile.TargetKey = TargetKeyTextBox.Text.Trim();
-        Profile.StartDelayMs = Number(StartDelayTextBox.Text, "Start delay");
-        Profile.SpamIntervalMs = Profile.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, "Interval");
-        Profile.RepeatCount = Profile.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, "Runs");
-        Profile.Actions = new(_steps.Select(a => a.Clone()));
-        ApplyTarget(Profile);
-        ApplyIcon(Profile);
-        ProfileValidator.Validate(Profile);
+        ReadForm(Profile);
         Saved?.Invoke();
     });
+    /// <summary>Copies the whole form into a profile and validates it. Throws <see cref="ArgumentException"/> for anything invalid.</summary>
+    private MacroProfile ReadForm(MacroProfile p)
+    {
+        if (Mode == 2 && _stepError.Length > 0) throw new ArgumentException($"{StepIndexText.Text}: {_stepError}");
+        p.Name = MacroNameTextBox.Text.Trim();
+        p.PrimaryVk = _key; p.PrimaryModifiers = _modifiers;
+        p.FallbackVk = 0; p.FallbackModifiers = 0;
+        p.Behavior = (MacroBehaviorType)Mode;
+        p.TargetType = KeyboardTarget ? TargetInputType.Keyboard : TargetInputType.Mouse;
+        p.TargetMouseButton = SelectedButton;
+        p.TargetKey = TargetKeyTextBox.Text.Trim();
+        p.StartDelayMs = Number(StartDelayTextBox.Text, "Start delay");
+        p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, "Interval");
+        p.RepeatCount = p.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, "Runs");
+        p.Actions = new(_steps.Select(a => a.Clone()));
+        ApplyTarget(p);
+        ApplyIcon(p);
+        ProfileValidator.Validate(p);
+        return p;
+    }
     private void Cancel_Click(object sender, RoutedEventArgs e) => Cancel();
     public void Cancel()
     {

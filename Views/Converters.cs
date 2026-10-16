@@ -50,7 +50,7 @@ public sealed class StepViewConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
-public enum StepLayoutPart { Number, Indent, Rail, Visibility, Children }
+public enum StepLayoutPart { Number, Indent, Rail, Visibility, Children, Time }
 
 /// <summary>
 /// Where a step sits in the list: its number (group markers have none), how far groups indent it, the group rail beside it,
@@ -66,6 +66,8 @@ public sealed class StepLayoutConverter : IMultiValueConverter
         if (values.Length < 2 || values[0] is not MacroAction step || values[1] is not IList<MacroAction> list || list.IndexOf(step) is not (>= 0 and var i))
             return part switch { StepLayoutPart.Indent => new Thickness(), StepLayoutPart.Rail => StepRailInfo.None, StepLayoutPart.Visibility => Visibility.Visible, _ => "" };
         var steps = (IReadOnlyList<MacroAction>)list;
+        if (part == StepLayoutPart.Time)
+            return step.ActionType == MacroActionType.GroupEnd ? "" : FormatTime(TimesFor(steps, values.Length > 2 ? values[2] : null)[i]);
         int indent = StepGroups.DepthAt(steps, i) - (step.ActionType == MacroActionType.GroupEnd ? 1 : 0);
         return part switch
         {
@@ -81,6 +83,22 @@ public sealed class StepLayoutConverter : IMultiValueConverter
                 _ => ""
             }
         };
+    }
+    /// <summary>Start times are worked out once per list and revision, not once per row.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, Tuple<object?, double[]>> Times = new();
+    private static double[] TimesFor(IReadOnlyList<MacroAction> steps, object? revision)
+    {
+        if (Times.TryGetValue(steps, out var cached) && Equals(cached.Item1, revision) && cached.Item2.Length == steps.Count) return cached.Item2;
+        var times = StepGroups.StartTimes(steps);
+        Times.AddOrUpdate(steps, Tuple.Create(revision, times));
+        return times;
+    }
+    /// <summary>0.25 s, 12.40 s, 1:05.2 for a minute or more.</summary>
+    public static string FormatTime(double ms)
+    {
+        if (ms < 60_000) return (ms / 1000).ToString("0.00", CultureInfo.InvariantCulture) + " s";
+        var t = TimeSpan.FromMilliseconds(ms);
+        return $"{(int)t.TotalMinutes}:{t.Seconds:00}.{t.Milliseconds / 100}";
     }
     private static string Children(IReadOnlyList<MacroAction> steps, int start)
     {

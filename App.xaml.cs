@@ -11,7 +11,7 @@ public partial class App : Application
         _instance = new Mutex(true, "Local\\Keyloom", out bool first);
         if (!first)
         {
-            MessageBox.Show("Keyloom is already running. Open it from the tray or press Ctrl + Shift + I.", "Keyloom");
+            MessageBox.Show("Keyloom is already running. Open it from the tray.", "Keyloom");
             Shutdown(); return;
         }
         Services.AppSettings.Load();

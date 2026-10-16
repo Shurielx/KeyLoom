@@ -135,7 +135,7 @@ internal static partial class Program
         for (int i = 0; i < 1000; i++) { large.PositionAt(i * 80); large.DelayAt(i * 80); large.StepAt(i * 80); }
         Check(clock.ElapsedMilliseconds < 500, $"20,000-step timeline builds and answers 3,000 queries in {clock.ElapsedMilliseconds} ms");
 
-        Check(AppVersion.Format("0.1-dev-3+abc123") == "0.1-dev-3" && AppVersion.Display == "0.1-dev-4", "version is shown as 0.1-dev-4 without build metadata");
+        Check(AppVersion.Format("0.1-dev-3+abc123") == "0.1-dev-3" && AppVersion.Display == "0.1-dev-5", "version is shown as 0.1-dev-5 without build metadata");
         string settingsPath = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         new AppSettings { ShowExperimental = true }.Save(settingsPath);
         Check(AppSettings.Load(settingsPath).ShowExperimental, "experimental setting round-trips");
@@ -273,7 +273,7 @@ internal static partial class Program
         var slider = (Slider)preview.FindName("TimeSlider");
         slider.Value = 250; Pump();
         Check(route.Time == 250 && ((TextBlock)preview.FindName("StepText")).Text.Contains("Step 5"), "preview scrubbing moves the marker and shows the running step");
-        Render(preview, 640, 470, "preview.png");
+        Render(preview, 680, 520, "preview.png");
         Invoke(preview, "Play_Click", preview, new RoutedEventArgs());
         Pump(120);
         Check(route.Time > 250, "preview plays in real time");
@@ -292,7 +292,7 @@ internal static partial class Program
         Check(options.Options is { Space: CoordinateSpace.Start, Simplify: true }, "record options choose coordinate space and simplification");
         string settingsFile = Path.Combine(Path.GetTempPath(), "keyloom-settings-" + Guid.NewGuid().ToString("N") + ".json");
         var settingsView = new SettingsView(settingsFile);
-        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.1-dev-4", "settings show the version");
+        Check(((TextBlock)settingsView.FindName("VersionText")).Text == "Keyloom 0.1-dev-5", "settings show the version");
         ((RadioButton)settingsView.FindName("DarkThemeRadio")).IsChecked = true;
         Check(ThemeManager.IsDark && AppSettings.Load(settingsFile).Theme == AppTheme.Dark, "choosing a theme applies and saves it right away");
         ((RadioButton)settingsView.FindName("LightThemeRadio")).IsChecked = true;
@@ -346,12 +346,13 @@ internal static partial class Program
             Check(iconEditor.Profile.IconKind == MacroIconKind.Image && IconStore.IsValidName(stored) && IconStore.Load(stored) is System.Windows.Media.Imaging.BitmapSource { PixelWidth: 96, PixelHeight: 96 },
                 "a custom picture is copied into the icon folder as a square icon");
             Render(iconEditor, 800, 300, "editor-icon-image.png");
-            ((TextBox)iconEditor.FindName("GlyphTextBox")).Text = "P1";
+            var chooser = (IconPicker)iconEditor.FindName("IconChooser");
+            ((TextBox)chooser.FindName("GlyphTextBox")).Text = "P1";
             Save(iconEditor);
             Check(iconEditor.Profile is { IconKind: MacroIconKind.Glyph, IconGlyph: "P1", IconImage: "" }, "typing a letter or number makes it the icon");
             Render(iconEditor, 800, 300, "editor-icon-glyph.png");
             Render((FrameworkElement)((System.Windows.Controls.Primitives.Popup)iconEditor.FindName("IconPopup")).Child, 290, 300, "icon-picker.png");
-            ((RadioButton)iconEditor.FindName("CursorIconRadio")).IsChecked = true;
+            ((RadioButton)chooser.FindName("CursorIconRadio")).IsChecked = true;
             Save(iconEditor);
             Check(iconEditor.Profile is { IconKind: MacroIconKind.Cursor, IconGlyph: "" }, "built-in icons can be chosen");
             IconStore.Prune([]);

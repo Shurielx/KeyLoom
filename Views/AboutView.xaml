@@ -17,7 +17,7 @@
   <ScrollViewer x:Name="Scroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="-4,0,-14,0" Padding="4,0,14,0">
     <StackPanel Margin="0,0,0,16">
       <!-- This version and whether a newer one is out -->
-      <Border Style="{StaticResource Card}" Effect="{DynamicResource CardShadow}" Padding="16,14">
+      <Border Style="{StaticResource Card}" Padding="16,14">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <Image Source="/Keyloom;component/Assets/keyloom.ico" Width="44" Height="44" Margin="0,0,14,0" VerticalAlignment="Center"/>

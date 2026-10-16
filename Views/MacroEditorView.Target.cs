@@ -62,9 +62,10 @@ public partial class MacroEditorView
     {
         _window = null; UsePointBox.IsChecked = false; UpdateTargetUi();
     }
-    private async void PickPoint_Click(object sender, RoutedEventArgs e)
+    /// <summary>Hides the window while the person clicks a point in another one. Null when cancelled.</summary>
+    private async Task<PickedPoint?> PickAsync()
     {
-        if (_picker != null || _recording != null) return;
+        if (_picker != null || _recording != null) return null;
         Say("");
         _picker = new PointPicker();
         PickedPoint? picked = null;
@@ -79,16 +80,23 @@ public partial class MacroEditorView
             MacroForm.IsEnabled = true;
             if (host != null && IsLoaded) { host.WindowState = WindowState.Normal; host.Activate(); }
         }
-        if (picked == null || !IsLoaded) return;
+        return IsLoaded ? picked : null;
+    }
+    /// <summary>Repeat and hold: sets the point. Sequences: adds a move there, with a click unless the menu item says move only.</summary>
+    private async void PickPoint_Click(object sender, RoutedEventArgs e)
+    {
+        bool click = sender is not FrameworkElement { Tag: "Move" };
+        var picked = await PickAsync();
+        if (picked == null) return;
         SetWindow(picked.Target);
         if (Mode == 2)
         {
             Attempt(() =>
             {
                 InsertStep(new() { ActionType = MacroActionType.MousePosition, Space = CoordinateSpace.Window, X = picked.X, Y = picked.Y });
-                InsertStep(new() { ActionType = MacroActionType.MouseClick, MouseButton = "Left" });
+                if (click) InsertStep(new() { ActionType = MacroActionType.MouseClick, MouseButton = "Left" });
             });
-            if (ErrorText.Text.Length == 0) Say($"Added a click at {picked.X}, {picked.Y} in {picked.Target.Label}.");
+            if (ErrorText.Text.Length == 0) Say($"Added {(click ? "a click" : "a move")} at {picked.X}, {picked.Y} in {picked.Target.Label}.");
         }
         else
         {
@@ -97,6 +105,64 @@ public partial class MacroEditorView
             UsePointBox.IsChecked = true;
             UpdateTargetUi();
         }
+    }
+    /// <summary>Moves the picked Move to step to a newly clicked point. Screen positions stay on screen; others follow the window.</summary>
+    private async void RepickPoint_Click(object sender, RoutedEventArgs e)
+    {
+        if (ActionsListBox.SelectedItem is not MacroAction { ActionType: MacroActionType.MousePosition } step) return;
+        var picked = await PickAsync();
+        int i = _steps.IndexOf(step);
+        if (picked == null || i < 0) return;
+        var moved = step.Clone();
+        if (step.Space == CoordinateSpace.Screen) (moved.X, moved.Y) = WindowSystem.Instance.ClientToScreen(picked.Window, picked.X, picked.Y);
+        else { SetWindow(picked.Target); moved.Space = CoordinateSpace.Window; moved.X = picked.X; moved.Y = picked.Y; }
+        Remember();
+        _selecting = true;
+        try { _steps[i] = moved; }
+        finally { _selecting = false; }
+        Select([i]); FocusStep(i);
+        Say($"Step {StepNumber(i)} now moves to {moved.X}, {moved.Y}{(moved.Space == CoordinateSpace.Screen ? " on screen" : $" in {picked.Target.Label}")}.");
+    }
+    private bool HasClickAfter(int i) => i >= 0 && i + 1 < _steps.Count && _steps[i + 1].ActionType == MacroActionType.MouseClick;
+    /// <summary>Adds a left click right after the picked move, or takes it away.</summary>
+    private void ThenClick_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loadingStep || ActionsListBox.SelectedItem is not MacroAction { ActionType: MacroActionType.MousePosition } step) return;
+        int i = _steps.IndexOf(step);
+        bool want = ThenClickBox.IsChecked == true;
+        if (i < 0 || HasClickAfter(i) == want) return;
+        Attempt(() =>
+        {
+            if (want) EnsureRoom(1);
+            Remember();
+            _selecting = true;
+            try
+            {
+                if (want) _steps.Insert(i + 1, new MacroAction { ActionType = MacroActionType.MouseClick, MouseButton = "Left" });
+                else _steps.RemoveAt(i + 1);
+            }
+            finally { _selecting = false; }
+            if (want) AnimateStep(_steps[i + 1]);
+            Select([i]);
+        });
+    }
+    private string StepNumber(int i) => (_steps.Take(i).Count(s => !s.IsGroupMarker) + 1).ToString("N0");
+    private void Strip_StepPicked(int index)
+    {
+        if (index < 0 || index >= _steps.Count) return;
+        Select([index]); FocusStep(index);
+    }
+    private async void TestRun_Click(object sender, RoutedEventArgs e) => await RunTestAsync();
+    /// <summary>Plays what is in the editor once, for real. Nothing is saved.</summary>
+    private async Task RunTestAsync()
+    {
+        if (TestRun == null) return;
+        MacroProfile test;
+        try { Say(""); test = ReadForm(new MacroProfile { Id = Profile.Id }); }
+        catch (ArgumentException ex) { Say(ex.Message, true); return; }
+        test.RepeatCount = 1;
+        try { await TestRun(test); if (IsLoaded) Say("Test run finished. Nothing was saved."); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { Say(ex.Message, true); }
     }
     /// <summary>Copies target settings from the form into a profile.</summary>
     private void ApplyTarget(MacroProfile p)
@@ -143,7 +209,7 @@ public partial class MacroEditorView
         Say("");
         var p = new MacroProfile { Name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : "Macro", Actions = new(_steps.Select(a => a.Clone())) };
         ApplyTarget(p);
-        if (SheetLayer.For(this) is { } sheets) await sheets.ShowAsync(new PreviewView(p), 660);
+        if (SheetLayer.For(this) is { } sheets) await sheets.ShowAsync(new PreviewView(p, null, TestRun == null ? null : RunTestAsync), 680);
     }
     private void BindSteps(ObservableCollection<MacroAction> steps)
     {
@@ -162,15 +228,26 @@ public partial class MacroEditorView
         _thumbnailQueued = true;
         Dispatcher.BeginInvoke(RefreshThumbnail, DispatcherPriority.Background);
     }
+    /// <summary>Redraws the run strip, and the route when the macro moves the pointer; without one the list gets the room.</summary>
     private void RefreshThumbnail()
     {
         _thumbnailQueued = false;
-        var timeline = MacroTimeline.Build(StepGroups.PlayedCount(_steps) <= StepGroups.MaxPlayedSteps ? StepGroups.Expand(_steps).ToList() : _steps.Where(a => !a.IsGroupMarker).ToList());
+        var index = new Dictionary<MacroAction, int>(ReferenceEqualityComparer.Instance);
+        for (int i = 0; i < _steps.Count; i++) if (!_steps[i].IsGroupMarker) index.TryAdd(_steps[i], i);
+        var played = (StepGroups.PlayedCount(_steps) <= StepGroups.MaxPlayedSteps ? StepGroups.Expand(_steps) : _steps.Where(a => !a.IsGroupMarker)).ToList();
+        var timeline = MacroTimeline.Build(played);
         Thumbnail.Timeline = timeline;
-        ThumbnailEmpty.Visibility = timeline.HasPointer ? Visibility.Collapsed : Visibility.Visible;
+        // One position is a spot, not a route; the strip already shows it.
+        bool route = timeline.Points.Select(p => (p.X, p.Y)).Distinct().Skip(1).Any();
+        PreviewCard.Visibility = route ? Visibility.Visible : Visibility.Collapsed;
+        RouteColumn.Width = new GridLength(route ? 190 : 0);
         ThumbnailInfo.Text = $"{timeline.Duration / 1000:0.0} s";
+        Strip.Show(played, played.Select(a => index.TryGetValue(a, out int i) ? i : -1).ToArray());
+        Strip.Picked = ActionsListBox.SelectedItems.Count == 1 ? ActionsListBox.SelectedIndex : -1;
+        StripEnd.Text = StepLayoutConverter.FormatTime(timeline.Duration);
         int count = _steps.Count(a => !a.IsGroupMarker);
-        StepCountText.Text = count == 0 ? "" : $"{count:N0} · {timeline.Duration / 1000:0.0} s";
+        StripPanel.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        StepCountText.Text = count == 0 ? "" : $"{count:N0} {(count == 1 ? "step" : "steps")} · {StepLayoutConverter.FormatTime(timeline.Duration)} per run";
         NoStepsText.Visibility = _steps.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (_steps.Count == 0) StepEditor.Visibility = BulkEditor.Visibility = GroupEditor.Visibility = Visibility.Collapsed;
     }

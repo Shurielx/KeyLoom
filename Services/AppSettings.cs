@@ -9,6 +9,9 @@ public sealed class AppSettings
 {
     public bool ShowExperimental { get; set; }
     public AppTheme Theme { get; set; }
+    /// <summary>Keeps a small "running" card on screen while a macro runs.</summary>
+    public bool ShowRunIndicator { get; set; } = true;
+    public IndicatorPlace IndicatorPlace { get; set; }
 
     public static AppSettings Current { get; private set; } = new();
     private static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Keyloom", "settings.json");
@@ -20,13 +23,14 @@ public sealed class AppSettings
             Current = File.Exists(path) && new FileInfo(path).Length < 64 * 1024
                 ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new() : new();
             if (!Enum.IsDefined(Current.Theme)) Current.Theme = AppTheme.System;
+            if (!Enum.IsDefined(Current.IndicatorPlace)) Current.IndicatorPlace = IndicatorPlace.Top;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { Current = new(); }
         return Current;
     }
     public AppSettings With(Action<AppSettings> change)
     {
-        var next = new AppSettings { ShowExperimental = ShowExperimental, Theme = Theme };
+        var next = new AppSettings { ShowExperimental = ShowExperimental, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace };
         change(next); return next;
     }
     public void Save(string? path = null)
@@ -37,6 +41,9 @@ public sealed class AppSettings
         Current = this;
     }
 }
+
+/// <summary>Where the running indicator sits on the screen with the pointer.</summary>
+public enum IndicatorPlace { Top, TopRight, BottomRight }
 
 public static class AppVersion
 {

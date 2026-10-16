@@ -2,6 +2,28 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.1-dev-5 · 2026-10-16
+
+### New
+- Change name, icon and shortcut right in the list
+- Steps show when they start, with lines between rows
+- Run strip: every input of a run at its time
+- Move to: pick the point again, click after or not
+- Add a move with or without a click
+- Test run: play a macro once for real
+- Dry-run preview shows the step playing now
+- Running card on screen with time and how to stop
+- Usage statistics in Settings
+
+### Changed
+- Sharper, slightly larger text, also on 1080p
+- Calmer running state, no blinking
+- Route shows only when the pointer moves
+- Ctrl + Shift + I removed
+
+### Fixed
+- Macro rows no longer jump and get cut off on hover
+
 ## 0.1-dev-4 · 2026-10-16
 
 ### New

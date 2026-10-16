@@ -12,9 +12,8 @@ public sealed class HotkeyManager : IDisposable
     private readonly HwndSource? _source;
     private readonly List<int> _ids = new();
     private readonly Dictionary<int, MacroProfile> _profiles = new();
-    private const int WindowId = 1, StopId = 2;
+    private const int StopId = 2;
     public event Action<MacroProfile>? ProfileTriggered;
-    public event Action? WindowTriggered;
     public event Action? StopTriggered;
 
     public HotkeyManager(IntPtr hwnd)
@@ -27,7 +26,6 @@ public sealed class HotkeyManager : IDisposable
     {
         UnregisterAll();
         var errors = new List<string>();
-        if (!Register(WindowId, Shortcut.AppModifiers, Shortcut.WindowKey)) errors.Add("Window shortcut is unavailable.");
         if (!Register(StopId, Shortcut.AppModifiers, Shortcut.StopKey)) errors.Add("Stop shortcut is unavailable. Use Stop all or the tray menu.");
         int id = 100;
         foreach (var profile in profiles)
@@ -52,8 +50,7 @@ public sealed class HotkeyManager : IDisposable
     {
         if (message != 0x0312) return IntPtr.Zero;
         int id = wParam.ToInt32();
-        if (id == WindowId) WindowTriggered?.Invoke();
-        else if (id == StopId) StopTriggered?.Invoke();
+        if (id == StopId) StopTriggered?.Invoke();
         else if (_profiles.TryGetValue(id, out var profile)) ProfileTriggered?.Invoke(profile);
         else return IntPtr.Zero;
         handled = true; return IntPtr.Zero;

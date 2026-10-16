@@ -104,6 +104,35 @@ public static class StepGroups
     /// </summary>
     public static IEnumerable<MacroAction> Expand(IReadOnlyList<MacroAction> steps) => Play(Parse(steps));
 
+    /// <summary>
+    /// When each step first plays in one run, in milliseconds from the start, counting waits and the waits groups add.
+    /// Group markers take the time of the step after them. With more played steps than <see cref="MaxPlayedSteps"/>
+    /// the times count each step once.
+    /// </summary>
+    public static double[] StartTimes(IReadOnlyList<MacroAction> steps)
+    {
+        var times = new double[steps.Count];
+        var index = new Dictionary<MacroAction, int>(ReferenceEqualityComparer.Instance);
+        for (int i = 0; i < steps.Count; i++) if (!steps[i].IsGroupMarker) index.TryAdd(steps[i], i);
+        var seen = new bool[steps.Count];
+        int left = index.Count;
+        double time = 0;
+        var played = PlayedCount(steps) <= MaxPlayedSteps ? Expand(steps) : steps.Where(a => !a.IsGroupMarker);
+        foreach (var step in played)
+        {
+            if (left == 0) break;
+            if (index.TryGetValue(step, out int i) && !seen[i]) { seen[i] = true; times[i] = time; left--; }
+            if (step.ActionType == MacroActionType.Delay) time += step.DelayMs;
+        }
+        double next = time;
+        for (int i = steps.Count - 1; i >= 0; i--)
+        {
+            if (steps[i].IsGroupMarker) times[i] = next;
+            else next = times[i];
+        }
+        return times;
+    }
+
     private sealed record Node(MacroAction Step, List<Node>? Children);
     private static List<Node> Parse(IReadOnlyList<MacroAction> steps)
     {

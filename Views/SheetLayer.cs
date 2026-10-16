@@ -22,15 +22,20 @@ public sealed class SheetLayer : Grid
         var scrim = new Border();
         scrim.SetResourceReference(Border.BackgroundProperty, "ScrimBrush");
         scrim.MouseLeftButtonDown += (_, _) => Close(content, false);
-        var card = new Border
+        var surface = new Border { Child = content, BorderThickness = new(1), CornerRadius = new(12), Padding = new(18, 16, 18, 16) };
+        surface.SetResourceReference(Border.BackgroundProperty, "SheetBrush");
+        surface.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
+        // The shadow is its own layer behind the sheet; text inside an element with an effect would lose ClearType.
+        var shadow = new Border { CornerRadius = new(12), IsHitTestVisible = false };
+        shadow.SetResourceReference(Border.BackgroundProperty, "SheetBrush");
+        shadow.SetResourceReference(EffectProperty, "SheetShadow");
+        var card = new Grid
         {
-            Child = content, Width = width, BorderThickness = new(1), CornerRadius = new(12), Padding = new(18, 16, 18, 16),
+            Children = { shadow, surface }, Width = width,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new(24),
             RenderTransformOrigin = new(.5, .5), RenderTransform = new ScaleTransform(.96, .96)
         };
-        card.SetResourceReference(Border.BackgroundProperty, "SheetBrush");
-        card.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
-        card.SetResourceReference(EffectProperty, "SheetShadow");
+        RenderOptions.SetClearTypeHint(card, ClearTypeHint.Enabled);
         KeyboardNavigation.SetTabNavigation(card, KeyboardNavigationMode.Cycle);
         KeyboardNavigation.SetControlTabNavigation(card, KeyboardNavigationMode.Cycle);
         var layer = new Grid { Children = { scrim, card } };
@@ -42,8 +47,8 @@ public sealed class SheetLayer : Grid
         Children.Add(layer);
         Visibility = Visibility.Visible;
         var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
-        scrim.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
-        card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+        scrim.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)) { FillBehavior = FillBehavior.Stop });
+        card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { FillBehavior = FillBehavior.Stop });
         var grow = new DoubleAnimation(.96, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease };
         card.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
         card.RenderTransform.BeginAnimation(ScaleTransform.ScaleYProperty, grow);

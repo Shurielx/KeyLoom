@@ -1,7 +1,10 @@
 <UserControl x:Class="Keyloom.Views.PreviewView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Keyloom.Views"
-             Foreground="{DynamicResource InkBrush}" Height="470">
+             Foreground="{DynamicResource InkBrush}" Height="520">
+  <UserControl.Resources>
+    <local:StepViewConverter x:Key="StepView"/>
+  </UserControl.Resources>
   <Grid>
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid Margin="0,0,0,12">
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
         <Path Data="{StaticResource IconPlay}" Style="{StaticResource AccentIcon}" Width="11" Height="11" Margin="0,0,9,0"/>
@@ -14,7 +17,24 @@
     <Border Grid.Row="1" CornerRadius="8" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" ClipToBounds="True">
       <Grid>
         <local:PathPreview x:Name="Route"/>
-        <TextBlock x:Name="EmptyText" Text="This sequence has no pointer positions to draw." Style="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+        <!-- Without pointer positions there is no route; the step that plays now takes the space instead. -->
+        <StackPanel x:Name="NowPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed" MinWidth="300">
+          <TextBlock x:Name="PreviousText" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="460"/>
+          <Border Margin="0,12" Padding="16,12" CornerRadius="10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1" HorizontalAlignment="Center" MinWidth="260">
+            <Grid x:Name="NowStep" Style="{StaticResource StepTone}">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Grid Width="36" Height="36" Margin="0,0,14,0">
+                <Border CornerRadius="9" Background="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" Opacity=".16"/>
+                <Path Data="{Binding Icon}" Fill="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" Width="16" Height="16" Stretch="Uniform"/>
+              </Grid>
+              <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}"/>
+                <TextBlock Text="{Binding Detail}" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <TextBlock x:Name="NextText" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="460"/>
+        </StackPanel>
       </Grid>
     </Border>
     <Grid Grid.Row="2" Margin="0,12,0,0">
@@ -23,22 +43,27 @@
         <StackPanel Orientation="Horizontal"><Path x:Name="PlayIcon" Data="{StaticResource IconPlay}" Fill="White" Width="9" Height="10" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center"/><TextBlock x:Name="PlayText" Text="Play"/></StackPanel>
       </Button>
       <Slider x:Name="TimeSlider" Grid.Column="1" VerticalAlignment="Center" Minimum="0" IsMoveToPointEnabled="True" ValueChanged="Time_Changed" AutomationProperties.Name="Preview time"/>
-      <TextBlock x:Name="TimeText" Grid.Column="2" Text="0.0 s / 0.0 s" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="96" TextAlignment="Right"/>
+      <TextBlock x:Name="TimeText" Grid.Column="2" Text="0.0 s / 0.0 s" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="96" TextAlignment="Right" Typography.NumeralAlignment="Tabular"/>
     </Grid>
-    <Grid Grid.Row="3" Margin="0,10,0,0">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <!-- Every input in the run, with the playhead -->
+    <local:RunStrip x:Name="Strip" Grid.Row="3" Height="22" Margin="96,8,108,0" StepPicked="Strip_StepPicked"/>
+    <Grid Grid.Row="4" Margin="0,10,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <ComboBox x:Name="SpeedBox" Width="84" SelectedIndex="2" SelectionChanged="Speed_Changed" ToolTip="Preview speed">
         <ComboBoxItem Content="0.25×"/><ComboBoxItem Content="0.5×"/><ComboBoxItem Content="1×"/><ComboBoxItem Content="2×"/><ComboBoxItem Content="4×"/>
       </ComboBox>
       <CheckBox x:Name="ScreenBox" Grid.Column="1" Content="Show on screen" Margin="14,0,0,0" VerticalAlignment="Center" Checked="Screen_Changed" Unchecked="Screen_Changed" ToolTip="Draw the route where it will run. Clicks pass through."/>
-      <StackPanel Grid.Column="2" Margin="16,0,0,0" VerticalAlignment="Center">
-        <TextBlock x:Name="StepText" TextTrimming="CharacterEllipsis" FontSize="12"/>
+      <StackPanel Grid.Column="2" Margin="16,0,12,0" VerticalAlignment="Center">
+        <TextBlock x:Name="StepText" TextTrimming="CharacterEllipsis"/>
         <Border x:Name="DelayTrack" Height="4" CornerRadius="2" Background="{DynamicResource PillBrush}" Margin="0,4,0,0">
           <Border x:Name="DelayBar" HorizontalAlignment="Left" Width="0" CornerRadius="2" Background="{DynamicResource AccentBrush}"/>
         </Border>
       </StackPanel>
+      <Button x:Name="TestButton" Grid.Column="3" Click="Test_Click" Padding="11,4" ToolTip="Play it once for real, with clicks and keys. Ctrl + Shift + F12 stops." Visibility="Collapsed">
+        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconBolt}" Style="{StaticResource AccentIcon}" Width="9" Height="12" Margin="0,0,7,0"/><TextBlock Text="Test run"/></StackPanel>
+      </Button>
     </Grid>
-    <TextBlock x:Name="NoteText" Grid.Row="4" Style="{StaticResource Hint}" Margin="0,10,0,0"
-               Text="Planned positions only: preview never moves your pointer or sends input. Moved buttons, resized windows or a game camera can change the real result."/>
+    <TextBlock x:Name="NoteText" Grid.Row="5" Style="{StaticResource Hint}" Margin="0,10,0,0"
+               Text="A dry run: preview never moves your pointer or sends input. Test run plays it once for real. Moved buttons, resized windows or a game camera can change the real result."/>
   </Grid>
 </UserControl>

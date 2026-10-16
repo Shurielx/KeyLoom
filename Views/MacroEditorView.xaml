@@ -3,27 +3,11 @@
   <UserControl.Resources>
     <local:StepViewConverter x:Key="StepView"/>
     <local:StepLayoutConverter x:Key="StepLayout"/>
-    <!-- Sets the tone colour for a step; icon tile and title pick it up through TextElement.Foreground. -->
-    <Style x:Key="StepTone" TargetType="Grid">
-      <Setter Property="TextElement.Foreground" Value="{DynamicResource MutedBrush}"/>
-      <Style.Triggers>
-        <DataTrigger Binding="{Binding Tone}" Value="Pointer"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepPointerBrush}"/></DataTrigger>
-        <DataTrigger Binding="{Binding Tone}" Value="Key"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepKeyBrush}"/></DataTrigger>
-        <DataTrigger Binding="{Binding Tone}" Value="Hold"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepHoldBrush}"/></DataTrigger>
-        <DataTrigger Binding="{Binding Tone}" Value="Move"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepMoveBrush}"/></DataTrigger>
-        <DataTrigger Binding="{Binding Tone}" Value="Text"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepTextBrush}"/></DataTrigger>
-        <DataTrigger Binding="{Binding Tone}" Value="Group"><Setter Property="TextElement.Foreground" Value="{DynamicResource StepGroupBrush}"/></DataTrigger>
-      </Style.Triggers>
-    </Style>
     <Style x:Key="RowTool" TargetType="Button" BasedOn="{StaticResource IconButton}">
       <Setter Property="Width" Value="24"/><Setter Property="Height" Value="24"/><Setter Property="MinHeight" Value="0"/><Setter Property="Margin" Value="1,0,0,0"/>
     </Style>
     <Style x:Key="InlineLabel" TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
       <Setter Property="Margin" Value="0,0,8,0"/><Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-    <Style x:Key="IconChoice" TargetType="RadioButton" BasedOn="{StaticResource ChoiceCard}">
-      <Setter Property="Width" Value="52"/><Setter Property="Height" Value="52"/><Setter Property="Padding" Value="0"/>
-      <Setter Property="Margin" Value="0,0,6,6"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="GroupName" Value="Icon"/>
     </Style>
   </UserControl.Resources>
   <Grid x:Name="MacroForm">
@@ -31,7 +15,7 @@
     <ScrollViewer x:Name="FormScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="-4,0,-14,0" Padding="4,0,14,0">
       <StackPanel Margin="0,0,0,12">
         <!-- Icon, name and shortcut -->
-        <Border Style="{StaticResource Card}" Padding="12" Effect="{DynamicResource CardShadow}">
+        <Border Style="{StaticResource Card}" Padding="12">
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="236"/></Grid.ColumnDefinitions>
             <Button x:Name="IconButton" Click="Icon_Click" Style="{StaticResource IconButton}" Width="56" Height="56" Margin="0,0,14,0" VerticalAlignment="Center" ToolTip="Change icon" AutomationProperties.Name="Change icon">
@@ -44,34 +28,7 @@
               </Grid>
             </Button>
             <Popup x:Name="IconPopup" PlacementTarget="{Binding ElementName=IconButton}" Placement="Bottom" VerticalOffset="4" HorizontalOffset="-10" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
-              <Border Margin="10,0,10,16" Width="316" Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12" Effect="{DynamicResource PopupShadow}" TextElement.Foreground="{DynamicResource InkBrush}">
-                <StackPanel>
-                  <TextBlock Text="Icon" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
-                  <WrapPanel>
-                    <RadioButton x:Name="AutoIconRadio" Style="{StaticResource IconChoice}" Checked="IconChoice_Checked" ToolTip="Automatic: follows the macro type">
-                      <Grid><local:MacroIcon x:Name="AutoIconPreview" SymbolSize="17" Foreground="{DynamicResource AccentBrush}"/><TextBlock Text="AUTO" FontSize="7.5" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-14"/></Grid>
-                    </RadioButton>
-                    <RadioButton x:Name="MouseIconRadio" Style="{StaticResource IconChoice}" Checked="IconChoice_Checked" ToolTip="Mouse"><Path Data="{StaticResource IconMouse}" Style="{StaticResource AccentIcon}" Width="18" Height="18"/></RadioButton>
-                    <RadioButton x:Name="KeyboardIconRadio" Style="{StaticResource IconChoice}" Checked="IconChoice_Checked" ToolTip="Keyboard"><Path Data="{StaticResource IconKeyboard}" Style="{StaticResource AccentIcon}" Width="20" Height="20"/></RadioButton>
-                    <RadioButton x:Name="CursorIconRadio" Style="{StaticResource IconChoice}" Checked="IconChoice_Checked" ToolTip="Moving pointer"><Path Data="{StaticResource IconCursorMove}" Style="{StaticResource AccentIcon}" Width="20" Height="20"/></RadioButton>
-                    <RadioButton x:Name="ImageIconRadio" Style="{StaticResource IconChoice}" Checked="IconChoice_Checked" ToolTip="Your picture" Visibility="Collapsed">
-                      <local:MacroIcon x:Name="ImageIconPreview" Kind="Image" Width="44" Height="44"/>
-                    </RadioButton>
-                  </WrapPanel>
-                  <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,6,0,10"/>
-                  <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="64"/></Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                      <TextBlock Text="Letter or number" FontWeight="SemiBold"/>
-                      <TextBlock Text="Up to two characters, like K, 2 or P1" Style="{StaticResource Hint}" Margin="0,2,8,0"/>
-                    </StackPanel>
-                    <TextBox x:Name="GlyphTextBox" Grid.Column="1" MaxLength="2" FontSize="15" FontWeight="SemiBold" HorizontalContentAlignment="Center" TextChanged="Glyph_Changed" AutomationProperties.Name="Icon letter or number"/>
-                  </Grid>
-                  <Button Click="UploadIcon_Click" Margin="0,12,0,0" HorizontalAlignment="Stretch">
-                    <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconUpload}" Style="{StaticResource Icon}" Width="13" Height="13" Margin="0,0,8,0"/><TextBlock Text="Use your own picture..."/></StackPanel>
-                  </Button>
-                </StackPanel>
-              </Border>
+              <local:IconPicker x:Name="IconChooser" Changed="IconChooser_Changed" CloseRequested="IconChooser_CloseRequested" Failed="IconChooser_Failed"/>
             </Popup>
             <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
               <TextBlock Text="Name" Style="{StaticResource FieldLabel}"/>
@@ -113,7 +70,7 @@
         </UniformGrid>
 
         <!-- Repeat and hold: which input -->
-        <Border x:Name="TargetPanel" Style="{StaticResource Card}" Margin="0,10,0,0" Effect="{DynamicResource CardShadow}">
+        <Border x:Name="TargetPanel" Style="{StaticResource Card}" Margin="0,10,0,0">
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="86"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -156,7 +113,7 @@
         </Border>
 
         <!-- Sequence: steps -->
-        <Border x:Name="SequencePanel" Style="{StaticResource Card}" PreviewKeyDown="Steps_KeyDown" Margin="0,10,0,0" Effect="{DynamicResource CardShadow}" Visibility="Collapsed">
+        <Border x:Name="SequencePanel" Style="{StaticResource Card}" PreviewKeyDown="Steps_KeyDown" Margin="0,10,0,0" Visibility="Collapsed">
           <Grid>
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid Margin="0,0,0,10">
@@ -168,8 +125,11 @@
                 <Button Click="Record_Click" Margin="0,0,6,0" Padding="11,4" ToolTip="Record mouse and keyboard input">
                   <StackPanel Orientation="Horizontal"><Grid Width="10" Height="10" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Fill="{DynamicResource RecordHaloBrush}"/><Ellipse Width="6" Height="6" Fill="{DynamicResource RecordBrush}"/></Grid><TextBlock Text="Record"/></StackPanel>
                 </Button>
-                <Button Click="Preview_Click" Margin="0,0,6,0" Padding="11,4" ToolTip="Play the route without sending input">
+                <Button Click="Preview_Click" Margin="0,0,6,0" Padding="11,4" ToolTip="Watch what happens and when, without sending any input">
                   <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconPlay}" Style="{StaticResource AccentIcon}" Width="9" Height="10" Margin="0,0,7,0"/><TextBlock Text="Preview"/></StackPanel>
+                </Button>
+                <Button x:Name="TestRunButton" Click="TestRun_Click" Margin="0,0,6,0" Padding="11,4" ToolTip="Play it once for real, with clicks and keys. Ctrl + Shift + F12 stops.">
+                  <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconBolt}" Style="{StaticResource AccentIcon}" Width="9" Height="12" Margin="0,0,7,0"/><TextBlock Text="Test run"/></StackPanel>
                 </Button>
                 <Button x:Name="AddStepButton" Click="AddStepMenu_Click" Style="{StaticResource PrimaryButton}" Padding="11,4">
                   <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconPlus}" Fill="White" Width="10" Height="10" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Add step"/><Path Data="M0 0L4 4L8 0" Stroke="White" StrokeThickness="1.4" Width="8" Height="4" Stretch="Uniform" Margin="8,1,0,0" VerticalAlignment="Center"/></StackPanel>
@@ -188,16 +148,25 @@
                       <Separator/>
                       <MenuItem Header="Group" Click="AddGroup_Click" InputGestureText="Ctrl+G" ToolTip="Groups the picked steps, or adds an empty group"><MenuItem.Icon><Path Data="{StaticResource IconGroup}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                       <Separator/>
-                      <MenuItem Header="Click a point in a window..." Click="PickPoint_Click"><MenuItem.Icon><Path Data="{StaticResource IconCursorMove}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                      <MenuItem Header="Click at a point in a window..." Tag="Click" Click="PickPoint_Click" ToolTip="Adds a move to the point and a click"><MenuItem.Icon><Path Data="{StaticResource IconCursorMove}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                      <MenuItem Header="Move to a point in a window..." Tag="Move" Click="PickPoint_Click" ToolTip="Adds only the move, without a click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     </ContextMenu>
                   </Button.ContextMenu>
                 </Button>
               </StackPanel>
             </Grid>
             <Grid Grid.Row="1">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
-              <Grid>
-                <ListBox x:Name="ActionsListBox" MinHeight="168" MaxHeight="216" SelectionMode="Extended" SelectionChanged="Step_Selected" MouseDoubleClick="Steps_DoubleClick" ContextMenuOpening="Steps_ContextMenuOpening"
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="RouteColumn" Width="190"/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+              <!-- Column names, lined up with the rows below -->
+              <Grid x:Name="StepHeader" Margin="8,0,24,5" TextElement.FontSize="11.5" TextElement.Foreground="{DynamicResource MutedBrush}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="#" HorizontalAlignment="Right" Margin="0,0,10,0"/>
+                <TextBlock Grid.Column="1" Text="Step"/>
+                <TextBlock Grid.Column="2" Text="Starts at" Margin="0,0,52,0" ToolTip="When the step plays in one run, counting the waits before it"/>
+              </Grid>
+              <Grid Grid.Row="1">
+                <ListBox x:Name="ActionsListBox" MinHeight="220" MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Visible" SelectionMode="Extended" SelectionChanged="Step_Selected" MouseDoubleClick="Steps_DoubleClick" ContextMenuOpening="Steps_ContextMenuOpening"
                          PreviewMouseLeftButtonDown="Steps_MouseDown" PreviewMouseMove="Steps_MouseMove" PreviewMouseLeftButtonUp="Steps_MouseUp" LostMouseCapture="Steps_LostCapture"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">
                   <!-- Filled when it opens, from what is picked -->
@@ -205,6 +174,33 @@
                   <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                       <Setter Property="Padding" Value="4,0"/>
+                      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                        <Grid Background="Transparent">
+                          <Border x:Name="Hover" CornerRadius="4" Background="{DynamicResource ListHoverBrush}" Opacity="0"/>
+                          <Border x:Name="Selected" CornerRadius="4" Background="{DynamicResource ListSelectedBrush}" Opacity="0"/>
+                          <Border x:Name="Pip" Width="3" Height="16" CornerRadius="1.5" HorizontalAlignment="Left" Margin="1,0,0,0" Background="{DynamicResource AccentBrush}" RenderTransformOrigin=".5,.5">
+                            <Border.RenderTransform><ScaleTransform x:Name="PipScale" ScaleY="0"/></Border.RenderTransform>
+                          </Border>
+                          <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                          <Rectangle Height="1" VerticalAlignment="Bottom" Margin="6,0" Fill="{DynamicResource DividerBrush}" IsHitTestVisible="False"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.1"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+                            <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+                          </Trigger>
+                          <Trigger Property="IsSelected" Value="True">
+                            <Trigger.EnterActions><BeginStoryboard><Storyboard>
+                              <DoubleAnimation Storyboard.TargetName="Selected" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12"/>
+                              <DoubleAnimation Storyboard.TargetName="PipScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.25" EasingFunction="{StaticResource EaseOutStrong}"/>
+                            </Storyboard></BeginStoryboard></Trigger.EnterActions>
+                            <Trigger.ExitActions><BeginStoryboard><Storyboard>
+                              <DoubleAnimation Storyboard.TargetName="Selected" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15"/>
+                              <DoubleAnimation Storyboard.TargetName="PipScale" Storyboard.TargetProperty="ScaleY" To="0" Duration="0:0:0.12"/>
+                            </Storyboard></BeginStoryboard></Trigger.ExitActions>
+                          </Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate></Setter.Value></Setter>
                       <!-- Steps inside a collapsed group are hidden -->
                       <Setter Property="Visibility">
                         <Setter.Value>
@@ -218,14 +214,14 @@
                     </Style>
                   </ListBox.ItemContainerStyle>
                   <ListBox.ItemTemplate><DataTemplate>
-                    <Grid x:Name="Row" MinHeight="34">
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Grid x:Name="Row" MinHeight="36">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                       <!-- Step number; a checkbox takes its place on hover and sits beside it while several steps are picked -->
                       <Grid x:Name="Lead" Width="34">
                       <Path x:Name="Grip" Data="{StaticResource IconGrip}" Fill="{DynamicResource MutedBrush}" Width="7" Height="11" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" Visibility="Hidden" Cursor="SizeAll" ToolTip="Drag to move"/>
                       <CheckBox x:Name="Pick" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" Visibility="Collapsed"
                                 IsChecked="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" AutomationProperties.Name="Pick step"/>
-                      <TextBlock x:Name="Number" Style="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                      <TextBlock x:Name="Number" Style="{StaticResource Muted}" FontSize="12" Typography.NumeralAlignment="Tabular" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
                         <TextBlock.Text>
                           <MultiBinding Converter="{StaticResource StepLayout}" ConverterParameter="Number">
                             <Binding/>
@@ -263,7 +259,7 @@
                         <Border x:Name="Chip" Grid.Column="2" Padding="0" CornerRadius="9" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" BorderBrush="{DynamicResource KeycapBorderBrush}">
                           <TextBlock x:Name="Detail" Text="{Binding Detail}" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
                         </Border>
-                        <TextBlock x:Name="EndLabel" Grid.Column="2" Style="{StaticResource Muted}" FontSize="10.5" FontStyle="Italic" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="EndLabel" Grid.Column="2" Style="{StaticResource Muted}" FontSize="11.5" FontStyle="Italic" VerticalAlignment="Center" Visibility="Collapsed">
                           <TextBlock.Text>
                             <MultiBinding Converter="{StaticResource StepLayout}" ConverterParameter="Children">
                               <Binding Path="DataContext" ElementName="Row"/>
@@ -279,7 +275,7 @@
                             <Path x:Name="FoldChevron" Data="{StaticResource IconChevron}" Fill="{DynamicResource MutedBrush}" Width="8" Height="8" Stretch="Uniform" RenderTransformOrigin=".5,.5" Margin="0,0,6,0">
                               <Path.RenderTransform><RotateTransform Angle="90"/></Path.RenderTransform>
                             </Path>
-                            <TextBlock Style="{StaticResource Muted}" FontSize="11.5">
+                            <TextBlock Style="{StaticResource Muted}" FontSize="12">
                               <TextBlock.Text>
                                 <MultiBinding Converter="{StaticResource StepLayout}" ConverterParameter="Children">
                             <Binding Path="DataContext" ElementName="Row"/>
@@ -291,7 +287,17 @@
                           </StackPanel>
                         </Button>
                       </Grid>
-                      <StackPanel x:Name="Tools" Grid.Column="3" Orientation="Horizontal" Visibility="Hidden">
+                      <!-- When the step plays in one run -->
+                      <TextBlock x:Name="StartsAt" Grid.Column="3" Style="{StaticResource Muted}" FontSize="12" Typography.NumeralAlignment="Tabular" MinWidth="58" TextAlignment="Right" VerticalAlignment="Center" Margin="8,0,2,0">
+                        <TextBlock.Text>
+                          <MultiBinding Converter="{StaticResource StepLayout}" ConverterParameter="Time">
+                            <Binding/>
+                            <Binding Path="ItemsSource" RelativeSource="{RelativeSource AncestorType=ListBox}"/>
+                            <Binding Path="StepsRevision" RelativeSource="{RelativeSource AncestorType=local:MacroEditorView}"/>
+                          </MultiBinding>
+                        </TextBlock.Text>
+                      </TextBlock>
+                      <StackPanel x:Name="Tools" Grid.Column="4" Orientation="Horizontal" Visibility="Hidden">
                         <Button Click="RowDuplicate_Click" Tag="{Binding}" Style="{StaticResource RowTool}" ToolTip="Duplicate" AutomationProperties.Name="Duplicate step"><Path Data="{StaticResource IconCopy}" Style="{StaticResource Icon}" Width="11" Height="11"/></Button>
                         <Button Click="RowRemove_Click" Tag="{Binding}" Style="{StaticResource RowTool}" ToolTip="Remove (Delete)" AutomationProperties.Name="Remove step"><Path Data="{StaticResource IconTrash}" Fill="{DynamicResource DangerIconBrush}" Width="11" Height="11" Stretch="Uniform"/></Button>
                       </StackPanel>
@@ -307,23 +313,23 @@
                       </DataTrigger>
                       <!-- Waits stay quiet: no title, just a soft duration chip, so the rhythm of the macro shows at a glance. -->
                       <DataTrigger Binding="{Binding DataContext.IsWait, ElementName=Tile}" Value="True">
-                        <Setter TargetName="Row" Property="MinHeight" Value="24"/>
+                        <Setter TargetName="Row" Property="MinHeight" Value="28"/>
                         <Setter TargetName="Title" Property="Visibility" Value="Collapsed"/>
                         <Setter TargetName="TileFill" Property="Opacity" Value="0"/>
                         <Setter TargetName="Chip" Property="Padding" Value="8,1"/>
                         <Setter TargetName="Chip" Property="Background" Value="{DynamicResource DividerBrush}"/>
-                        <Setter TargetName="Detail" Property="FontSize" Value="11.5"/>
+                        <Setter TargetName="Detail" Property="FontSize" Value="12"/>
                       </DataTrigger>
                       <!-- Group headers carry the group's name and settings; group ends are a slim closing corner. -->
                       <DataTrigger Binding="{Binding DataContext.IsGroup, ElementName=Tile}" Value="True">
                         <Setter TargetName="Fold" Property="Visibility" Value="Visible"/>
-                        <Setter TargetName="Detail" Property="FontSize" Value="11.5"/>
+                        <Setter TargetName="Detail" Property="FontSize" Value="12"/>
                       </DataTrigger>
                       <DataTrigger Binding="{Binding DataContext.Collapsed, ElementName=Tile}" Value="True">
                         <Setter TargetName="FoldChevron" Property="RenderTransform"><Setter.Value><RotateTransform Angle="0"/></Setter.Value></Setter>
                       </DataTrigger>
                       <DataTrigger Binding="{Binding DataContext.IsGroupEnd, ElementName=Tile}" Value="True">
-                        <Setter TargetName="Row" Property="MinHeight" Value="18"/>
+                        <Setter TargetName="Row" Property="MinHeight" Value="22"/>
                         <Setter TargetName="Tile" Property="Height" Value="12"/>
                         <Setter TargetName="Tile" Property="Visibility" Value="Hidden"/>
                         <Setter TargetName="Title" Property="Visibility" Value="Collapsed"/>
@@ -338,7 +344,7 @@
                         <Setter TargetName="Chip" Property="BorderThickness" Value="1,1,1,2"/>
                         <Setter TargetName="Chip" Property="Background" Value="{DynamicResource KeycapBrush}"/>
                         <Setter TargetName="Detail" Property="Foreground" Value="{DynamicResource InkBrush}"/>
-                        <Setter TargetName="Detail" Property="FontSize" Value="11.5"/>
+                        <Setter TargetName="Detail" Property="FontSize" Value="12"/>
                       </DataTrigger>
                       <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"><Setter TargetName="Tools" Property="Visibility" Value="Visible"/></DataTrigger>
                       <!-- With several steps picked, tools show only on the row under the pointer. -->
@@ -362,7 +368,7 @@
                   <Button x:Name="GapButton" Canvas.Left="6" Height="16" Click="GapButton_Click" Cursor="Hand" Focusable="False" Visibility="Collapsed" ToolTip="Insert a wait here" AutomationProperties.Name="Insert a wait here">
                     <Button.Template>
                       <ControlTemplate TargetType="Button">
-                        <Border x:Name="Pill" CornerRadius="8" Padding="6,0,8,0" Background="{DynamicResource BlueButtonBrush}" Effect="{DynamicResource AccentGlow}">
+                        <Border x:Name="Pill" CornerRadius="8" Padding="6,0,8,0" Background="{DynamicResource BlueButtonBrush}">
                           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Path Data="{StaticResource IconPlus}" Fill="White" Width="8" Height="8" Stretch="Uniform" Margin="0,0,4,0"/>
                             <TextBlock Text="Wait" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
@@ -381,7 +387,7 @@
                     <Rectangle Height="2" RadiusX="1" RadiusY="1" Fill="{DynamicResource AccentBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
                     <Ellipse Width="8" Height="8" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2" Fill="{DynamicResource SheetBrush}" HorizontalAlignment="Left"/>
                   </Grid>
-                  <Border x:Name="DragBadge" Padding="9,3" CornerRadius="10" Background="{DynamicResource BlueButtonBrush}" Effect="{DynamicResource PopupShadow}" Visibility="Collapsed">
+                  <Border x:Name="DragBadge" Padding="9,3" CornerRadius="10" Background="{DynamicResource BlueButtonBrush}" Visibility="Collapsed">
                     <TextBlock x:Name="DragBadgeText" Foreground="White" FontSize="11.5" FontWeight="SemiBold"/>
                   </Border>
                 </Canvas>
@@ -390,14 +396,20 @@
                   <TextBlock Text="Record your input or use Add step." Style="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,3,0,0"/>
                 </StackPanel>
               </Grid>
-              <Border x:Name="PreviewCard" Grid.Column="1" Margin="10,0,0,0" CornerRadius="8" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" Cursor="Hand" MouseLeftButtonUp="Preview_Click" ToolTip="Open preview" ClipToBounds="True">
+              <Border x:Name="PreviewCard" Grid.Column="1" Grid.RowSpan="2" Margin="10,0,0,0" CornerRadius="8" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1" Cursor="Hand" MouseLeftButtonUp="Preview_Click" ToolTip="Open preview" ClipToBounds="True">
                 <Grid>
                   <local:PathPreview x:Name="Thumbnail" ShowMarker="False" Margin="0,22,0,0"/>
                   <TextBlock Text="Route" Style="{StaticResource SectionTitle}" FontSize="12" Margin="10,8,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"/>
                   <TextBlock x:Name="ThumbnailInfo" Style="{StaticResource Hint}" Margin="0,9,10,0" HorizontalAlignment="Right" VerticalAlignment="Top"/>
-                  <TextBlock x:Name="ThumbnailEmpty" Text="No pointer movement" Style="{StaticResource Hint}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
               </Border>
+              <!-- One run at a glance: every input at the time it happens. Click a mark to pick its step. -->
+              <Grid x:Name="StripPanel" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="0 s" Style="{StaticResource Muted}" FontSize="11.5" VerticalAlignment="Center" Margin="2,0,8,0"/>
+                <local:RunStrip x:Name="Strip" Grid.Column="1" Height="22" StepPicked="Strip_StepPicked"/>
+                <TextBlock x:Name="StripEnd" Grid.Column="2" Style="{StaticResource Muted}" FontSize="11.5" VerticalAlignment="Center" Margin="8,0,2,0" Typography.NumeralAlignment="Tabular"/>
+              </Grid>
             </Grid>
             <!-- Editor for several steps at once -->
             <Border x:Name="BulkEditor" Grid.Row="2" Margin="0,10,0,0" Padding="12,10" CornerRadius="8" Background="{DynamicResource InfoFillBrush}" Visibility="Collapsed">
@@ -481,6 +493,12 @@
                     <ComboBox x:Name="StepSpaceBox" Grid.Column="1" Width="150" Visibility="Collapsed" Margin="8,0,0,0" SelectedIndex="0" SelectionChanged="StepField_Changed" AutomationProperties.Name="Measured from"><ComboBoxItem Content="On screen"/><ComboBoxItem Content="In target window"/><ComboBoxItem Content="From start point"/></ComboBox>
                   </Grid>
                 </Grid>
+                <StackPanel x:Name="MoveOptions" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
+                  <Button Click="RepickPoint_Click" Padding="10,4" Margin="0,0,14,0" ToolTip="Click the new spot in the target window. Esc cancels.">
+                    <StackPanel Orientation="Horizontal"><Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3"/><Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}"/></Grid><TextBlock Text="Pick the point again"/></StackPanel>
+                  </Button>
+                  <CheckBox x:Name="ThenClickBox" Content="Click after moving" VerticalAlignment="Center" Checked="ThenClick_Changed" Unchecked="ThenClick_Changed" ToolTip="Adds or removes a click right after this move"/>
+                </StackPanel>
                 <TextBlock x:Name="StepHintText" Style="{StaticResource Hint}" Margin="0,7,0,0"/>
               </StackPanel>
             </Border>
@@ -488,7 +506,7 @@
         </Border>
 
         <!-- Timing -->
-        <Border x:Name="TimingPanel" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,12" Effect="{DynamicResource CardShadow}">
+        <Border x:Name="TimingPanel" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="14,12">
           <StackPanel>
             <WrapPanel>
               <StackPanel x:Name="IntervalPanel" Orientation="Horizontal" Margin="0,0,24,0">

@@ -28,6 +28,7 @@ internal static partial class Program
             FeatureEngineTests().GetAwaiter().GetResult();
             GroupEngineTests().GetAwaiter().GetResult();
             StorageTests();
+            PolishEngineTests();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Theme.xaml", UriKind.Relative) });
@@ -38,6 +39,7 @@ internal static partial class Program
             FeatureUiTests();
             GroupUiTests();
             MenuUiTests();
+            PolishUiTests();
             UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();
@@ -168,7 +170,7 @@ internal static partial class Program
         profiles.Clear(); profiles.Add(ProfileStorageService.CreateDefault()); profiles.Add(new() { Name = "Copy and paste", PrimaryVk = 0x78, PrimaryModifiers = 6, Behavior = MacroBehaviorType.Sequence, RepeatCount = 1, Actions = new() { new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+C" }, new() { ActionType = MacroActionType.Delay, DelayMs = 100 }, new() { ActionType = MacroActionType.KeyPress, KeyName = "Ctrl+V" } } });
         var content = (FrameworkElement)main.Content;
         Render(content, 838, 598, "main.png");
-        var buttons = Descendants<Button>(content).Where(b => b.Tag == profiles[0]).ToArray();
+        var buttons = Descendants<Button>(content).Where(b => b.Tag == profiles[0] && b.Name is not ("IconButton" or "ShortcutButton")).ToArray();
         Check(buttons.Length == 3 && buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path, "profile controls render vector edit and delete icons");
         profiles[0].IsActive = true; Pump();
         Check(buttons[0].Content is System.Windows.Shapes.Path && buttons[1].Content is System.Windows.Shapes.Path && (string)buttons[2].Content == "Stop", "running state changes only the Start button");

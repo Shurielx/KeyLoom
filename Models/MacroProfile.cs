@@ -76,6 +76,41 @@ public class MacroProfile : INotifyPropertyChanged
         get => _hotkeyStatus;
         set { _hotkeyStatus = value; Changed(); }
     }
+    private string _runText = "", _usageText = "";
+    /// <summary>While running: how long and how many repeats so far, like "0:12 · 34 clicks".</summary>
+    [JsonIgnore] public string RunText
+    {
+        get => _runText;
+        set { _runText = value; Changed(); }
+    }
+    /// <summary>Lifetime use, like "Used 23 times · 1 h 4 min".</summary>
+    [JsonIgnore] public string UsageText
+    {
+        get => _usageText;
+        set { _usageText = value; Changed(); }
+    }
+    /// <summary>What one repeat is called in run counts.</summary>
+    [JsonIgnore] public string CycleNoun => Behavior switch
+    {
+        MacroBehaviorType.ClickSpam => TargetType == TargetInputType.Mouse ? "click" : "press",
+        MacroBehaviorType.PressAndHold => "hold",
+        _ => "run"
+    };
+    private bool _isRenaming, _isCapturing;
+    /// <summary>The macro list shows a name box instead of the name.</summary>
+    [JsonIgnore] public bool IsRenaming
+    {
+        get => _isRenaming;
+        set { _isRenaming = value; Changed(); }
+    }
+    /// <summary>The macro list waits for a new shortcut.</summary>
+    [JsonIgnore] public bool IsCapturing
+    {
+        get => _isCapturing;
+        set { _isCapturing = value; Changed(); }
+    }
+    /// <summary>Refreshes every binding after settings were changed in place.</summary>
+    public void Refresh() => Changed(string.Empty);
     public MacroProfile Snapshot() => new()
     {
         Id = Id, Name = Name, PrimaryVk = PrimaryVk, PrimaryModifiers = PrimaryModifiers,
