@@ -11,33 +11,17 @@ public sealed record ProfileLoadResult(ObservableCollection<MacroProfile> Profil
 public sealed class ProfileStorageService
 {
     public string FilePath { get; }
-    private readonly string? _legacyPath;
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
-    public ProfileStorageService(string? folder = null, string? legacyFolder = null)
+    public ProfileStorageService(string? folder = null)
     {
         string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         FilePath = Path.Combine(folder ?? Path.Combine(appData, "Keyloom"), "macro_profiles.json");
-        _legacyPath = folder == null || legacyFolder != null ? Path.Combine(legacyFolder ?? Path.Combine(appData, "KeychronHUD"), "macro_profiles.json") : null;
     }
     public ProfileLoadResult LoadProfiles()
     {
-        string source = File.Exists(FilePath) ? FilePath : _legacyPath != null && File.Exists(_legacyPath) ? _legacyPath : FilePath;
+        string source = FilePath;
         if (!File.Exists(source)) return new(new() { CreateDefault() }, "");
-        try
-        {
-            var profiles = Read(source);
-            if (source != FilePath)
-            {
-                foreach (var p in profiles)
-                {
-                    if (p.FallbackVk != 0) { p.PrimaryVk = p.FallbackVk; p.PrimaryModifiers = p.FallbackModifiers; }
-                    p.FallbackVk = 0; p.FallbackModifiers = 0;
-                    if (p.Name == "Primary Macro (Autoclicker)") p.Name = "Autoclicker";
-                }
-                SaveProfiles(profiles);
-            }
-            return new(profiles, "");
-        }
+        try { return new(Read(source), ""); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
         {
             try { return new(Read(source + ".bak"), "Profiles recovered from backup. The previous file could not be read."); }

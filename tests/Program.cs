@@ -152,11 +152,6 @@ internal static partial class Program
         Check(loaded.Profiles[0].Name == "Test" && loaded.Warning.Length > 0, "corrupt storage recovers its previous atomic-save backup");
         storage.SaveProfiles(Array.Empty<MacroProfile>());
         Check(storage.LoadProfiles().Profiles.Count == 0, "empty profile list is preserved");
-        string legacy = Path.Combine(folder, "legacy"); Directory.CreateDirectory(legacy);
-        var old = Profile(); old.PrimaryVk = 0x7C; old.PrimaryModifiers = 4; old.FallbackVk = 0x31; old.FallbackModifiers = 6;
-        File.WriteAllText(Path.Combine(legacy, "macro_profiles.json"), System.Text.Json.JsonSerializer.Serialize(new[] { old }));
-        var migrated = new ProfileStorageService(Path.Combine(folder, "new"), legacy).LoadProfiles();
-        Check(migrated.Profiles[0].PrimaryVk == 0x31 && migrated.Profiles[0].FallbackVk == 0, "legacy Keychron profiles migrate to their universal fallback");
         Directory.Delete(folder, true);
     }
     private static void UiTests()

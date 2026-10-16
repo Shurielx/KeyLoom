@@ -32,7 +32,7 @@ Validated on Windows x64 on 2026-10-13.
 - Release build: zero warnings and errors.
 - The self-contained published EXE started successfully and responded as Keyloom. A short idle sample used about 144 MB working set and 16 ms CPU time over one second; this is a smoke measurement, not a benchmark.
 - 62 automated checks passed: repeat counts, hold/release, sequences, chords, Unicode, input failure handling, immutable execution snapshots, cancellation, switching macros, paced execution, and throttled counters, plus recording and editor coverage.
-- Profile persistence, backup recovery, empty lists, and legacy migration passed.
+- Profile persistence, backup recovery and empty lists passed.
 - Compiled WPF views were instantiated and rendered at default and compact sizes. Edit/delete icons remain intact when a macro runs. All editor modes and step editing passed.
 - Real Windows hotkey registration, conflict reporting, reserved shortcut protection, and the native input structure layout passed.
 

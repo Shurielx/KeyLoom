@@ -100,7 +100,7 @@ Macro shortcuts need Ctrl, Alt or Win with a key, or an F-key on its own.
 
 ## Your data
 
-Macros, settings, icons and usage live in `%APPDATA%\Keyloom`, with a backup of your macros on every save. Existing KeychronHUD profiles are imported automatically. Closing the window keeps Keyloom in the tray; use the tray menu to exit.
+Macros, settings, icons and usage live in `%APPDATA%\Keyloom`, with a backup of your macros on every save. Closing the window keeps Keyloom in the tray; use the tray menu to exit.
 
 ## Build
 
