@@ -153,6 +153,9 @@
                     <MenuItem Header="Wait" Tag="Delay" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconClock}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Type text" Tag="Text" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconText}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <Separator/>
+                    <MenuItem Header="Click on something on the screen..." Tag="ClickTarget" Click="AddTargetStep_Click" ToolTip="Finds a picture or a color on the screen and clicks it, wherever it is"><MenuItem.Icon><Path Data="{StaticResource IconImage}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="Wait until something shows..." Tag="WaitUntil" Click="AddTargetStep_Click" ToolTip="Waits for a picture or a color to show up on the screen, or to go away"><MenuItem.Icon><Path Data="{StaticResource IconClock}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                    <Separator/>
                     <MenuItem Header="Cursor position" Tag="MousePosition" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Cursor to a point in a window..." Tag="Move" Click="PickPoint_Click" ToolTip="Adds only the move, without a click"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Move cursor by" Tag="MouseMove" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconMove}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
@@ -426,11 +429,66 @@
               <TextBlock Text="Action" Style="{StaticResource StackLabel}"/>
               <ComboBox x:Name="StepTypeBox" SelectionChanged="StepType_Changed" DisplayMemberPath="Label" SelectedValuePath="Kind" AutomationProperties.Name="Step action"/>
               <TextBlock x:Name="StepValueLabel" Text="Value" Style="{StaticResource StackLabel}"/>
-              <Grid>
+              <Grid x:Name="StepValuePanel">
                 <TextBox x:Name="StepValueTextBox" MaxHeight="120" VerticalScrollBarVisibility="Auto" TextChanged="StepField_Changed" AutomationProperties.Name="Step value"/>
                 <ComboBox x:Name="StepMouseBox" Visibility="Collapsed" SelectionChanged="StepField_Changed" AutomationProperties.Name="Mouse button"><ComboBoxItem Content="Left"/><ComboBoxItem Content="Right"/><ComboBoxItem Content="Middle"/><ComboBoxItem Content="X1"/><ComboBoxItem Content="X2"/></ComboBox>
               </Grid>
               <TextBlock x:Name="StepHintText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+              <!-- Click on target and Wait until: what to find, and how long to look -->
+              <StackPanel x:Name="TargetOptions" Visibility="Collapsed">
+                <TextBlock Text="Look for" Style="{StaticResource StackLabel}"/>
+                <ComboBox x:Name="TargetBox" SelectionChanged="TargetBox_Changed" AutomationProperties.Name="Target to look for"/>
+                <WrapPanel Margin="0,8,0,0">
+                  <Button Click="CapturePicture_Click" Padding="10,4" Margin="0,0,6,6" ToolTip="Drag around a button, an icon or text on the screen. Esc cancels.">
+                    <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconImage}" Style="{StaticResource Icon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="New picture"/></StackPanel>
+                  </Button>
+                  <Button Click="PickColor_Click" Padding="10,4" Margin="0,0,6,6" ToolTip="Click a color on the screen. Esc cancels.">
+                    <StackPanel Orientation="Horizontal"><Ellipse Width="11" Height="11" Margin="0,0,7,0" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center"/><TextBlock Text="New color"/></StackPanel>
+                  </Button>
+                </WrapPanel>
+                <Border x:Name="TargetCard" Style="{StaticResource MoreBox}" Margin="0,2,0,0" Padding="12">
+                  <StackPanel>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                      <Border Width="72" Height="52" CornerRadius="6" BorderThickness="1" BorderBrush="{DynamicResource DividerBrush}" Background="{DynamicResource HoverFillBrush}" Margin="0,0,10,0" ClipToBounds="True">
+                        <Grid>
+                          <Image x:Name="TargetImage" Stretch="Uniform" Margin="3" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                          <Border x:Name="TargetSwatch" CornerRadius="5" Margin="6"/>
+                        </Grid>
+                      </Border>
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBox x:Name="TargetNameTextBox" MaxLength="60" LostKeyboardFocus="TargetName_LostFocus" KeyDown="TargetName_KeyDown" AutomationProperties.Name="Target name"/>
+                        <TextBlock x:Name="TargetInfoText" Style="{StaticResource Muted}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Grid>
+                    <TextBlock Text="Tolerance" Style="{StaticResource StackLabel}"/>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                      <Slider x:Name="ToleranceSlider" Minimum="0" Maximum="60" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" ValueChanged="Tolerance_Changed" AutomationProperties.Name="Tolerance"/>
+                      <TextBlock x:Name="ToleranceText" Grid.Column="1" Style="{StaticResource Unit}" MinWidth="78"/>
+                    </Grid>
+                    <CheckBox x:Name="NearBox" Content="Only look near where it was" Margin="0,8,0,0" Checked="Near_Changed" Unchecked="Near_Changed" ToolTip="Faster, and it won't find the same thing elsewhere on the screen"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                      <Button Click="FindNow_Click" Padding="10,4" ToolTip="Looks for it on the screen now, with Keyloom out of the way">
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconTarget}" Style="{StaticResource Icon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="Find it now"/></StackPanel>
+                      </Button>
+                    </StackPanel>
+                    <TextBlock x:Name="FindResultText" TextWrapping="Wrap" Margin="0,6,0,0">
+                      <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Hint}"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </Border>
+                <StackPanel x:Name="UntilPanel">
+                  <TextBlock Text="Wait until it" Style="{StaticResource StackLabel}"/>
+                  <ComboBox x:Name="UntilBox" SelectedIndex="0" SelectionChanged="StepField_Changed" AutomationProperties.Name="Wait until it"><ComboBoxItem Content="Shows up"/><ComboBoxItem Content="Is gone"/></ComboBox>
+                </StackPanel>
+                <TextBlock x:Name="TimeoutLabel" Text="Keep looking for" Style="{StaticResource StackLabel}"/>
+                <StackPanel Orientation="Horizontal">
+                  <TextBox x:Name="TimeoutTextBox" Width="72" Text="0" TextChanged="StepField_Changed" AutomationProperties.Name="Time to look"/>
+                  <TextBlock x:Name="TimeoutUnit" Text="ms" Style="{StaticResource Unit}"/>
+                </StackPanel>
+                <CheckBox x:Name="StopIfMissingBox" Margin="0,10,0,0" Checked="StepField_Changed" Unchecked="StepField_Changed"/>
+              </StackPanel>
               <StackPanel x:Name="MoveOptions" Margin="0,10,0,0" Visibility="Collapsed">
                 <Button Click="RepickPoint_Click" Padding="10,4" HorizontalAlignment="Left" ToolTip="Click the new spot in the target window. Esc cancels.">
                   <StackPanel Orientation="Horizontal"><Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3"/><Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}"/></Grid><TextBlock Text="Pick the point again"/></StackPanel>

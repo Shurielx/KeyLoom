@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using Keyloom.Models;
+using Keyloom.Services;
 using Keyloom.Views;
 
 internal static partial class Program
@@ -58,7 +59,36 @@ internal static partial class Program
         RealClick((FrameworkElement)editor.FindName("PreviewCard")); Pump(1200);
         Capture(window, "live-route-click.png");
         ((SheetLayer)window.FindName("Sheets")).CloseTop(false); Pump(400);
+        LiveVision(window);
         window.Close();
+    }
+    /// <summary>
+    /// A Click on target step in the real editor, then the screen freeze for New color, clicked with the real mouse.
+    /// Only Keyloom's own window is saved; the frozen screen shows the person's desktop, so it is never captured.
+    /// </summary>
+    private static void LiveVision(MainWindow window)
+    {
+        var p = Profile(MacroBehaviorType.Sequence);
+        p.Targets.Add(new ScreenTarget { Name = "Play button", Picture = Keyloom.Engine.TargetPicture.Encode(Button(48, 28)) });
+        p.Actions.Add(new() { ActionType = MacroActionType.WaitUntil, Target = "Play button", TimeoutMs = 5000 });
+        p.Actions.Add(new() { ActionType = MacroActionType.ClickTarget, Target = "Play button", TimeoutMs = 1000 });
+        Invoke(window, "Back_Click", window, new RoutedEventArgs()); Pump(300);
+        Invoke(window, "OpenEditor", p, false, (Action)(() => { })); Pump(600);
+        var editor = (MacroEditorView)Field(window, "_activeEditor")!;
+        ((System.Windows.Controls.ListBox)editor.FindName("ActionsListBox")).SelectedIndex = 1; Pump(400);
+        Capture(window, "live-vision-step.png");
+        var snip = ScreenSnipWindow.TakeAsync(true);
+        Pump(600);
+        var snipWindow = Application.Current.Windows.OfType<ScreenSnipWindow>().Single();
+        GetWindowRect(new System.Windows.Interop.WindowInteropHelper(snipWindow).Handle, out var r);
+        SetCursorPos(r.Left + 40, r.Top + 40); Pump(150);
+        mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero); Pump(60); mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+        var deadline = DateTime.Now.AddSeconds(3);
+        while (!snip.IsCompleted && DateTime.Now < deadline) Pump(50);
+        var picked = snip.IsCompleted ? snip.Result : null;
+        var monitor = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(r.Left + 40, r.Top + 40)).Bounds;
+        Console.WriteLine($"snip covers {r.Right - r.Left}x{r.Bottom - r.Top} of monitor {monitor.Width}x{monitor.Height}; picked {(picked == null ? "nothing" : $"color at {picked.Bounds.X},{picked.Bounds.Y}")}; open windows {Application.Current.Windows.OfType<ScreenSnipWindow>().Count()}");
+        editor.Cancel(); Pump(300);
     }
     private static void Capture(Window window, string name)
     {

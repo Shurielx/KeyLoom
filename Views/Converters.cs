@@ -37,6 +37,14 @@ public sealed record StepView(string Tone, Geometry? Icon, string Title, string 
                 a.Runs > 1 ? $"×{a.Runs:N0}" : "", a.GapMs > 0 ? $"{a.GapMs:N0} ms between steps" : ""
             }.Where(s => s.Length > 0)), false, false, IsGroup: true, Collapsed: a.Collapsed),
             MacroActionType.GroupEnd => new("Group", null, "", "end of group", false, false, IsGroupEnd: true),
+            MacroActionType.ClickTarget => new("Pointer", Find("IconTarget"), "Click on", string.Join(" · ", new[]
+            {
+                a.TargetName, a.MouseButton == "Left" ? "" : button, a.TimeoutMs > 0 ? $"looks {a.TimeoutMs:N0} ms" : "", a.StopIfMissing ? "stops if missing" : ""
+            }.Where(x => x.Length > 0)), false, false),
+            MacroActionType.WaitUntil => new("Wait", Find("IconClock"), "Wait until", string.Join(" · ", new[]
+            {
+                $"{a.TargetName} {(a.Gone ? "is gone" : "shows")}", a.TimeoutMs > 0 ? $"up to {a.TimeoutMs:N0} ms" : "", a.StopIfMissing ? "stops if time is up" : ""
+            }.Where(x => x.Length > 0)), false, false),
             _ => new("Text", Find("IconText"), "Type", $"“{a.Text.Replace("\r", "").Replace("\n", " ⏎ ")}”", false, false)
         };
     }

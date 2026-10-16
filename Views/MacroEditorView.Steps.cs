@@ -24,6 +24,8 @@ public partial class MacroEditorView
 
     /// <summary>Copied steps, shared by every editor so steps can move between macros.</summary>
     private static MacroAction[] _clipboard = [];
+    /// <summary>The targets the copied steps look for, so they still work when pasted into another macro.</summary>
+    private static ScreenTarget[] _clipboardTargets = [];
     private sealed record UndoState(MacroAction[] Steps, int[] Picked);
     private const int UndoLimit = 30;
     private readonly List<UndoState> _undo = [], _redo = [];
@@ -234,12 +236,18 @@ public partial class MacroEditorView
     {
         if (picked.Count == 0) return;
         _clipboard = picked.Select(i => _steps[i].Clone()).ToArray();
+        var names = _clipboard.Select(a => a.Target).Where(n => n != null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _clipboardTargets = _targets.Where(t => names.Contains(t.Name)).Select(t => t.Clone()).ToArray();
         Say($"Copied {picked.Count:N0} {(picked.Count == 1 ? "step" : "steps")}.");
     }
     private void Paste()
     {
         if (_clipboard.Length == 0) return;
         var picked = SelectedIndices();
+        // A target with the same name here is kept; the pasted steps then look for that one.
+        foreach (var t in _clipboardTargets.Where(t => !_targets.Any(x => string.Equals(x.Name, t.Name, StringComparison.OrdinalIgnoreCase))))
+            _targets.Add(t.Clone());
+        RefreshTargetBox(CurrentTarget?.Name);
         Insert(InsertionAfter(picked.Count > 0 ? picked[^1] : -1), _clipboard.Select(a => a.Clone()).ToList());
         Say($"Pasted {_clipboard.Length:N0} {(_clipboard.Length == 1 ? "step" : "steps")}.");
     }

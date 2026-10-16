@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Keyloom.Models;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown, KeyUp, Delay, MouseMove, MouseScroll, Text, MousePosition, GroupStart, GroupEnd }
+public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown, KeyUp, Delay, MouseMove, MouseScroll, Text, MousePosition, GroupStart, GroupEnd, ClickTarget, WaitUntil }
 
 /// <summary>What a pointer position is measured from.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -29,6 +29,16 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Collapsed { get; set; }
     /// <summary>A cursor position step glides there over this time instead of jumping. 0 jumps.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int GlideMs { get; set; }
+    // Screen targets: Click on target and Wait until.
+    /// <summary>Name of the macro's <see cref="ScreenTarget"/> the step looks for.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Target { get; set; }
+    /// <summary>Click on target: how long to keep looking, 0 looks once. Wait until: when to give up, 0 waits for as long as it takes.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int TimeoutMs { get; set; }
+    /// <summary>Wait until the target is gone, instead of until it shows up.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Gone { get; set; }
+    /// <summary>Stop the macro when the target is not found in time, instead of going on with the next step.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool StopIfMissing { get; set; }
+    [JsonIgnore] public string TargetName => string.IsNullOrWhiteSpace(Target) ? "target" : Target;
     /// <summary>How long the step itself takes: a wait, or a cursor gliding to its spot.</summary>
     [JsonIgnore] public int DurationMs => ActionType switch
     {
@@ -58,6 +68,8 @@ public class MacroAction
         MacroActionType.MouseScroll => $"Scroll {ScrollAmount} notch(es)",
         MacroActionType.GroupStart => $"Group {GroupName}{(Runs > 1 ? $" ×{Runs}" : "")}{(GapMs > 0 ? $", {GapMs} ms between steps" : "")}",
         MacroActionType.GroupEnd => "End of group",
+        MacroActionType.ClickTarget => $"Click {MouseButton.ToLowerInvariant()} on {TargetName}",
+        MacroActionType.WaitUntil => $"Wait until {TargetName} {(Gone ? "is gone" : "shows")}",
         _ => $"Type: {Text.Replace("\r", " ").Replace("\n", " ")}"
     };
     public MacroAction Clone() => (MacroAction)MemberwiseClone();

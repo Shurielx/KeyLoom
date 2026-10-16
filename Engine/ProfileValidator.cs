@@ -24,7 +24,32 @@ public static class ProfileValidator
         else if (p.TargetType == TargetInputType.Keyboard) KeyResolver.Resolve(p.TargetKey);
         else ValidateButton(p.TargetMouseButton);
         ValidateTarget(p);
+        ValidateScreenTargets(p);
         ValidateIcon(p);
+    }
+    public const int MaxScreenTargets = 100;
+    private static void ValidateScreenTargets(MacroProfile p)
+    {
+        p.Targets ??= new();
+        if (p.Targets.Count > MaxScreenTargets) throw new ArgumentException($"A macro can have up to {MaxScreenTargets} targets.");
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in p.Targets) ValidateScreenTarget(t, names);
+        foreach (var a in p.Actions.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil))
+            if (!names.Contains(a.Target ?? ""))
+                throw new ArgumentException(string.IsNullOrWhiteSpace(a.Target) ? "A step that looks for a target needs one. Pick or capture it." : $"A step looks for '{a.Target}', but the macro has no target with that name.");
+    }
+    public static void ValidateScreenTarget(ScreenTarget t, HashSet<string>? names = null)
+    {
+        if (t == null || string.IsNullOrWhiteSpace(t.Name) || t.Name.Length > 60) throw new ArgumentException("Give each target a name of 1 to 60 characters.");
+        if (names != null && !names.Add(t.Name)) throw new ArgumentException($"Two targets are called '{t.Name}'. Give each its own name.");
+        if (!Enum.IsDefined(t.Kind)) throw new ArgumentException($"'{t.Name}': unknown kind of target.");
+        if (t.Tolerance is < 0 or > 100) throw new ArgumentException($"'{t.Name}': tolerance goes from 0 to 100.");
+        if (t.Kind == ScreenTargetKind.Color) TargetPicture.ParseColor(t.Color);
+        else if (string.IsNullOrEmpty(t.Picture) || t.Picture.Length > 2_000_000) throw new ArgumentException($"'{t.Name}' has no picture. Capture it from the screen.");
+        else TargetPicture.Decode(t.Picture);
+        if (t.Area is { } a && (a.Width is < 1 or > 100000 || a.Height is < 1 or > 100000 || Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000
+            || a.Space is not (CoordinateSpace.Screen or CoordinateSpace.Window)))
+            throw new ArgumentException($"'{t.Name}': the area to look in is invalid.");
     }
     private static void ValidateIcon(MacroProfile p)
     {
@@ -66,6 +91,8 @@ public static class ProfileValidator
             case MacroActionType.MousePosition when a.GlideMs is < 0 or > 60000: throw new ArgumentException("A cursor can glide for 0 to 60000 ms.");
             case MacroActionType.MouseScroll when a.ScrollAmount is < -100 or > 100 or 0: throw new ArgumentException("Use a scroll amount from -100 to 100, excluding 0.");
             case MacroActionType.Text when string.IsNullOrEmpty(a.Text) || a.Text.Length > 10000: throw new ArgumentException("Text steps must contain between 1 and 10000 characters.");
+            case MacroActionType.ClickTarget or MacroActionType.WaitUntil when a.TimeoutMs is < 0 or > 3600000: throw new ArgumentException("Looking for a target can take from 0 to 3600000 ms.");
+            case MacroActionType.ClickTarget: ValidateButton(a.MouseButton); break;
         }
     }
     private static void ValidateButton(string button)

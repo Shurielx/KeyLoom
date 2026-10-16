@@ -90,6 +90,14 @@ public static class MacroFile
         }
         if (p.Behavior == MacroBehaviorType.ClickSpam) d.EveryMs = p.SpamIntervalMs;
         if (p.Behavior != MacroBehaviorType.PressAndHold) d.Runs = p.RepeatCount;
+        if (p.Targets.Count > 0) d.Targets = p.Targets.Select(t => new TargetDto
+        {
+            Name = t.Name,
+            Picture = t.Kind == ScreenTargetKind.Picture ? t.Picture : null,
+            Color = t.Kind == ScreenTargetKind.Color ? t.Color : null,
+            Tolerance = t.Tolerance == ScreenTarget.DefaultTolerance ? null : t.Tolerance,
+            Area = t.Area is { } a ? new AreaDto { X = a.X, Y = a.Y, Width = a.Width, Height = a.Height, From = a.Space == CoordinateSpace.Window ? "window" : null } : null
+        }).ToList();
         if (p.Actions.Count > 0) d.Steps = ToSteps(p.Actions);
         if (p.PointerSettleMs != MacroProfile.DefaultPointerSettleMs) d.ClickDelayAfterMoveMs = p.PointerSettleMs;
         if (p.ExecutionMode != ExecutionMode.Standard) d.Input = p.ExecutionMode == ExecutionMode.Background ? "background" : "quickSwitch";
@@ -145,6 +153,25 @@ public static class MacroFile
                 throw new ArgumentException($"Unknown icon kind \"{icon.Kind}\". Use auto, mouse, keyboard, cursor, glyph or image.");
             p.IconKind = kind; p.IconGlyph = icon.Glyph ?? ""; p.IconImage = icon.Image ?? "";
         }
+        for (int i = 0; i < (d.Targets?.Count ?? 0); i++)
+        {
+            var t = d.Targets![i] ?? throw new ArgumentException($"Target {i + 1} is empty.");
+            string label = string.IsNullOrWhiteSpace(t.Name) ? $"Target {i + 1}" : $"Target \"{t.Name}\"";
+            if ((t.Picture == null) == (t.Color == null)) throw new ArgumentException($"{label}: give it either a \"picture\" or a \"color\", like \"#FF8800\".");
+            ScreenArea? area = null;
+            if (t.Area is { } a)
+                area = new(a.X, a.Y, a.Width, a.Height, (a.From ?? "screen").ToLowerInvariant() switch
+                {
+                    "screen" => CoordinateSpace.Screen,
+                    "window" => CoordinateSpace.Window,
+                    _ => throw new ArgumentException($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\".")
+                });
+            p.Targets.Add(new ScreenTarget
+            {
+                Name = t.Name?.Trim() ?? "", Kind = t.Picture != null ? ScreenTargetKind.Picture : ScreenTargetKind.Color,
+                Picture = t.Picture ?? "", Color = t.Color ?? "#000000", Tolerance = t.Tolerance ?? ScreenTarget.DefaultTolerance, Area = area
+            });
+        }
         if (d.Steps != null)
         {
             var path = new List<int>();
@@ -188,6 +215,16 @@ public static class MacroFile
                     GlideMs = a.GlideMs > 0 ? a.GlideMs : null
                 },
                 MacroActionType.MouseScroll => new StepDto { Do = "scroll", Notches = a.ScrollAmount },
+                MacroActionType.ClickTarget => new StepDto
+                {
+                    Do = "clickOn", Target = a.Target, Button = a.MouseButton == "Left" ? null : ButtonText(a.MouseButton),
+                    TimeoutMs = a.TimeoutMs > 0 ? a.TimeoutMs : null, IfTimeUp = a.StopIfMissing ? "stop" : null
+                },
+                MacroActionType.WaitUntil => new StepDto
+                {
+                    Do = "waitUntil", Target = a.Target, Until = a.Gone ? "gone" : "shows",
+                    TimeoutMs = a.TimeoutMs > 0 ? a.TimeoutMs : null, IfTimeUp = a.StopIfMissing ? "stop" : null
+                },
                 _ => new StepDto { Do = "type", Text = a.Text }
             });
         }
@@ -234,8 +271,27 @@ public static class MacroFile
                         AddSteps(into, s.Steps ?? new(), path);
                         into.Add(new() { ActionType = MacroActionType.GroupEnd });
                         break;
+                    case "clickon":
+                        into.Add(new()
+                        {
+                            ActionType = MacroActionType.ClickTarget, Target = Need(s.Target, "target", "\"Play button\""), MouseButton = Button(s.Button),
+                            TimeoutMs = s.TimeoutMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp)
+                        });
+                        break;
+                    case "waituntil":
+                        into.Add(new()
+                        {
+                            ActionType = MacroActionType.WaitUntil, Target = Need(s.Target, "target", "\"Loading screen\""),
+                            Gone = (s.Until ?? "shows").ToLowerInvariant() switch
+                            {
+                                "shows" => false, "gone" => true,
+                                _ => throw new ArgumentException($"unknown \"until\" \"{s.Until}\". Use \"shows\" or \"gone\".")
+                            },
+                            TimeoutMs = s.TimeoutMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp)
+                        });
+                        break;
                     case "": throw new ArgumentException("it has no \"do\". Say what it does, such as \"do\": \"click\".");
-                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type or group.");
+                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil or group.");
                 }
                 if (s.Steps != null && !string.Equals(s.Do, "group", StringComparison.OrdinalIgnoreCase))
                     throw new ArgumentException("only a group can contain \"steps\".");
@@ -257,6 +313,11 @@ public static class MacroFile
     private static string Need(string? value, string field, string example) =>
         value ?? throw new ArgumentException($"it needs \"{field}\", such as {example}.");
 
+    private static bool IfTimeUp(string? text) => (text ?? "continue").ToLowerInvariant() switch
+    {
+        "continue" => false, "stop" => true,
+        _ => throw new ArgumentException($"unknown \"ifTimeUp\" \"{text}\". Use \"continue\" or \"stop\".")
+    };
     private static string Button(string? text) => (text ?? "left").ToLowerInvariant() switch
     {
         "left" => "Left", "right" => "Right", "middle" => "Middle", "x1" or "back" => "X1", "x2" or "forward" => "X2",
@@ -289,6 +350,23 @@ public static class MacroFile
         public WindowDto? Window { get; set; }
         public bool? ScaleWithWindow { get; set; }
         public IconDto? Icon { get; set; }
+        public List<TargetDto>? Targets { get; set; }
+    }
+    private sealed class TargetDto
+    {
+        public string? Name { get; set; }
+        public string? Picture { get; set; }
+        public string? Color { get; set; }
+        public int? Tolerance { get; set; }
+        public AreaDto? Area { get; set; }
+    }
+    private sealed class AreaDto
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public string? From { get; set; }
     }
     private sealed class PressDto
     {
@@ -330,6 +408,10 @@ public static class MacroFile
         public int? Repeat { get; set; }
         public int? GapMs { get; set; }
         public bool? Collapsed { get; set; }
+        public string? Target { get; set; }
+        public string? Until { get; set; }
+        public int? TimeoutMs { get; set; }
+        public string? IfTimeUp { get; set; }
         public List<StepDto>? Steps { get; set; }
     }
 }

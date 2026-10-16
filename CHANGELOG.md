@@ -2,6 +2,15 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-5 · 2026-10-16
+
+### Added
+- Click on target: finds a picture or color and clicks it
+- Wait until a picture or color shows up, or goes away
+- New picture and New color take them from a frozen screen
+- Targets have a name, a tolerance and Find it now
+- Steps can give up and go on, or stop the macro
+
 ## 0.3-dev-4 · 2026-10-16
 
 ### Added

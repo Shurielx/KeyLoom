@@ -48,6 +48,8 @@ public class MacroProfile : INotifyPropertyChanged
     public int PointY { get; set; }
     /// <summary>When the window size differs from the size at pick time, positions scale proportionally instead of keeping pixel distances.</summary>
     public bool ScaleWithWindow { get; set; }
+    /// <summary>Pictures and colors the steps find on the screen.</summary>
+    public List<ScreenTarget> Targets { get; set; } = new();
     public MacroIconKind IconKind { get; set; }
     public string IconGlyph { get; set; } = "";
     /// <summary>File name inside the icon folder, never a path.</summary>
@@ -127,12 +129,13 @@ public class MacroProfile : INotifyPropertyChanged
         TargetKey = TargetKey, SpamIntervalMs = SpamIntervalMs, StartDelayMs = StartDelayMs,
         RepeatCount = RepeatCount, PointerSettleMs = PointerSettleMs, Actions = new(Actions.Select(a => a.Clone())),
         ExecutionMode = ExecutionMode, RestoreCursor = RestoreCursor, Window = Window, UsePoint = UsePoint, PointX = PointX, PointY = PointY,
-        ScaleWithWindow = ScaleWithWindow, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
+        ScaleWithWindow = ScaleWithWindow, Targets = Targets.Select(t => t.Clone()).ToList(), IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
     };
     /// <summary>True when execution needs the target window to be found first.</summary>
     [JsonIgnore] public bool NeedsWindow => ExecutionMode != ExecutionMode.Standard ||
         (UsePoint && Behavior != MacroBehaviorType.Sequence && TargetType == TargetInputType.Mouse) ||
-        (Behavior == MacroBehaviorType.Sequence && Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window));
+        (Behavior == MacroBehaviorType.Sequence && Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window)) ||
+        (Behavior == MacroBehaviorType.Sequence && Targets.Any(t => t.Area?.Space == CoordinateSpace.Window));
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }

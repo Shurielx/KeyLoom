@@ -29,6 +29,7 @@ Repeat a click, hold a key, or build a sequence of steps and play it with a shor
 - One window: the editor, settings and help open as pages, and dialogs appear inside it.
 - Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
 - Clicks land where you picked them inside a window, and follow it when it moves. Games get a moment to see the cursor before the click.
+- Steps can find a picture or a color on the screen: click it wherever it is, or wait until it shows up or goes away.
 - **Experimental:** build a macro right on the screen, and run modes for games that keep your mouse free.
 - Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
 - Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
@@ -61,6 +62,18 @@ Steps read like a table: the number, what the step does and **when it starts** i
 **Preview** is a dry run. It plays the route with a moving marker and a countdown for each wait, or, when nothing moves the pointer, shows the step playing now with the ones before and after it. It never moves your pointer or sends input. **Show on screen** draws the route exactly where it will run.
 
 **Test run** plays the macro once for real, without saving it. Keyloom steps out of the way while it runs and comes back when it's done.
+
+## Finding things on the screen
+
+A sequence can look at the screen instead of clicking fixed spots.
+
+- **Add step → Click on something on the screen** finds a picture or a color and clicks its middle, wherever it moved to. **Wait until something shows** holds the macro until it appears, or until it is gone (a loading screen, say).
+- **New picture** hides Keyloom and freezes the screen; drag around a button, an icon or a bit of text. **New color** takes the color you click. Esc cancels both. Keep pictures small and distinctive.
+- Each picture or color becomes a *target* with a name. Several steps can use the same one, and **Find it now** checks that Keyloom sees it.
+- **Tolerance** lets the screen look a little different and still count. **Only look near where it was** is faster and ignores the same thing elsewhere.
+- A step that looks for a target keeps trying for the time you set, then goes on, or stops the macro if you ask it to.
+
+Keyloom reads what the screen shows, so the target has to be visible: not covered, and not in a minimized window.
 
 ## Cursor positions and other windows
 

@@ -53,6 +53,7 @@ Keyloom keeps your macros in one plain JSON file: `%APPDATA%\Keyloom\macros.keyl
 | `scaleWithWindow` | no | `true` scales positions when the window is resized. |
 | `input` | no | `"standard"` (default) sends real input. `"background"` sends it to `window` without moving your pointer. `"quickSwitch"` brings `window` to the front for each step, then hands it back. |
 | `restoreCursor` | no | Quick switch only. `false` leaves the pointer where the macro put it. |
+| `targets` | no | Pictures and colors the steps find on the screen. See [Targets](#targets). |
 | `icon` | no | `{ "kind": "glyph", "glyph": "R" }`. Kinds: auto, mouse, keyboard, cursor, glyph, image. |
 | `id` | no | Keyloom adds one. Keep it when you edit a file so usage history stays with the macro. |
 
@@ -71,6 +72,8 @@ Every step has `"do"`, which says what it does.
 | `moveBy` | `x`, `y` | `{ "do": "moveBy", "x": 0, "y": -40 }` |
 | `scroll` | `notches` | `{ "do": "scroll", "notches": -3 }` (negative scrolls down) |
 | `type` | `text` | `{ "do": "type", "text": "Hello" }` |
+| `clickOn` | `target`, `button`, `timeoutMs`, `ifTimeUp` | `{ "do": "clickOn", "target": "Play button", "timeoutMs": 2000 }` |
+| `waitUntil` | `target`, `until`, `timeoutMs`, `ifTimeUp` | `{ "do": "waitUntil", "target": "Loading", "until": "gone" }` |
 | `group` | `steps`, `repeat`, `gapMs`, `name`, `collapsed` | see below |
 
 - **Buttons:** `left`, `right`, `middle`, `back`, `forward`.
@@ -78,6 +81,9 @@ Every step has `"do"`, which says what it does.
 - **`from`** in `moveTo`: `screen` (default) counts from the top-left of the screen, `window` from the top-left inside the macro's `window`, `start` from where the pointer was when the macro started.
 - **`glideMs`** moves the pointer there over that time instead of jumping.
 - A `hold` should have a matching `release` later in the steps.
+- **`clickOn`** finds its target on the screen and clicks the middle of it. It keeps looking for `timeoutMs` (default 0: look once).
+- **`waitUntil`** holds the macro until its target shows (`"until": "shows"`, the default) or is gone (`"until": "gone"`). `timeoutMs` 0 (the default) waits for as long as it takes.
+- **`ifTimeUp`** says what happens when the time runs out: `"continue"` (default) goes on with the next step, `"stop"` stops the macro.
 
 ### Groups
 
@@ -90,6 +96,27 @@ A group plays its steps `repeat` times, with `gapMs` between its steps and betwe
 ] }
 ```
 
+## Targets
+
+A target is something on the screen a macro looks for: a small `picture`, or one `color`. Steps name it in `target`.
+
+```json
+"targets": [
+  { "name": "Play button", "picture": "iVBORw0KGgo...", "tolerance": 10 },
+  { "name": "Full health", "color": "#3FBF3F", "tolerance": 4, "area": { "x": 20, "y": 900, "width": 300, "height": 40 } }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | Up to 60 characters, unique in the macro. |
+| `picture` | A PNG as base64 text, up to 600 by 600 pixels. Capture it in Keyloom with New picture; it is not something to write by hand. |
+| `color` | `"#RRGGBB"`. Give either `picture` or `color`. |
+| `tolerance` | 0 to 100, how different the screen may look and still count. 0 needs it exact. Default 10. |
+| `area` | Where to look: `x`, `y`, `width`, `height`, and `from`: `screen` (default) or `window`. Without it, Keyloom looks on the whole screen, or in the macro's `window` when it has one. A smaller area is faster. |
+
+A picture is found where it matches, wherever it moved to; a color is found as the first patch of it from the top, and clicked in its middle. Keyloom reads the screen, so the target has to be visible: not covered, and not on a minimized window.
+
 ## Limits
 
-Up to 20,000 steps per macro and 1,000,000 played steps per run once groups are repeated. The whole file can be up to 8 MB.
+Up to 20,000 steps and 100 targets per macro and 1,000,000 played steps per run once groups are repeated. The whole file can be up to 8 MB.

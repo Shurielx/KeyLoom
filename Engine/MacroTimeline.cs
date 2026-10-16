@@ -59,6 +59,8 @@ public sealed class MacroTimeline
                     (x, y) = resolve(a.Space, a.X, a.Y); Place(i); break;
                 case MacroActionType.MouseMove:
                     x += a.X; y += a.Y; Place(i); break;
+                // Where a target is shows only while the macro runs, so the preview has nothing to draw.
+                case MacroActionType.ClickTarget or MacroActionType.WaitUntil: break;
                 default:
                     var kind = a.ActionType switch
                     {

@@ -3,12 +3,15 @@ using Keyloom.Models;
 
 namespace Keyloom.Engine;
 
-public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null) : IAsyncDisposable
+public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null) : IAsyncDisposable
 {
     private readonly IInputDriver _driver = driver ?? new InputSimulator();
     private readonly IWindowSystem _windows = windows ?? WindowSystem.Instance;
     private readonly Func<IntPtr, IInputDriver> _backgroundDriver = backgroundDriver ?? (window => new WindowMessageDriver(window, windows));
     private readonly Func<IntPtr, IInputDriver> _switchDriver = switchDriver ?? (window => new FocusSwitchDriver(driver ?? new InputSimulator(), window, windows));
+    private readonly IScreen _screen = screen ?? ScreenCapture.Instance;
+    /// <summary>How often a step that looks for a target checks the screen again.</summary>
+    public const int LookEveryMs = 50;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _cts;
     private Task? _task;
@@ -72,6 +75,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             }, p.PointerSettleMs);
             Wait(p.StartDelayMs, token);
             var pointer = new PointerResolver(_windows, window, p);
+            var targets = new TargetLocator(_screen, _windows, window, p.Targets);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
                 (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.GlideMs > 0 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
@@ -106,7 +110,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     {
                         token.ThrowIfCancellationRequested();
                         pointer.EnsureAlive();
-                        Execute(step, stepKeys.GetValueOrDefault(step, []), input, pointer, token);
+                        Execute(step, stepKeys.GetValueOrDefault(step, []), input, pointer, targets, token);
                     }
                     count++;
                     if (progressClock.ElapsedMilliseconds >= 100)
@@ -130,7 +134,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             ExecutionStateChanged?.Invoke(original, false);
         }
     }
-    private static void Execute(MacroAction a, ushort[] keys, ExecutionInput input, PointerResolver pointer, CancellationToken token)
+    private static void Execute(MacroAction a, ushort[] keys, ExecutionInput input, PointerResolver pointer, TargetLocator targets, CancellationToken token)
     {
         switch (a.ActionType)
         {
@@ -149,6 +153,42 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                 break;
             case MacroActionType.MouseScroll: input.Scroll(a.ScrollAmount); break;
             case MacroActionType.Text: input.Text(a.Text, token); break;
+            case MacroActionType.ClickTarget:
+                if (Look(a, targets, token, found => found != null) is { } spot)
+                {
+                    var (cx, cy) = spot.Center;
+                    input.Position(cx, cy);
+                    input.Click(a.MouseButton);
+                }
+                break;
+            case MacroActionType.WaitUntil:
+                input.Settle();
+                Look(a, targets, token, found => a.Gone ? found == null : found != null);
+                break;
+        }
+    }
+    /// <summary>
+    /// Checks the screen until the condition holds or the step's time is up. Out of time, the macro goes on,
+    /// or stops when the step says so.
+    /// </summary>
+    private static Match? Look(MacroAction a, TargetLocator targets, CancellationToken token, Func<Match?, bool> done)
+    {
+        var clock = Stopwatch.StartNew();
+        // Clicking with no time set looks once; waiting with no time set waits for as long as it takes.
+        bool forever = a.ActionType == MacroActionType.WaitUntil && a.TimeoutMs == 0;
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+            var found = targets.Locate(a.Target);
+            if (done(found)) return found;
+            if (!forever && clock.ElapsedMilliseconds >= a.TimeoutMs)
+            {
+                if (!a.StopIfMissing) return null;
+                throw new InvalidOperationException(a.ActionType == MacroActionType.ClickTarget || !a.Gone
+                    ? $"'{a.TargetName}' was not found on the screen, so the macro stopped."
+                    : $"'{a.TargetName}' did not go away, so the macro stopped.");
+            }
+            Wait((int)Math.Min(LookEveryMs, Math.Max(1, forever ? LookEveryMs : a.TimeoutMs - clock.ElapsedMilliseconds)), token);
         }
     }
     private static FocusSwitchDriver WithCursor(FocusSwitchDriver driver, bool restore)
