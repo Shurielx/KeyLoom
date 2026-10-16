@@ -30,6 +30,7 @@ public partial class MacroEditorView
         GridBox.SelectedItem = select;
         _loadingStep = loading;
         ShowGridCard();
+        RefreshScriptAssets();
     }
     private void ShowGridOptions(bool grid)
     {
@@ -72,6 +73,7 @@ public partial class MacroEditorView
     /// <summary>Keeps the grids that steps read; one marked and then left unused goes away on save.</summary>
     private void ApplyGrids(MacroProfile p)
     {
+        if (Mode == 3) { p.Grids = _grids.Select(g => g.Clone()).ToList(); return; }
         var used = _steps.Where(a => a.ActionType is MacroActionType.ClickCell or MacroActionType.DragPair).Select(a => a.Grid ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
         p.Grids = _grids.Where(g => used.Contains(g.Name)).Select(g => g.Clone()).ToList();
     }

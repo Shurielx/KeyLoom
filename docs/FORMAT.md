@@ -40,20 +40,22 @@ Keyloom keeps your macros in one plain JSON file: `%APPDATA%\Keyloom\macros.keyl
 | Field | Required | Meaning |
 |---|---|---|
 | `name` | yes | Up to 80 characters. |
-| `type` | yes | `"repeat"` presses one thing again and again, `"hold"` keeps it pressed, `"sequence"` plays `steps`. |
+| `type` | yes | `"repeat"` presses one thing again and again, `"hold"` keeps it pressed, `"sequence"` plays `steps`, `"script"` runs `script`. |
 | `shortcut` | no | Like `"Ctrl+Shift+F9"`. Needs Ctrl, Alt or Win with a key, or an F-key alone. Ctrl+Shift+F12 is reserved: it stops everything. |
 | `press` | repeat, hold | `{ "mouse": "left" }` or `{ "key": "Space" }`. |
 | `everyMs` | no | Repeat only. Time between presses, 1 to 3600000. Default 50. |
 | `at` | no | Repeat and hold with the mouse: click at `{ "x": 40, "y": 50 }` inside `window` instead of where the pointer is. Needs `window`. |
-| `runs` | no | Repeat and sequence. How many times it plays; `0` means until you stop it. Default 0. |
+| `runs` | no | Repeat, sequence and script. How many times it plays; `0` means until you stop it. Default 0. |
 | `startDelayMs` | no | Wait before the first input. Default 500. |
 | `steps` | sequence | The list of steps below. |
+| `script` | script | JavaScript, one line per entry: `["click()", "wait(100)"]`. Experimental; the functions are in [SCRIPTS.md](SCRIPTS.md). |
 | `clickDelayAfterMoveMs` | no | Wait after the pointer moves before a button is pressed, so games see the move. 0 to 1000, default 20. |
 | `window` | no | The window that positions are measured in: `{ "process": "chrome", "title": "Reports" }`. Also `class`, and `width` and `height` of its inside when the point was picked. |
 | `scaleWithWindow` | no | `true` scales positions when the window is resized. |
 | `input` | no | `"standard"` (default) sends real input. `"background"` sends it to `window` without moving your pointer. `"quickSwitch"` brings `window` to the front for each step, then hands it back. |
 | `restoreCursor` | no | Quick switch only. `false` leaves the pointer where the macro put it. |
 | `targets` | no | Pictures and colors the steps find on the screen. See [Targets](#targets). |
+| `grids` | no | Grids of numbers the steps read. See [Grids](#grids). |
 | `icon` | no | `{ "kind": "glyph", "glyph": "R" }`. Kinds: auto, mouse, keyboard, cursor, glyph, image. |
 | `id` | no | Keyloom adds one. Keep it when you edit a file so usage history stays with the macro. |
 

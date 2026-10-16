@@ -164,6 +164,7 @@ public partial class MacroEditorView
         try { Say(""); test = ReadForm(new MacroProfile { Id = Profile.Id }); }
         catch (ArgumentException ex) { Say(ex.Message, true); return; }
         test.RepeatCount = 1;
+        if (Mode == 3) ClearOutput_Click(this, new RoutedEventArgs());
         try { await TestRun(test); if (IsLoaded) Say("Test run finished. Nothing was saved."); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { Say(ex.Message, true); }
     }

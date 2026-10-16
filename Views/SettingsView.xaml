@@ -67,6 +67,22 @@
             </StackPanel>
           </Grid>
         </CheckBox>
+        <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,14"/>
+        <CheckBox x:Name="ScriptsBox" Style="{StaticResource Switch}" Checked="Scripts_Changed" Unchecked="Scripts_Changed">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,12,0" VerticalAlignment="Top"><Path Data="{StaticResource IconCode}" Style="{StaticResource AccentIcon}"/></Border>
+            <StackPanel Grid.Column="1">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Scripts" FontWeight="SemiBold"/>
+                <Border Style="{StaticResource Pill}" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock Text="Experimental" FontSize="10.5"/></Border>
+              </StackPanel>
+              <TextBlock Style="{StaticResource Hint}" FontSize="12" Margin="0,3,0,0"
+                         Text="Adds Script next to Sequence: write what a macro does in JavaScript, with simple functions like press(&quot;E&quot;), clickOn(&quot;Play&quot;) and wait(500). For things steps cannot do, like counting or deciding by a number."/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Script macros you already have keep working when this is off."/>
+            </StackPanel>
+          </Grid>
+        </CheckBox>
         </StackPanel>
       </Border>
 

@@ -21,6 +21,12 @@ public static class ProfileValidator
         {
             if (!p.Actions.Any(a => !a.IsGroupMarker)) throw new ArgumentException("Add at least one sequence step.");
         }
+        else if (p.Behavior == MacroBehaviorType.Script)
+        {
+            p.Script ??= "";
+            if (p.Script.Trim().Length == 0) throw new ArgumentException("Write a script, or start from one of the Examples.");
+            if (MacroScript.Check(p.Script) is { } problem) throw new ArgumentException("Script " + char.ToLowerInvariant(problem.ToString()[0]) + problem.ToString()[1..]);
+        }
         else if (p.TargetType == TargetInputType.Keyboard) KeyResolver.Resolve(p.TargetKey);
         else ValidateButton(p.TargetMouseButton);
         ValidateTarget(p);
@@ -91,7 +97,7 @@ public static class ProfileValidator
             ExecutionMode.QuickSwitch => "Quick switch needs a target window. Use Pick point first.",
             _ => "Pick a target window for window-relative positions."
         });
-        if (p.ExecutionMode != ExecutionMode.Standard && p.Behavior == MacroBehaviorType.Sequence &&
+        if (p.ExecutionMode != ExecutionMode.Standard && p.LooksAtScreen &&
             p.Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Start))
             throw new ArgumentException("Positions relative to the start point need Standard mode.");
         if (p.ExecutionMode == ExecutionMode.QuickSwitch && p.Behavior == MacroBehaviorType.PressAndHold)

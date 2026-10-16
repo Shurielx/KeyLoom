@@ -24,6 +24,7 @@ public partial class SettingsView : UserControl
         var settings = AppSettings.Current;
         ExperimentalBox.IsChecked = settings.ShowExperimental;
         BuilderBox.IsChecked = settings.MacroBuilder;
+        ScriptsBox.IsChecked = settings.Scripts;
         (settings.Theme switch { AppTheme.Light => LightThemeRadio, AppTheme.Dark => DarkThemeRadio, _ => SystemThemeRadio }).IsChecked = true;
         IndicatorBox.IsChecked = settings.ShowRunIndicator;
         SoundBox.IsChecked = settings.ClickSounds;
@@ -47,6 +48,10 @@ public partial class SettingsView : UserControl
     private void Experimental_Changed(object sender, RoutedEventArgs e)
     {
         if (!_loading) Save(s => s.ShowExperimental = ExperimentalBox.IsChecked == true);
+    }
+    private void Scripts_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_loading) Save(s => s.Scripts = ScriptsBox.IsChecked == true);
     }
     private void Builder_Changed(object sender, RoutedEventArgs e)
     {

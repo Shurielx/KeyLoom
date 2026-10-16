@@ -23,6 +23,13 @@ internal static partial class Program
     {
         try
         {
+            if (args.Contains("--only-scripts"))
+            {
+                var only = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+                only.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
+                only.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Theme.xaml", UriKind.Relative) });
+                ScriptEngineTests().GetAwaiter().GetResult(); ScriptUiTests(); Console.WriteLine($"PASS: {_checks} checks"); only.Shutdown(); return 0;
+            }
             if (args.Contains("--only-builder-targets"))
             {
                 var one = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -45,6 +52,7 @@ internal static partial class Program
             VisionEngineTests().GetAwaiter().GetResult();
             ConditionEngineTests().GetAwaiter().GetResult();
             GridEngineTests().GetAwaiter().GetResult();
+            ScriptEngineTests().GetAwaiter().GetResult();
             StorageTests();
             FormatTests();
             PolishEngineTests();
@@ -66,6 +74,7 @@ internal static partial class Program
             ConditionUiTests();
             GridOcrTests();
             GridUiTests();
+            ScriptUiTests();
             BuilderTargetTests();
             UpdateTests();
             BackgroundInputTests();

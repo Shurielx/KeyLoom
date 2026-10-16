@@ -44,7 +44,7 @@ public sealed class MacroIcon : Decorator
         MacroIconKind.Mouse => "IconMouse",
         MacroIconKind.Keyboard => "IconKeyboard",
         MacroIconKind.Cursor => "IconCursorMove",
-        _ => behavior == MacroBehaviorType.Sequence ? "IconBolt" : target == TargetInputType.Keyboard ? "IconKeyboard" : "IconMouse"
+        _ => behavior == MacroBehaviorType.Script ? "IconCode" : behavior == MacroBehaviorType.Sequence ? "IconBolt" : target == TargetInputType.Keyboard ? "IconKeyboard" : "IconMouse"
     };
     private void Rebuild()
     {

@@ -23,6 +23,8 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
     public event Action<MacroProfile, bool>? ExecutionStateChanged;
     public event Action<MacroProfile, long>? ProgressChanged;
     public event Action<string>? ExecutionFailed;
+    /// <summary>What a script wrote with log().</summary>
+    public event Action<string>? ScriptLogged;
 
     public async Task ToggleAsync(MacroProfile profile)
     {
@@ -80,7 +82,9 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             var pointer = new PointerResolver(_windows, window, p);
             var targets = new TargetLocator(_screen, _windows, window, p.Targets);
             var grids = new GridLocator(_screen, _windows, window, p.Grids, _gridReader);
-            using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
+            var script = p.Behavior == MacroBehaviorType.Script
+                ? new MacroScript(p.Script, input, pointer, targets, grids, _windows, _screen, window, line => ScriptLogged?.Invoke(line), token) : null;
+            using var timer = new TimerResolution(p.Behavior == MacroBehaviorType.Script || p.Behavior != MacroBehaviorType.PressAndHold &&
                 (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.GlideMs > 0 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
             {
@@ -109,6 +113,10 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                         }
                         if (p.TargetType == TargetInputType.Mouse) input.Click(p.TargetMouseButton);
                         else input.Press(keys);
+                    }
+                    else if (script != null)
+                    {
+                        if (!script.Run(count + 1)) { count++; break; }
                     }
                     else foreach (var step in StepGroups.Expand(p.Actions, block => Holds(block, targets, token)))
                     {

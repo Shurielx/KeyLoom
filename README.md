@@ -30,7 +30,7 @@ Repeat a click, hold a key, or build a sequence of steps and play it with a shor
 - Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
 - Clicks land where you picked them inside a window, and follow it when it moves. Games get a moment to see the cursor before the click.
 - Steps can find a picture or a color on the screen: click it wherever it is, wait until it shows up or goes away, or play some steps only if it is there.
-- **Experimental:** build a macro right on the screen, and run modes for games that keep your mouse free.
+- **Experimental:** build a macro right on the screen, write macros as scripts, and run modes for games that keep your mouse free.
 - Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
 - Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
 
@@ -116,6 +116,28 @@ Turn on **Settings → Features → Macro builder**. **Build on screen** in the 
 | <kbd>H</kbd> | Hide or show the panel |
 
 **Done** puts the steps in the editor and brings Keyloom back; one Ctrl+Z there brings back what was there before.
+
+</details>
+
+<details>
+<summary><b>Scripts (experimental)</b></summary>
+<br>
+
+Turn on **Settings → Features → Scripts**, then pick **Script** next to Sequence. A script macro is a short JavaScript program with functions named after what they do:
+
+```js
+if (waitFor("Play", 10000)) clickOn("Play")
+const board = readGrid("Board")
+if (board.highest()) click(board.highest())
+```
+
+- **Help** (F1) lists every function with an example to insert. Ctrl+Space suggests functions and the names of your targets and grids. **Examples** has ready-made scripts to start from.
+- The line under the script says the first mistake as you type, and a click takes you there.
+- Beside the script are the targets and grids it can use, with **New picture**, **New color** and **New grid**. Renaming one renames it in the script.
+- **Test run** plays it once; what it writes with `log()` and why it stopped show under **Output**.
+- Scripts reach only the keyboard, mouse and screen, through Keyloom. They cannot open files, go online or start programs.
+
+The full list is in [docs/SCRIPTS.md](docs/SCRIPTS.md).
 
 </details>
 

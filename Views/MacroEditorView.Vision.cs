@@ -35,6 +35,7 @@ public partial class MacroEditorView
         TargetBox.SelectedItem = select;
         _loadingStep = loading;
         ShowTargetCard();
+        RefreshScriptAssets();
     }
 
     private void ShowTargetOptions(bool looks)
@@ -76,6 +77,7 @@ public partial class MacroEditorView
     /// <summary>Keeps the targets that steps use; one captured and then left unused goes away on save.</summary>
     private void ApplyScreenTargets(MacroProfile p)
     {
+        if (Mode == 3) { p.Targets = _targets.Select(t => t.Clone()).ToList(); return; }
         var used = _steps.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil || a.Block == BlockKind.If)
             .Select(a => a.Target ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
         p.Targets = _targets.Where(t => used.Contains(t.Name)).Select(t => t.Clone()).ToList();

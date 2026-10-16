@@ -63,12 +63,13 @@ public partial class MacroEditorView : UserControl
         InitializeBuilder();
         InitializeVision();
         InitializeGrids();
+        InitializeScript();
         MoreToggle.IsChecked = profile.Window != null && profile.Behavior == MacroBehaviorType.Sequence || profile.ExecutionMode != ExecutionMode.Standard;
         Loaded += (_, _) => { if (isNew) { MacroNameTextBox.Focus(); MacroNameTextBox.SelectAll(); } };
     }
-    /// <summary>0 repeat, 1 hold, 2 sequence: the order of <see cref="MacroBehaviorType"/>.</summary>
-    private int Mode => SequenceRadio.IsChecked == true ? 2 : HoldRadio.IsChecked == true ? 1 : 0;
-    private void SetMode(int mode) => (mode == 2 ? SequenceRadio : mode == 1 ? HoldRadio : RepeatRadio).IsChecked = true;
+    /// <summary>0 repeat, 1 hold, 2 sequence, 3 script: the order of <see cref="MacroBehaviorType"/>.</summary>
+    private int Mode => ScriptRadio.IsChecked == true ? 3 : SequenceRadio.IsChecked == true ? 2 : HoldRadio.IsChecked == true ? 1 : 0;
+    private void SetMode(int mode) => (mode == 3 ? ScriptRadio : mode == 2 ? SequenceRadio : mode == 1 ? HoldRadio : RepeatRadio).IsChecked = true;
     private bool KeyboardTarget => KeyboardRadio.IsChecked == true;
     private IEnumerable<RadioButton> ButtonChoices => ((Panel)MouseButtonPanel.Child).Children.OfType<RadioButton>();
     private string SelectedButton => ButtonChoices.FirstOrDefault(b => b.IsChecked == true)?.Tag as string ?? "Left";
@@ -104,19 +105,22 @@ public partial class MacroEditorView : UserControl
     private void UpdateMode()
     {
         if (!IsInitialized || TimingPanel == null) return;
-        bool sequence = Mode == 2, hold = Mode == 1, keyboard = KeyboardTarget;
-        TargetScroll.Visibility = sequence ? Visibility.Collapsed : Visibility.Visible;
-        SequencePanel.Visibility = RunButtons.Visibility = sequence ? Visibility.Visible : Visibility.Collapsed;
+        bool sequence = Mode == 2, hold = Mode == 1, script = Mode == 3, keyboard = KeyboardTarget;
+        TargetScroll.Visibility = sequence || script ? Visibility.Collapsed : Visibility.Visible;
+        SequencePanel.Visibility = sequence ? Visibility.Visible : Visibility.Collapsed;
+        RunButtons.Visibility = sequence || script ? Visibility.Visible : Visibility.Collapsed;
+        PreviewButton.Visibility = sequence ? Visibility.Visible : Visibility.Collapsed;
+        ShowScriptMode(script);
         PreviewCard.Visibility = _hasRoute && sequence ? Visibility.Visible : Visibility.Collapsed;
         // Repeat and hold have a few settings; their card only grows as tall as they are.
-        Inspector.VerticalAlignment = sequence ? VerticalAlignment.Stretch : VerticalAlignment.Top;
-        ModeText.Text = sequence ? "Plays steps you record or build" : hold ? "Keeps a key or button held down" : "Clicks or presses again and again";
+        Inspector.VerticalAlignment = sequence || script ? VerticalAlignment.Stretch : VerticalAlignment.Top;
+        ModeText.Text = script ? "Does what a script you write says" : sequence ? "Plays steps you record or build" : hold ? "Keeps a key or button held down" : "Clicks or presses again and again";
         ButtonLabel.Visibility = MouseButtonPanel.Visibility = keyboard ? Visibility.Collapsed : Visibility.Visible;
         KeyLabel.Visibility = KeyPanel.Visibility = keyboard ? Visibility.Visible : Visibility.Collapsed;
         IntervalPanel.Visibility = RunsPanel.Visibility = hold ? Visibility.Collapsed : Visibility.Visible;
-        IntervalLabel.Text = sequence ? "Pause between runs" : "Every";
+        IntervalLabel.Text = sequence || script ? "Pause between runs" : "Every";
         // Only pointer input can follow a move.
-        SettlePanel.Visibility = sequence || !keyboard ? Visibility.Visible : Visibility.Collapsed;
+        SettlePanel.Visibility = sequence || script || !keyboard ? Visibility.Visible : Visibility.Collapsed;
         ModeHintText.Visibility = hold ? Visibility.Visible : Visibility.Collapsed;
         UpdateTargetUi();
         UpdateIconPreview();
@@ -339,7 +343,8 @@ public partial class MacroEditorView : UserControl
         p.PointerSettleMs = Number(SettleTextBox.Text, "Click delay after moving");
         p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, "Interval");
         p.RepeatCount = p.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, "Runs");
-        p.Actions = new(_steps.Select(a => a.Clone()));
+        p.Actions = p.Behavior == MacroBehaviorType.Script ? new() : new(_steps.Select(a => a.Clone()));
+        p.Script = p.Behavior == MacroBehaviorType.Script ? ScriptText : "";
         ApplyTarget(p);
         ApplyScreenTargets(p);
         ApplyGrids(p);

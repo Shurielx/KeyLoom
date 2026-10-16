@@ -10,6 +10,8 @@ public sealed class AppSettings
     public bool ShowExperimental { get; set; }
     /// <summary>Experimental: shows Build on screen in the editor.</summary>
     public bool MacroBuilder { get; set; }
+    /// <summary>Experimental: adds Script, macros written in JavaScript, to the editor.</summary>
+    public bool Scripts { get; set; }
     public AppTheme Theme { get; set; }
     /// <summary>Keeps a small "running" card on screen while a macro runs.</summary>
     public bool ShowRunIndicator { get; set; } = true;
@@ -34,7 +36,7 @@ public sealed class AppSettings
     }
     public AppSettings With(Action<AppSettings> change)
     {
-        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace, ClickSounds = ClickSounds };
+        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Scripts = Scripts, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace, ClickSounds = ClickSounds };
         change(next); return next;
     }
     public void Save(string? path = null)

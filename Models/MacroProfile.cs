@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace Keyloom.Models;
 
-public enum MacroBehaviorType { ClickSpam, PressAndHold, Sequence }
+public enum MacroBehaviorType { ClickSpam, PressAndHold, Sequence, Script }
 public enum TargetInputType { Mouse, Keyboard }
 /// <summary>Standard sends system input; Background posts messages to the target window without moving the pointer;
 /// QuickSwitch brings the target to the front for each burst of input, then gives focus and the pointer back.</summary>
@@ -52,6 +52,10 @@ public class MacroProfile : INotifyPropertyChanged
     public List<ScreenTarget> Targets { get; set; } = new();
     /// <summary>Parts of the screen split into cells whose numbers the steps read.</summary>
     public List<ScreenGrid> Grids { get; set; } = new();
+    /// <summary>A script macro's JavaScript. Experimental.</summary>
+    public string Script { get; set; } = "";
+    /// <summary>Sequences and scripts look at the screen; repeat and hold do not.</summary>
+    [JsonIgnore] public bool LooksAtScreen => Behavior is MacroBehaviorType.Sequence or MacroBehaviorType.Script;
     public MacroIconKind IconKind { get; set; }
     public string IconGlyph { get; set; } = "";
     /// <summary>File name inside the icon folder, never a path.</summary>
@@ -62,12 +66,14 @@ public class MacroProfile : INotifyPropertyChanged
     {
         MacroBehaviorType.ClickSpam => "Repeat input",
         MacroBehaviorType.PressAndHold => "Hold input",
+        MacroBehaviorType.Script => "Script",
         _ => "Sequence"
     };
     [JsonIgnore] public string BehaviorSummary => Behavior switch
     {
         MacroBehaviorType.ClickSpam => $"{TargetLabel} every {SpamIntervalMs} ms{PointLabel}",
         MacroBehaviorType.PressAndHold => $"Hold {TargetLabel.ToLowerInvariant()}{PointLabel}",
+        MacroBehaviorType.Script => $"Script · {Script.Split('\n').Length} lines · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}",
         _ => $"{Actions.Count(a => !a.IsGroupMarker)} steps · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}"
     } + ExecutionMode switch { ExecutionMode.Background => " · background", ExecutionMode.QuickSwitch => " · quick switch", _ => "" };
     private string PointLabel => UsePoint && TargetType == TargetInputType.Mouse ? $" at {PointX}, {PointY}" : "";
@@ -131,14 +137,14 @@ public class MacroProfile : INotifyPropertyChanged
         TargetKey = TargetKey, SpamIntervalMs = SpamIntervalMs, StartDelayMs = StartDelayMs,
         RepeatCount = RepeatCount, PointerSettleMs = PointerSettleMs, Actions = new(Actions.Select(a => a.Clone())),
         ExecutionMode = ExecutionMode, RestoreCursor = RestoreCursor, Window = Window, UsePoint = UsePoint, PointX = PointX, PointY = PointY,
-        ScaleWithWindow = ScaleWithWindow, Targets = Targets.Select(t => t.Clone()).ToList(), Grids = Grids.Select(g => g.Clone()).ToList(), IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
+        ScaleWithWindow = ScaleWithWindow, Targets = Targets.Select(t => t.Clone()).ToList(), Grids = Grids.Select(g => g.Clone()).ToList(), Script = Script, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
     };
     /// <summary>True when execution needs the target window to be found first.</summary>
     [JsonIgnore] public bool NeedsWindow => ExecutionMode != ExecutionMode.Standard ||
-        (UsePoint && Behavior != MacroBehaviorType.Sequence && TargetType == TargetInputType.Mouse) ||
+        (UsePoint && !LooksAtScreen && TargetType == TargetInputType.Mouse) ||
         (Behavior == MacroBehaviorType.Sequence && Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window)) ||
-        (Behavior == MacroBehaviorType.Sequence && Targets.Any(t => t.Area?.Space == CoordinateSpace.Window)) ||
-        (Behavior == MacroBehaviorType.Sequence && Grids.Any(g => g.Area.Space == CoordinateSpace.Window));
+        (LooksAtScreen && Targets.Any(t => t.Area?.Space == CoordinateSpace.Window)) ||
+        (LooksAtScreen && Grids.Any(g => g.Area.Space == CoordinateSpace.Window));
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }

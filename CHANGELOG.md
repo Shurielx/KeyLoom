@@ -2,6 +2,16 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-9 · 2026-10-17
+
+### Added
+- Scripts (experimental): write a macro in JavaScript
+- Simple functions: press, click, clickOn, waitFor, drag
+- readGrid reads numbers and finds the highest or a pair
+- Editor with colors, suggestions, Help and Examples
+- Mistakes show their line as you type
+- Output shows what log() wrote on a test run
+
 ## 0.3-dev-8 · 2026-10-16
 
 ### Added

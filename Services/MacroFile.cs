@@ -80,10 +80,11 @@ public static class MacroFile
             Id = p.Id,
             Name = p.Name,
             Shortcut = p.PrimaryVk == 0 ? null : Shortcut.ToText(p.PrimaryModifiers, p.PrimaryVk),
-            Type = p.Behavior switch { MacroBehaviorType.ClickSpam => "repeat", MacroBehaviorType.PressAndHold => "hold", _ => "sequence" },
+            Type = p.Behavior switch { MacroBehaviorType.ClickSpam => "repeat", MacroBehaviorType.PressAndHold => "hold", MacroBehaviorType.Script => "script", _ => "sequence" },
             StartDelayMs = p.StartDelayMs
         };
-        if (p.Behavior != MacroBehaviorType.Sequence)
+        if (p.Behavior == MacroBehaviorType.Script) d.Script = p.Script.Replace("\r\n", "\n").Split('\n').ToList();
+        if (!p.LooksAtScreen)
         {
             d.Press = p.TargetType == TargetInputType.Mouse ? new PressDto { Mouse = ButtonText(p.TargetMouseButton) } : new PressDto { Key = p.TargetKey };
             if (p.UsePoint && p.TargetType == TargetInputType.Mouse) d.At = new PointDto { X = p.PointX, Y = p.PointY };
@@ -123,8 +124,9 @@ public static class MacroFile
             "repeat" => MacroBehaviorType.ClickSpam,
             "hold" => MacroBehaviorType.PressAndHold,
             "sequence" => MacroBehaviorType.Sequence,
-            "" => throw new ArgumentException("Set \"type\" to \"repeat\", \"hold\" or \"sequence\"."),
-            _ => throw new ArgumentException($"Unknown type \"{d.Type}\". Use \"repeat\", \"hold\" or \"sequence\".")
+            "script" => MacroBehaviorType.Script,
+            "" => throw new ArgumentException("Set \"type\" to \"repeat\", \"hold\", \"sequence\" or \"script\"."),
+            _ => throw new ArgumentException($"Unknown type \"{d.Type}\". Use \"repeat\", \"hold\", \"sequence\" or \"script\".")
         };
         if (d.Press is { } press)
         {
@@ -132,7 +134,12 @@ public static class MacroFile
             if (press.Key != null) { p.TargetType = TargetInputType.Keyboard; p.TargetKey = press.Key; }
             else { p.TargetType = TargetInputType.Mouse; p.TargetMouseButton = Button(press.Mouse); }
         }
-        else if (p.Behavior != MacroBehaviorType.Sequence) throw new ArgumentException("Add \"press\", such as { \"mouse\": \"left\" } or { \"key\": \"Space\" }.");
+        else if (!p.LooksAtScreen) throw new ArgumentException("Add \"press\", such as { \"mouse\": \"left\" } or { \"key\": \"Space\" }.");
+        if (d.Script != null)
+        {
+            if (p.Behavior != MacroBehaviorType.Script) throw new ArgumentException("Only a macro with \"type\": \"script\" has a \"script\".");
+            p.Script = string.Join("\n", d.Script.Select(line => line ?? ""));
+        }
         if (d.At is { } at) { p.UsePoint = true; p.PointX = at.X; p.PointY = at.Y; }
         if (d.EveryMs is { } every) p.SpamIntervalMs = every;
         if (d.StartDelayMs is { } start) p.StartDelayMs = start;
@@ -432,6 +439,7 @@ public static class MacroFile
         public int? StartDelayMs { get; set; }
         public int? Runs { get; set; }
         public List<StepDto>? Steps { get; set; }
+        public List<string?>? Script { get; set; }
         public int? ClickDelayAfterMoveMs { get; set; }
         public string? Input { get; set; }
         public bool? RestoreCursor { get; set; }

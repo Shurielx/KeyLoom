@@ -51,7 +51,12 @@ public partial class MainWindow : Window
         EmptyText.Visibility = _profiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         _executor.ExecutionStateChanged += (p, active) => Dispatcher.BeginInvoke(() => OnRunChanged(p, active));
         _executor.ProgressChanged += (p, count) => Dispatcher.BeginInvoke(() => { p.ExecutionCount = count; ShowRun(p); });
-        _executor.ExecutionFailed += message => Dispatcher.BeginInvoke(() => StatusText.Text = message);
+        _executor.ExecutionFailed += message => Dispatcher.BeginInvoke(() =>
+        {
+            StatusText.Text = message;
+            if (_testDone != null) _activeEditor?.ShowScriptOutput(message, true);
+        });
+        _executor.ScriptLogged += line => Dispatcher.BeginInvoke(() => _activeEditor?.ShowScriptOutput(line));
         _runClock.Tick += (_, _) => { foreach (var p in _running.Keys) ShowRun(p); };
         _tray = new(ShowHud, StopAll, () => Run(ExitAsync));
         Loaded += (_, _) =>
