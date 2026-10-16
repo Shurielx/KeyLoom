@@ -40,6 +40,7 @@ internal static partial class Program
             GroupUiTests();
             MenuUiTests();
             PolishUiTests();
+            DeleteAllUndoTests();
             UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();

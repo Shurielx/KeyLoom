@@ -23,13 +23,13 @@ internal static partial class Program
     private static HttpResponseMessage Text(string body, HttpStatusCode code = HttpStatusCode.OK) => new(code) { Content = new StringContent(body, Encoding.UTF8) };
     private const string ReleasesJson = """
         [
-          { "tag_name": "v0.1-dev-6", "name": "Draft", "html_url": "https://example.test/draft", "draft": true, "prerelease": true },
-          { "tag_name": "v0.1-dev-6", "name": "Keyloom 0.1-dev-6", "html_url": "https://github.com/Shurielx/KeyLoom/releases/tag/v0.1-dev-6", "draft": false, "prerelease": true },
+          { "tag_name": "v0.1-dev-7", "name": "Draft", "html_url": "https://example.test/draft", "draft": true, "prerelease": true },
+          { "tag_name": "v0.1-dev-7", "name": "Keyloom 0.1-dev-7", "html_url": "https://github.com/Shurielx/KeyLoom/releases/tag/v0.1-dev-7", "draft": false, "prerelease": true },
           { "tag_name": "Alpha-01", "name": "Alpha", "html_url": "https://example.test/alpha", "draft": false, "prerelease": false },
           { "tag_name": "v0.1-dev-1", "name": "Keyloom 0.1-dev-1", "html_url": "https://example.test/1", "draft": false, "prerelease": true }
         ]
         """;
-    private static string OnlineChangelog => "## 0.1-dev-6 · 2026-11-01\n\n### Featured\n- **Something new**, with a long line\n  that wraps onto the next one\n\n" + UpdateService.BundledChangelog();
+    private static string OnlineChangelog => "## 0.1-dev-7 · 2026-11-01\n\n### Featured\n- **Something new**, with a long line\n  that wraps onto the next one\n\n" + UpdateService.BundledChangelog();
 
     /// <summary>Runs async UI code on the dispatcher and pumps until it finishes.</summary>
     private static void RunOnDispatcher(Func<Task> work)
@@ -58,7 +58,7 @@ internal static partial class Program
         // In-app notes stay short; long notes belong on the GitHub release.
         Check(bundled.SelectMany(e => e.Sections).SelectMany(x => x.Items).All(i => i.Length <= 60), "in-app changelog lines stay short");
         Check(bundled.Count >= 5 && bundled[0].Version == AppVersion.Display && bundled[0].Date.Length == 10
-            && bundled[0].Sections[0].Title == "New" && bundled.Last().Version == "Alpha-01",
+            && bundled[0].Sections.Count > 0 && bundled.Last().Version == "Alpha-01",
             "the bundled changelog covers every version and starts with the installed one");
         var wrapped = UpdateService.ParseChangelog(OnlineChangelog)[0].Sections[0].Items[0];
         Check(wrapped == "**Something new**, with a long line that wraps onto the next one", "changelog items join wrapped lines");
@@ -67,8 +67,8 @@ internal static partial class Program
         var online = new FakeHttp(r => r.RequestUri!.Host == "api.github.com" ? Text(ReleasesJson) : Text(OnlineChangelog));
         using var http = UpdateService.CreateClient(online);
         var releases = UpdateService.FetchReleasesAsync(http).GetAwaiter().GetResult()!;
-        Check(releases.Select(r => r.Version).SequenceEqual(new[] { "0.1-dev-6", "0.1-dev-1" }) && UpdateService.NewerThan(releases, "0.1-dev-5")?.Version == "0.1-dev-6"
-            && UpdateService.NewerThan(releases, "0.1-dev-6") == null && http.DefaultRequestHeaders.UserAgent.ToString().StartsWith("Keyloom/"),
+        Check(releases.Select(r => r.Version).SequenceEqual(new[] { "0.1-dev-7", "0.1-dev-1" }) && UpdateService.NewerThan(releases, "0.1-dev-6")?.Version == "0.1-dev-7"
+            && UpdateService.NewerThan(releases, "0.1-dev-7") == null && http.DefaultRequestHeaders.UserAgent.ToString().StartsWith("Keyloom/"),
             "update check finds the newest published release");
         using var down = UpdateService.CreateClient(new FakeHttp(_ => throw new HttpRequestException("offline")));
         Check(UpdateService.FetchReleasesAsync(down).GetAwaiter().GetResult() == null && UpdateService.FetchChangelogAsync(down).GetAwaiter().GetResult() == null,
@@ -78,17 +78,17 @@ internal static partial class Program
 
         // About page: online it shows the newer version and the GitHub changelog; offline it keeps the bundled one.
         AboutView? about = null;
-        RunOnDispatcher(() => { about = new AboutView(http, "0.1-dev-5"); return about.CheckAsync(); });
+        RunOnDispatcher(() => { about = new AboutView(http, "0.1-dev-6"); return about.CheckAsync(); });
         var entries = ((IEnumerable<ChangelogEntryView>)((ItemsControl)about!.FindName("ChangelogList")).ItemsSource).ToList();
-        Check(((TextBlock)about.FindName("StatusText")).Text.Contains("0.1-dev-6 is out") && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Visible
+        Check(((TextBlock)about.FindName("StatusText")).Text.Contains("0.1-dev-7 is out") && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Visible
             && ((TextBlock)about.FindName("SourceText")).Text.Contains("GitHub"), "about shows a newer release with a download button");
-        Check(entries[0] is { Version: "0.1-dev-6", IsNew: true } && entries[1] is { Version: "0.1-dev-5", IsInstalled: true, IsNew: false }, "about marks new and installed versions in the changelog");
-        RunOnDispatcher(() => { about = new AboutView(down, "0.1-dev-5"); return about.CheckAsync(); });
+        Check(entries[0] is { Version: "0.1-dev-7", IsNew: true } && entries[1] is { Version: "0.1-dev-6", IsInstalled: true, IsNew: false }, "about marks new and installed versions in the changelog");
+        RunOnDispatcher(() => { about = new AboutView(down, "0.1-dev-6"); return about.CheckAsync(); });
         entries = ((IEnumerable<ChangelogEntryView>)((ItemsControl)about!.FindName("ChangelogList")).ItemsSource).ToList();
         Check(((TextBlock)about.FindName("StatusText")).Text.Contains("Couldn't reach GitHub") && ((TextBlock)about.FindName("SourceText")).Text.Contains("Included")
             && entries[0].IsInstalled && ((Button)about.FindName("CheckButton")).IsEnabled, "offline, about keeps the bundled changelog and lets you try again");
         using var current = UpdateService.CreateClient(new FakeHttp(r => r.RequestUri!.Host == "api.github.com" ? Text(ReleasesJson) : Text(UpdateService.BundledChangelog())));
-        RunOnDispatcher(() => { about = new AboutView(current, "0.1-dev-6"); return about.CheckAsync(); });
+        RunOnDispatcher(() => { about = new AboutView(current, "0.1-dev-7"); return about.CheckAsync(); });
         Check(((TextBlock)about!.FindName("StatusText")).Text.Contains("latest version") && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Collapsed,
             "about says when you have the latest version");
     }

@@ -176,6 +176,8 @@ public partial class MainWindow : Window
             if (Sheets.IsOpen) { Sheets.CloseTop(false); e.Handled = true; }
             else if (!OnList) { GoBack(); e.Handled = true; }
         }
+        // Undo still works when focus left the steps, like after deleting every step.
+        if (!e.Handled && !Sheets.IsOpen && _activeEditor != null && _activeEditor.UndoShortcut(Keyboard.Modifiers, e.Key == Key.System ? e.SystemKey : e.Key)) e.Handled = true;
         base.OnKeyDown(e);
     }
 

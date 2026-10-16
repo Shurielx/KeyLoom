@@ -149,6 +149,26 @@ internal static partial class Program
             if (Directory.Exists(folder)) Directory.Delete(folder, true);
         }
     }
+    /// <summary>Deleting every step leaves nothing to focus; Ctrl+Z must still bring them back.</summary>
+    private static void DeleteAllUndoTests()
+    {
+        var p = Profile(MacroBehaviorType.Sequence);
+        p.Actions = new() { KeyStep("A"), KeyStep("B"), KeyStep("C") };
+        var editor = new MacroEditorView(p);
+        var host = new Window { Content = editor, Width = 760, Height = 900, ShowActivated = false };
+        host.Show(); Pump(100);
+        try
+        {
+            var steps = (ListBox)editor.FindName("ActionsListBox");
+            steps.SelectAll();
+            Invoke(editor, "Delete", (List<int>)Call(editor, "PickedBlock")!); Pump(50);
+            Check(steps.Items.Count == 0 && FocusManager.GetFocusedElement(host) == steps, "deleting every step keeps focus on the step list");
+            Check(editor.UndoShortcut(ModifierKeys.Control, Key.Z) && steps.Items.Count == 3, "Ctrl+Z from outside the steps brings every deleted step back");
+            Check(editor.UndoShortcut(ModifierKeys.Control, Key.Y) && steps.Items.Count == 0, "Ctrl+Y deletes them again");
+            Check(!editor.UndoShortcut(ModifierKeys.Control, Key.C), "other shortcuts are left to the steps");
+        }
+        finally { host.Close(); }
+    }
     private sealed class FakeSource : PresentationSource
     {
         protected override System.Windows.Media.CompositionTarget GetCompositionTargetCore() => null!;

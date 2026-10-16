@@ -83,10 +83,12 @@ public partial class MacroEditorView
         if (i < 0) return [];
         Select([i]); return WholeGroups([i]);
     }
-    /// <summary>Puts keyboard focus on a row so shortcuts keep working after a button click.</summary>
+    /// <summary>Puts keyboard focus on a row so shortcuts keep working after a button click.
+    /// With no row left, the list itself takes it, so Ctrl+Z still reaches the steps.</summary>
     private void FocusStep(int index) => Dispatcher.BeginInvoke(() =>
     {
         if (index >= 0 && ActionsListBox.ItemContainerGenerator.ContainerFromIndex(index) is ListBoxItem row) row.Focus();
+        else ActionsListBox.Focus();
     }, DispatcherPriority.Loaded);
 
     private void ShowBulk()
@@ -272,6 +274,21 @@ public partial class MacroEditorView
     }
     private void Undo() => Restore(_undo, _redo);
     private void Redo() => Restore(_redo, _undo);
+    /// <summary>Ctrl+Z and Ctrl+Y from anywhere in the editor, for when focus is outside the steps,
+    /// like after the last step was deleted. Text fields keep their own undo.</summary>
+    public bool UndoShortcut(ModifierKeys mods, Key key)
+    {
+        if (Keyboard.FocusedElement is TextBoxBase or ComboBox || _dragging) return false;
+        Action? action = (mods, key) switch
+        {
+            (ModifierKeys.Control, Key.Z) => Undo,
+            (ModifierKeys.Control, Key.Y) or (ModifierKeys.Control | ModifierKeys.Shift, Key.Z) => Redo,
+            _ => null
+        };
+        if (action == null) return false;
+        Attempt(action);
+        return true;
+    }
 
     private void Steps_KeyDown(object sender, KeyEventArgs e)
     {

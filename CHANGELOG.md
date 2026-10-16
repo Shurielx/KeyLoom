@@ -2,6 +2,11 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.1-dev-6 · 2026-10-16
+
+### Fixed
+- Ctrl+Z works again after deleting every step
+
 ## 0.1-dev-5 · 2026-10-16
 
 ### New
