@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Keyloom.Models;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown, KeyUp, Delay, MouseMove, MouseScroll, Text, MousePosition, GroupStart, GroupEnd, ClickTarget, WaitUntil }
+public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown, KeyUp, Delay, MouseMove, MouseScroll, Text, MousePosition, GroupStart, GroupEnd, ClickTarget, WaitUntil, ClickCell, DragPair }
 
 /// <summary>What a pointer position is measured from.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -47,6 +47,19 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool StopIfMissing { get; set; }
     /// <summary>What an If checks, in words: "Play button is on the screen".</summary>
     [JsonIgnore] public string Condition => $"{TargetName} {(Gone ? "is not on the screen" : "is on the screen")}";
+    // Grids: Click on a cell and Drag a matching pair.
+    /// <summary>Name of the macro's <see cref="ScreenGrid"/> the step reads.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Grid { get; set; }
+    /// <summary>Click on a cell: which cell.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public CellPick Pick { get; set; }
+    /// <summary>Click on a cell with <see cref="CellPick.Equals"/>: the number to look for.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public long CellValue { get; set; }
+    [JsonIgnore] public string GridName => string.IsNullOrWhiteSpace(Grid) ? "grid" : Grid;
+    [JsonIgnore] public string PickText => Pick switch
+    {
+        CellPick.Highest => "the highest number", CellPick.Lowest => "the lowest number",
+        CellPick.Equals => $"the number {CellValue}", _ => "an empty cell"
+    };
     [JsonIgnore] public string TargetName => string.IsNullOrWhiteSpace(Target) ? "target" : Target;
     /// <summary>How long the step itself takes: a wait, or a cursor gliding to its spot.</summary>
     [JsonIgnore] public int DurationMs => ActionType switch
@@ -85,6 +98,8 @@ public class MacroAction
         MacroActionType.GroupEnd => "End of group",
         MacroActionType.ClickTarget => $"Click {MouseButton.ToLowerInvariant()} on {TargetName}",
         MacroActionType.WaitUntil => $"Wait until {TargetName} {(Gone ? "is gone" : "shows")}",
+        MacroActionType.ClickCell => $"Click {MouseButton.ToLowerInvariant()} on {PickText} in {GridName}",
+        MacroActionType.DragPair => $"Drag a matching pair in {GridName}",
         _ => $"Type: {Text.Replace("\r", " ").Replace("\n", " ")}"
     };
     public MacroAction Clone() => (MacroAction)MemberwiseClone();

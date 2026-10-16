@@ -74,6 +74,8 @@ Every step has `"do"`, which says what it does.
 | `type` | `text` | `{ "do": "type", "text": "Hello" }` |
 | `clickOn` | `target`, `button`, `timeoutMs`, `ifTimeUp` | `{ "do": "clickOn", "target": "Play button", "timeoutMs": 2000 }` |
 | `waitUntil` | `target`, `until`, `timeoutMs`, `ifTimeUp` | `{ "do": "waitUntil", "target": "Loading", "until": "gone" }` |
+| `clickCell` | `grid`, `pick`, `value`, `button`, `ifTimeUp` | `{ "do": "clickCell", "grid": "Board", "pick": "highest" }` |
+| `dragPair` | `grid`, `glideMs`, `button`, `ifTimeUp` | `{ "do": "dragPair", "grid": "Board", "glideMs": 150 }` |
 | `if` | `target`, `when`, `timeoutMs`, `steps`, `else` | see [If](#if) |
 | `group` | `steps`, `repeat`, `gapMs`, `name`, `collapsed` | see below |
 
@@ -85,6 +87,9 @@ Every step has `"do"`, which says what it does.
 - **`clickOn`** finds its target on the screen and clicks the middle of it. It keeps looking for `timeoutMs` (default 0: look once).
 - **`waitUntil`** holds the macro until its target shows (`"until": "shows"`, the default) or is gone (`"until": "gone"`). `timeoutMs` 0 (the default) waits for as long as it takes.
 - **`ifTimeUp`** says what happens when the time runs out: `"continue"` (default) goes on with the next step, `"stop"` stops the macro.
+- **`clickCell`** reads its grid and clicks the middle of one cell. `pick` is `highest` (default), `lowest`, `equals` (the cell showing `value`) or `empty`. On a tie it takes the first cell, reading row by row.
+- **`dragPair`** reads its grid, finds two cells with the same number, the lowest number first, and drags the later cell onto the earlier one over `glideMs`.
+- For `clickCell` and `dragPair`, `ifTimeUp` says what happens when there is no such cell: `"continue"` (default) or `"stop"`.
 
 ### Groups
 
@@ -118,6 +123,24 @@ A target is something on the screen a macro looks for: a small `picture`, or one
 
 A picture is found where it matches, wherever it moved to; a color is found as the first patch of it from the top, and clicked in its middle. Keyloom reads the screen, so the target has to be visible: not covered, and not on a minimized window.
 
+## Grids
+
+A grid is a part of the screen split into equal cells, each holding a number or nothing. Steps name it in `grid`.
+
+```json
+"grids": [
+  { "name": "Board", "area": { "x": 640, "y": 300, "width": 480, "height": 480 }, "rows": 4, "columns": 4 }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | Up to 60 characters, unique in the macro. |
+| `area` | The whole grid, edge to edge: `x`, `y`, `width`, `height`, and `from`: `screen` (default) or `window`. |
+| `rows`, `columns` | How many cells across and down, up to 400 cells in all. |
+
+Numbers are read with the text recognition built into Windows. `1,024`, `1.5K` and `2M` count as numbers; other text in a cell is left out.
+
 ## If
 
 An `if` plays its `steps` only when its target is on the screen (`"when": "shows"`, the default) or not on it (`"when": "gone"`). Its `else` steps play when it does not. `timeoutMs` lets the `if` keep looking for up to that long before it decides; 0 (the default) checks once. An `if` can sit inside groups and other ifs.
@@ -133,4 +156,4 @@ An `if` plays its `steps` only when its target is on the screen (`"when": "shows
 
 ## Limits
 
-Up to 20,000 steps and 100 targets per macro and 1,000,000 played steps per run once groups are repeated. The whole file can be up to 8 MB.
+Up to 20,000 steps, 100 targets and 20 grids per macro and 1,000,000 played steps per run once groups are repeated. The whole file can be up to 8 MB.

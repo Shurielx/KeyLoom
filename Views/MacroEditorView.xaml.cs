@@ -49,7 +49,8 @@ public partial class MacroEditorView : UserControl
             new(MacroActionType.Delay, "Wait"), new(MacroActionType.MouseMove, "Move cursor by"),
             new(MacroActionType.MouseScroll, "Scroll"), new(MacroActionType.Text, "Type text"),
             new(MacroActionType.MousePosition, "Cursor position"),
-            new(MacroActionType.ClickTarget, "Click on target"), new(MacroActionType.WaitUntil, "Wait until")
+            new(MacroActionType.ClickTarget, "Click on target"), new(MacroActionType.WaitUntil, "Wait until"),
+            new(MacroActionType.ClickCell, "Click a cell"), new(MacroActionType.DragPair, "Drag a matching pair")
         };
         _loadingStep = true; StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0; _loadingStep = false;
         BindSteps(_steps);
@@ -61,6 +62,7 @@ public partial class MacroEditorView : UserControl
         InitializeRecording();
         InitializeBuilder();
         InitializeVision();
+        InitializeGrids();
         MoreToggle.IsChecked = profile.Window != null && profile.Behavior == MacroBehaviorType.Sequence || profile.ExecutionMode != ExecutionMode.Standard;
         Loaded += (_, _) => { if (isNew) { MacroNameTextBox.Focus(); MacroNameTextBox.SelectAll(); } };
     }
@@ -145,16 +147,20 @@ public partial class MacroEditorView : UserControl
         MacroActionType.Text => "Types this text into the focused app.",
         MacroActionType.ClickTarget => "Finds the target on the screen and clicks its middle, wherever it is.",
         MacroActionType.WaitUntil => "Holds the macro here until the screen shows the target, or until it is gone.",
+        MacroActionType.ClickCell => "Reads the numbers in the grid and clicks the cell you choose.",
+        MacroActionType.DragPair => "Reads the grid and drags one of two equal numbers onto the other, the lowest pair first.",
         _ => "Choose a mouse button."
     };
     private void StepType_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (StepValueTextBox == null) return;
         bool looks = StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil;
-        bool mouse = StepType is MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp or MacroActionType.ClickTarget;
+        bool grid = StepType is MacroActionType.ClickCell or MacroActionType.DragPair;
+        bool mouse = StepType is MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp or MacroActionType.ClickTarget || grid;
         StepMouseBox.Visibility = mouse ? Visibility.Visible : Visibility.Collapsed;
         StepValueLabel.Visibility = StepValuePanel.Visibility = StepType == MacroActionType.WaitUntil ? Visibility.Collapsed : Visibility.Visible;
         ShowTargetOptions(looks);
+        ShowGridOptions(grid);
         MoveOptions.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
         StepValueLabel.Text = StepType switch
         {
@@ -172,6 +178,7 @@ public partial class MacroEditorView : UserControl
         if (_loadingStep) return;
         _loadingStep = true;
         if (looks) PrepareTargetStep();
+        if (grid) PrepareGridStep();
         StepValueTextBox.Text = StepType switch
         {
             MacroActionType.Delay => "100", MacroActionType.MouseMove => "20, 0",
@@ -252,6 +259,7 @@ public partial class MacroEditorView : UserControl
         ThenClickBox.IsChecked = HasClickAfter(i);
         GlideTextBox.Text = a.GlideMs.ToString();
         ShowTargetStep(a);
+        ShowGridStep(a);
         if (a.ActionType == MacroActionType.MousePosition && (a.Space != CoordinateSpace.Screen || a.GlideMs > 0)) StepMoreToggle.IsChecked = true;
         StepValueTextBox.Text = a.ActionType switch
         {
@@ -281,6 +289,7 @@ public partial class MacroEditorView : UserControl
             }
         }
         if (StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil) ReadTargetStep(a);
+        if (StepType is MacroActionType.ClickCell or MacroActionType.DragPair) ReadGridStep(a);
         ProfileValidator.ValidateAction(a); return a;
     }
     private void AddStepMenu_Click(object sender, RoutedEventArgs e)
@@ -333,6 +342,7 @@ public partial class MacroEditorView : UserControl
         p.Actions = new(_steps.Select(a => a.Clone()));
         ApplyTarget(p);
         ApplyScreenTargets(p);
+        ApplyGrids(p);
         ApplyIcon(p);
         ProfileValidator.Validate(p);
         return p;

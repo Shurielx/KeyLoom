@@ -25,6 +25,7 @@ public static class ProfileValidator
         else ValidateButton(p.TargetMouseButton);
         ValidateTarget(p);
         ValidateScreenTargets(p);
+        ValidateGrids(p);
         ValidateIcon(p);
     }
     public const int MaxScreenTargets = 100;
@@ -37,6 +38,26 @@ public static class ProfileValidator
         foreach (var a in p.Actions.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil || a is { ActionType: MacroActionType.GroupStart, Block: BlockKind.If }))
             if (!names.Contains(a.Target ?? ""))
                 throw new ArgumentException(string.IsNullOrWhiteSpace(a.Target) ? "A step or an If that looks for a target needs one. Pick or capture it." : $"A step looks for '{a.Target}', but the macro has no target with that name.");
+    }
+    public const int MaxGrids = 20;
+    private static void ValidateGrids(MacroProfile p)
+    {
+        p.Grids ??= new();
+        if (p.Grids.Count > MaxGrids) throw new ArgumentException($"A macro can have up to {MaxGrids} grids.");
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in p.Grids) ValidateGrid(g, names);
+        foreach (var a in p.Actions.Where(a => a.ActionType is MacroActionType.ClickCell or MacroActionType.DragPair))
+            if (!names.Contains(a.Grid ?? ""))
+                throw new ArgumentException(string.IsNullOrWhiteSpace(a.Grid) ? "A step that reads a grid needs one. Mark the grid on the screen." : $"A step reads '{a.Grid}', but the macro has no grid with that name.");
+    }
+    public static void ValidateGrid(ScreenGrid g, HashSet<string>? names = null)
+    {
+        if (g == null || string.IsNullOrWhiteSpace(g.Name) || g.Name.Length > 60) throw new ArgumentException("Give each grid a name of 1 to 60 characters.");
+        if (names != null && !names.Add(g.Name)) throw new ArgumentException($"Two grids are called '{g.Name}'. Give each its own name.");
+        if (g.Rows < 1 || g.Columns < 1 || (long)g.Rows * g.Columns > ScreenGrid.MaxCells) throw new ArgumentException($"'{g.Name}': a grid has at least 1 row and 1 column, and up to {ScreenGrid.MaxCells} cells.");
+        if (g.Area is not { } a || a.Width < g.Columns * 4 || a.Height < g.Rows * 4 || a.Width > 100000 || a.Height > 100000
+            || Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000 || a.Space is not (CoordinateSpace.Screen or CoordinateSpace.Window))
+            throw new ArgumentException($"'{g.Name}': the grid's area is invalid or too small for its cells. Mark it again.");
     }
     public static void ValidateScreenTarget(ScreenTarget t, HashSet<string>? names = null)
     {
@@ -93,6 +114,10 @@ public static class ProfileValidator
             case MacroActionType.Text when string.IsNullOrEmpty(a.Text) || a.Text.Length > 10000: throw new ArgumentException("Text steps must contain between 1 and 10000 characters.");
             case MacroActionType.ClickTarget or MacroActionType.WaitUntil when a.TimeoutMs is < 0 or > 3600000: throw new ArgumentException("Looking for a target can take from 0 to 3600000 ms.");
             case MacroActionType.ClickTarget: ValidateButton(a.MouseButton); break;
+            case MacroActionType.ClickCell when !Enum.IsDefined(a.Pick): throw new ArgumentException("Unknown cell to pick.");
+            case MacroActionType.ClickCell: ValidateButton(a.MouseButton); break;
+            case MacroActionType.DragPair when a.GlideMs is < 0 or > 60000: throw new ArgumentException("A drag can take 0 to 60000 ms.");
+            case MacroActionType.DragPair: ValidateButton(a.MouseButton); break;
         }
     }
     private static void ValidateButton(string button)

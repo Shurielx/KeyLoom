@@ -3,15 +3,18 @@ using Keyloom.Models;
 
 namespace Keyloom.Engine;
 
-public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null) : IAsyncDisposable
+public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null, IGridReader? gridReader = null) : IAsyncDisposable
 {
     private readonly IInputDriver _driver = driver ?? new InputSimulator();
     private readonly IWindowSystem _windows = windows ?? WindowSystem.Instance;
     private readonly Func<IntPtr, IInputDriver> _backgroundDriver = backgroundDriver ?? (window => new WindowMessageDriver(window, windows));
     private readonly Func<IntPtr, IInputDriver> _switchDriver = switchDriver ?? (window => new FocusSwitchDriver(driver ?? new InputSimulator(), window, windows));
     private readonly IScreen _screen = screen ?? ScreenCapture.Instance;
+    private readonly IGridReader _gridReader = gridReader ?? WindowsOcrReader.Instance;
     /// <summary>How often a step that looks for a target checks the screen again.</summary>
     public const int LookEveryMs = 50;
+    /// <summary>A drag holds the button this long before it moves and after it arrives.</summary>
+    public const int DragPauseMs = 40;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _cts;
     private Task? _task;
@@ -76,6 +79,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             Wait(p.StartDelayMs, token);
             var pointer = new PointerResolver(_windows, window, p);
             var targets = new TargetLocator(_screen, _windows, window, p.Targets);
+            var grids = new GridLocator(_screen, _windows, window, p.Grids, _gridReader);
             using var timer = new TimerResolution(p.Behavior != MacroBehaviorType.PressAndHold &&
                 (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.GlideMs > 0 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
@@ -110,7 +114,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     {
                         token.ThrowIfCancellationRequested();
                         pointer.EnsureAlive();
-                        Execute(step, stepKeys.GetValueOrDefault(step, []), input, pointer, targets, token);
+                        Execute(step, stepKeys.GetValueOrDefault(step, []), input, pointer, targets, grids, token);
                     }
                     count++;
                     if (progressClock.ElapsedMilliseconds >= 100)
@@ -134,7 +138,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             ExecutionStateChanged?.Invoke(original, false);
         }
     }
-    private static void Execute(MacroAction a, ushort[] keys, ExecutionInput input, PointerResolver pointer, TargetLocator targets, CancellationToken token)
+    private static void Execute(MacroAction a, ushort[] keys, ExecutionInput input, PointerResolver pointer, TargetLocator targets, GridLocator grids, CancellationToken token)
     {
         switch (a.ActionType)
         {
@@ -161,6 +165,36 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     input.Click(a.MouseButton);
                 }
                 break;
+            case MacroActionType.ClickCell:
+            {
+                var reading = grids.Read(a.Grid);
+                int cell = reading.Pick(a.Pick, a.CellValue);
+                if (cell < 0)
+                {
+                    if (a.StopIfMissing) throw new InvalidOperationException($"{a.GridName} has no cell with {a.PickText}, so the macro stopped.");
+                    break;
+                }
+                input.Position(reading.Centers[cell].X, reading.Centers[cell].Y);
+                input.Click(a.MouseButton);
+                break;
+            }
+            case MacroActionType.DragPair:
+            {
+                var reading = grids.Read(a.Grid);
+                if (reading.Pair() is not var (from, to))
+                {
+                    if (a.StopIfMissing) throw new InvalidOperationException($"{a.GridName} has no two cells with the same number, so the macro stopped.");
+                    break;
+                }
+                // Press, travel and let go, with short pauses so the game sees a drag and not a click.
+                input.Position(reading.Centers[from].X, reading.Centers[from].Y);
+                input.MouseDown(a.MouseButton);
+                Wait(DragPauseMs, token);
+                input.Glide(reading.Centers[to].X, reading.Centers[to].Y, Math.Max(a.GlideMs, 1), token);
+                Wait(DragPauseMs, token);
+                input.MouseUp(a.MouseButton);
+                break;
+            }
             case MacroActionType.WaitUntil:
                 input.Settle();
                 Look(a, targets, token, found => a.Gone ? found == null : found != null);

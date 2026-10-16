@@ -98,6 +98,11 @@ public static class MacroFile
             Tolerance = t.Tolerance == ScreenTarget.DefaultTolerance ? null : t.Tolerance,
             Area = t.Area is { } a ? new AreaDto { X = a.X, Y = a.Y, Width = a.Width, Height = a.Height, From = a.Space == CoordinateSpace.Window ? "window" : null } : null
         }).ToList();
+        if (p.Grids.Count > 0) d.Grids = p.Grids.Select(g => new GridDto
+        {
+            Name = g.Name, Rows = g.Rows, Columns = g.Columns,
+            Area = new AreaDto { X = g.Area.X, Y = g.Area.Y, Width = g.Area.Width, Height = g.Area.Height, From = g.Area.Space == CoordinateSpace.Window ? "window" : null }
+        }).ToList();
         if (p.Actions.Count > 0) d.Steps = ToSteps(p.Actions);
         if (p.PointerSettleMs != MacroProfile.DefaultPointerSettleMs) d.ClickDelayAfterMoveMs = p.PointerSettleMs;
         if (p.ExecutionMode != ExecutionMode.Standard) d.Input = p.ExecutionMode == ExecutionMode.Background ? "background" : "quickSwitch";
@@ -172,6 +177,22 @@ public static class MacroFile
                 Picture = t.Picture ?? "", Color = t.Color ?? "#000000", Tolerance = t.Tolerance ?? ScreenTarget.DefaultTolerance, Area = area
             });
         }
+        for (int i = 0; i < (d.Grids?.Count ?? 0); i++)
+        {
+            var g = d.Grids![i] ?? throw new ArgumentException($"Grid {i + 1} is empty.");
+            string label = string.IsNullOrWhiteSpace(g.Name) ? $"Grid {i + 1}" : $"Grid \"{g.Name}\"";
+            var a = g.Area ?? throw new ArgumentException($"{label}: it needs an \"area\", such as {{ \"x\": 100, \"y\": 200, \"width\": 400, \"height\": 400 }}.");
+            p.Grids.Add(new ScreenGrid
+            {
+                Name = g.Name?.Trim() ?? "", Rows = Need(g.Rows, "rows", "4"), Columns = Need(g.Columns, "columns", "4"),
+                Area = new(a.X, a.Y, a.Width, a.Height, (a.From ?? "screen").ToLowerInvariant() switch
+                {
+                    "screen" => CoordinateSpace.Screen,
+                    "window" => CoordinateSpace.Window,
+                    _ => throw new ArgumentException($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\".")
+                })
+            });
+        }
         if (d.Steps != null)
         {
             var path = new List<int>();
@@ -236,6 +257,16 @@ public static class MacroFile
                 {
                     Do = "clickOn", Target = a.Target, Button = a.MouseButton == "Left" ? null : ButtonText(a.MouseButton),
                     TimeoutMs = a.TimeoutMs > 0 ? a.TimeoutMs : null, IfTimeUp = a.StopIfMissing ? "stop" : null
+                },
+                MacroActionType.ClickCell => new StepDto
+                {
+                    Do = "clickCell", Grid = a.Grid, Pick = Camel(a.Pick.ToString()), Value = a.Pick == CellPick.Equals ? a.CellValue : null,
+                    Button = a.MouseButton == "Left" ? null : ButtonText(a.MouseButton), IfTimeUp = a.StopIfMissing ? "stop" : null
+                },
+                MacroActionType.DragPair => new StepDto
+                {
+                    Do = "dragPair", Grid = a.Grid, GlideMs = a.GlideMs > 0 ? a.GlideMs : null,
+                    Button = a.MouseButton == "Left" ? null : ButtonText(a.MouseButton), IfTimeUp = a.StopIfMissing ? "stop" : null
                 },
                 MacroActionType.WaitUntil => new StepDto
                 {
@@ -307,6 +338,22 @@ public static class MacroFile
                             TimeoutMs = s.TimeoutMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp)
                         });
                         break;
+                    case "clickcell":
+                        into.Add(new()
+                        {
+                            ActionType = MacroActionType.ClickCell, Grid = Need(s.Grid, "grid", "\"Board\""), MouseButton = Button(s.Button), StopIfMissing = IfTimeUp(s.IfTimeUp),
+                            Pick = (s.Pick ?? "highest").ToLowerInvariant() switch
+                            {
+                                "highest" => CellPick.Highest, "lowest" => CellPick.Lowest, "equals" => CellPick.Equals, "empty" => CellPick.Empty,
+                                _ => throw new ArgumentException($"unknown \"pick\" \"{s.Pick}\". Use \"highest\", \"lowest\", \"equals\" or \"empty\".")
+                            },
+                            CellValue = s.Value ?? 0
+                        });
+                        if (into.Last().Pick == CellPick.Equals && s.Value == null) throw new ArgumentException("\"pick\": \"equals\" needs a \"value\", such as 32.");
+                        break;
+                    case "dragpair":
+                        into.Add(new() { ActionType = MacroActionType.DragPair, Grid = Need(s.Grid, "grid", "\"Board\""), MouseButton = Button(s.Button), GlideMs = s.GlideMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp) });
+                        break;
                     case "if":
                         into.Add(new()
                         {
@@ -330,7 +377,7 @@ public static class MacroFile
                         }
                         break;
                     case "": throw new ArgumentException("it has no \"do\". Say what it does, such as \"do\": \"click\".");
-                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil, if or group.");
+                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil, clickCell, dragPair, if or group.");
                 }
                 if (s.Steps != null && !(string.Equals(s.Do, "group", StringComparison.OrdinalIgnoreCase) || string.Equals(s.Do, "if", StringComparison.OrdinalIgnoreCase)))
                     throw new ArgumentException("only a group or an if can contain \"steps\".");
@@ -392,6 +439,14 @@ public static class MacroFile
         public bool? ScaleWithWindow { get; set; }
         public IconDto? Icon { get; set; }
         public List<TargetDto>? Targets { get; set; }
+        public List<GridDto>? Grids { get; set; }
+    }
+    private sealed class GridDto
+    {
+        public string? Name { get; set; }
+        public AreaDto? Area { get; set; }
+        public int? Rows { get; set; }
+        public int? Columns { get; set; }
     }
     private sealed class TargetDto
     {
@@ -452,6 +507,9 @@ public static class MacroFile
         public string? Target { get; set; }
         public string? Until { get; set; }
         public string? When { get; set; }
+        public string? Grid { get; set; }
+        public string? Pick { get; set; }
+        public long? Value { get; set; }
         public int? TimeoutMs { get; set; }
         public string? IfTimeUp { get; set; }
         public List<StepDto>? Steps { get; set; }

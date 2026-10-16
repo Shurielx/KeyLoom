@@ -76,6 +76,15 @@ A sequence can look at the screen instead of clicking fixed spots.
 
 Keyloom reads what the screen shows, so the target has to be visible: not covered, and not in a minimized window.
 
+### Grids of numbers
+
+Some screens are a grid of numbers: a board, an inventory, a merge game. Keyloom can read the number in each cell with the text recognition built into Windows, on your PC, without going online.
+
+- **Add step → Click a cell in a grid** clicks the cell with the highest number, the lowest, a number you give, or an empty one.
+- **Add step → Drag a matching pair in a grid** finds two cells with the same number, the lowest pair first, and drags one onto the other.
+- **Mark a new grid** freezes the screen; drag around the whole grid, edge to edge. Then set how many rows and columns it has.
+- **Read it now** reads the grid and shows the numbers it saw, so you can check them before the macro runs.
+
 ## Cursor positions and other windows
 
 **Pick point** lets you click once inside another window. Keyloom remembers the window and the spot, so clicks follow it when the window moves, and can scale with it when it's resized. The click you pick with never reaches the app; Esc cancels.

@@ -13,7 +13,7 @@ dotnet build "Keyloom.csproj" -c Release --nologo --verbosity quiet
 if errorlevel 1 goto build_failed
 
 if /i "%~1"=="--build-only" goto success
-start "" "%~dp0bin\Release\net10.0-windows\Keyloom.exe"
+start "" "%~dp0bin\Release\net10.0-windows10.0.19041.0\Keyloom.exe"
 if errorlevel 1 goto launch_failed
 
 :success

@@ -19,6 +19,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
 {
     private static readonly Brush Accent = Frozen(Color.FromRgb(15, 108, 189));
     private readonly bool _color;
+    private readonly int _maxSide;
     private readonly PixelImage _shot;
     private readonly Int32Rect _monitor;
     private readonly Canvas _canvas = new();
@@ -31,9 +32,9 @@ public sealed class ScreenSnipWindow : OverlayWindow
     private Point? _from;
     protected override bool ClickThrough => false;
 
-    private ScreenSnipWindow(bool color, PixelImage shot, Int32Rect monitor)
+    private ScreenSnipWindow(bool color, PixelImage shot, Int32Rect monitor, int maxSide, string? hint)
     {
-        _color = color; _shot = shot; _monitor = monitor;
+        _color = color; _shot = shot; _monitor = monitor; _maxSide = maxSide;
         Title = "Keyloom screen capture";
         ShowActivated = true; Focusable = true; IsHitTestVisible = true; Cursor = Cursors.Cross;
         var image = new Image { Source = ToBitmap(shot), Stretch = Stretch.Fill };
@@ -51,7 +52,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
             Background = Brushes.Black,
             Children = { image, new Border { Background = Frozen(Color.FromArgb(color ? (byte)0 : (byte)0x40, 0, 0, 0)), IsHitTestVisible = false }, _canvas }
         };
-        ShowLabel(new Point(24, 24), color ? "Click the color to find" : "Drag around what to find",
+        ShowLabel(new Point(24, 24), color ? "Click the color to find" : hint ?? "Drag around what to find",
             color ? "Esc cancels" : "Keep it small and distinctive, like a button or an icon · Esc cancels");
         Loaded += (_, _) => { Place(_monitor.X, _monitor.Y, _monitor.Width, _monitor.Height); Activate(); Focus(); };
         // Moving onto a monitor with another scale makes Windows resize the window; put it back over the monitor.
@@ -60,13 +61,15 @@ public sealed class ScreenSnipWindow : OverlayWindow
     }
 
     /// <summary>Captures the monitor under the pointer and waits for a picture or a color. Null when cancelled.</summary>
-    public static Task<ScreenSnip?> TakeAsync(bool color)
+    /// <param name="maxSide">The largest picture side kept, in pixels; a grid can be bigger than a target picture.</param>
+    /// <param name="hint">What to drag around, shown at the start.</param>
+    public static Task<ScreenSnip?> TakeAsync(bool color, int maxSide = Models.ScreenTarget.MaxPictureSide, string? hint = null)
     {
         var at = System.Windows.Forms.Cursor.Position;
         var bounds = System.Windows.Forms.Screen.FromPoint(at).Bounds;
         var monitor = new Int32Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
         var shot = ScreenCapture.Instance.Capture(monitor.X, monitor.Y, monitor.Width, monitor.Height);
-        var window = new ScreenSnipWindow(color, shot, monitor);
+        var window = new ScreenSnipWindow(color, shot, monitor, maxSide, hint);
         window.Show();
         return window._done.Task;
     }
@@ -109,7 +112,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
         int left = Math.Min(x1, x2), top = Math.Min(y1, y2), width = Math.Abs(x2 - x1) + 1, height = Math.Abs(y2 - y1) + 1;
         _from = null;
         if (width < 4 || height < 4) { _selection.Visibility = Visibility.Collapsed; ShowLabel(e.GetPosition(_canvas), "Drag a bigger box", "At least 4 by 4 pixels · Esc cancels"); return; }
-        width = Math.Min(width, Models.ScreenTarget.MaxPictureSide); height = Math.Min(height, Models.ScreenTarget.MaxPictureSide);
+        width = Math.Min(width, _maxSide); height = Math.Min(height, _maxSide);
         var pixels = new uint[width * height];
         for (int row = 0; row < height; row++) Array.Copy(_shot.Pixels, (top + row) * _shot.Width + left, pixels, row * width, width);
         Finish(new(new PixelImage(width, height, pixels), 0, new(_monitor.X + left, _monitor.Y + top, width, height)));

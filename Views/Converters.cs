@@ -45,6 +45,14 @@ public sealed record StepView(string Tone, Geometry? Icon, string Title, string 
             {
                 a.TargetName, a.MouseButton == "Left" ? "" : button, a.TimeoutMs > 0 ? $"looks {a.TimeoutMs:N0} ms" : "", a.StopIfMissing ? "stops if missing" : ""
             }.Where(x => x.Length > 0)), false, false),
+            MacroActionType.ClickCell => new("Pointer", Find("IconGrid"), "Click cell", string.Join(" · ", new[]
+            {
+                a.PickText, a.GridName, a.MouseButton == "Left" ? "" : button, a.StopIfMissing ? "stops if none" : ""
+            }.Where(x => x.Length > 0)), false, false),
+            MacroActionType.DragPair => new("Pointer", Find("IconGrid"), "Drag pair", string.Join(" · ", new[]
+            {
+                $"two equal numbers in {a.GridName}", a.GlideMs > 0 ? $"{a.GlideMs:N0} ms" : "", a.StopIfMissing ? "stops if none" : ""
+            }.Where(x => x.Length > 0)), false, false),
             MacroActionType.WaitUntil => new("Wait", Find("IconClock"), "Wait until", string.Join(" · ", new[]
             {
                 $"{a.TargetName} {(a.Gone ? "is gone" : "shows")}", a.TimeoutMs > 0 ? $"up to {a.TimeoutMs:N0} ms" : "", a.StopIfMissing ? "stops if time is up" : ""

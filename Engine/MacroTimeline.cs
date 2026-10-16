@@ -60,7 +60,7 @@ public sealed class MacroTimeline
                 case MacroActionType.MouseMove:
                     x += a.X; y += a.Y; Place(i); break;
                 // Where a target is shows only while the macro runs, so the preview has nothing to draw.
-                case MacroActionType.ClickTarget or MacroActionType.WaitUntil: break;
+                case MacroActionType.ClickTarget or MacroActionType.WaitUntil or MacroActionType.ClickCell or MacroActionType.DragPair: break;
                 default:
                     var kind = a.ActionType switch
                     {

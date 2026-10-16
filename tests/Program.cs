@@ -44,6 +44,7 @@ internal static partial class Program
             BuilderEngineTests().GetAwaiter().GetResult();
             VisionEngineTests().GetAwaiter().GetResult();
             ConditionEngineTests().GetAwaiter().GetResult();
+            GridEngineTests().GetAwaiter().GetResult();
             StorageTests();
             FormatTests();
             PolishEngineTests();
@@ -63,6 +64,8 @@ internal static partial class Program
             FileUiTests();
             VisionUiTests();
             ConditionUiTests();
+            GridOcrTests();
+            GridUiTests();
             BuilderTargetTests();
             UpdateTests();
             BackgroundInputTests();

@@ -164,6 +164,8 @@
                     <MenuItem Header="Hold or release a button" Tag="MouseDown" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconHold}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Hold or release a key" Tag="KeyDown" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconHold}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <Separator/>
+                    <MenuItem Header="Click a cell in a grid..." Tag="ClickCell" Click="AddGridStep_Click" ToolTip="Reads the numbers in a grid and clicks the highest, the lowest, a given number or an empty cell"><MenuItem.Icon><Path Data="{StaticResource IconGrid}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="Drag a matching pair in a grid..." Tag="DragPair" Click="AddGridStep_Click" ToolTip="Reads the numbers in a grid and drags one of two equal numbers onto the other, lowest first"><MenuItem.Icon><Path Data="{StaticResource IconGrid}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="If something is on the screen..." Click="AddIf_Click" ToolTip="Plays the picked steps only when a picture or a color is on the screen, with an Else for when it is not"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Group" Click="AddGroup_Click" InputGestureText="Ctrl+G" ToolTip="Groups the picked steps, or adds an empty group"><MenuItem.Icon><Path Data="{StaticResource IconGroup}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                   </ContextMenu>
@@ -492,6 +494,56 @@
                 <CheckBox x:Name="StopIfMissingBox" Margin="0,10,0,0" Checked="StepField_Changed" Unchecked="StepField_Changed"/>
               </StackPanel>
               </ContentControl>
+              <!-- Click on a cell and Drag a matching pair: which grid, and what to do in it -->
+              <StackPanel x:Name="GridOptions" Visibility="Collapsed">
+                <StackPanel x:Name="CellPickPanel">
+                  <TextBlock Text="Click the cell with" Style="{StaticResource StackLabel}"/>
+                  <StackPanel Orientation="Horizontal">
+                    <ComboBox x:Name="CellPickBox" Width="170" SelectedIndex="0" SelectionChanged="CellPick_Changed" AutomationProperties.Name="Which cell to click">
+                      <ComboBoxItem Content="The highest number"/><ComboBoxItem Content="The lowest number"/><ComboBoxItem Content="The number"/><ComboBoxItem Content="Nothing in it"/>
+                    </ComboBox>
+                    <TextBox x:Name="CellValueTextBox" Width="72" Margin="8,0,0,0" Text="0" TextChanged="StepField_Changed" AutomationProperties.Name="Number to click"/>
+                  </StackPanel>
+                </StackPanel>
+                <StackPanel x:Name="DragTimePanel">
+                  <TextBlock Text="Drag takes" Style="{StaticResource StackLabel}"/>
+                  <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="DragTimeTextBox" Width="72" Text="150" TextChanged="StepField_Changed" AutomationProperties.Name="Drag time"/>
+                    <TextBlock Text="ms · drags the later cell onto the earlier one" Style="{StaticResource Unit}"/>
+                  </StackPanel>
+                </StackPanel>
+                <TextBlock Text="Grid" Style="{StaticResource StackLabel}"/>
+                <ComboBox x:Name="GridBox" SelectionChanged="GridBox_Changed" AutomationProperties.Name="Grid to read"/>
+                <Button Click="MarkGrid_Click" Padding="10,4" Margin="0,8,0,0" HorizontalAlignment="Left" ToolTip="Drag around the whole grid on the screen. Esc cancels.">
+                  <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconGrid}" Style="{StaticResource Icon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="Mark a new grid"/></StackPanel>
+                </Button>
+                <Border x:Name="GridCard" Style="{StaticResource MoreBox}" Margin="0,8,0,0" Padding="12">
+                  <StackPanel>
+                    <TextBox x:Name="GridNameTextBox" MaxLength="60" LostKeyboardFocus="GridName_LostFocus" KeyDown="GridName_KeyDown" AutomationProperties.Name="Grid name"/>
+                    <TextBlock x:Name="GridInfoText" Style="{StaticResource Muted}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    <WrapPanel Margin="0,8,0,0">
+                      <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
+                        <TextBox x:Name="GridRowsTextBox" Width="48" TextChanged="GridSize_Changed" AutomationProperties.Name="Rows"/>
+                        <TextBlock Text="rows" Style="{StaticResource Unit}"/>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBox x:Name="GridColumnsTextBox" Width="48" TextChanged="GridSize_Changed" AutomationProperties.Name="Columns"/>
+                        <TextBlock Text="columns" Style="{StaticResource Unit}"/>
+                      </StackPanel>
+                    </WrapPanel>
+                    <Button Click="ReadGrid_Click" Padding="10,4" Margin="0,6,0,0" HorizontalAlignment="Left" ToolTip="Reads the numbers on the screen now, with Keyloom out of the way">
+                      <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconGrid}" Style="{StaticResource Icon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="Read it now"/></StackPanel>
+                    </Button>
+                    <TextBlock x:Name="GridReadText" FontFamily="Cascadia Mono, Consolas" FontSize="12.5" Margin="0,8,0,0" TextWrapping="NoWrap">
+                      <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="GridReadNote" TextWrapping="Wrap" Margin="0,4,0,0">
+                      <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Hint}"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </Border>
+                <CheckBox x:Name="GridStopBox" Content="Stop the macro when there is none" Margin="0,10,0,0" Checked="StepField_Changed" Unchecked="StepField_Changed"/>
+              </StackPanel>
               <StackPanel x:Name="MoveOptions" Margin="0,10,0,0" Visibility="Collapsed">
                 <Button Click="RepickPoint_Click" Padding="10,4" HorizontalAlignment="Left" ToolTip="Click the new spot in the target window. Esc cancels.">
                   <StackPanel Orientation="Horizontal"><Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3"/><Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}"/></Grid><TextBlock Text="Pick the point again"/></StackPanel>

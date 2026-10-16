@@ -2,6 +2,14 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-8 · 2026-10-16
+
+### Added
+- Grids: read the number in each cell with Windows OCR
+- Click a cell: highest, lowest, a given number or empty
+- Drag a matching pair: two equal numbers, lowest first
+- Mark a new grid and Read it now to check the numbers
+
 ## 0.3-dev-7 · 2026-10-16
 
 ### Changed
