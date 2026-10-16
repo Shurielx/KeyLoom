@@ -51,6 +51,7 @@ internal static partial class Program
             PolishUiTests();
             DeleteAllUndoTests();
             BuilderUiTests();
+            FileUiTests();
             UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();

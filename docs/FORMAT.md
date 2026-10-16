@@ -2,7 +2,7 @@
 
 Keyloom keeps your macros in one plain JSON file: `%APPDATA%\Keyloom\macros.keyloom`. You can read it, edit it in any text editor, or ask an AI tool to write macros for you. Close Keyloom before editing the file by hand, or it may save over your changes.
 
-**Writing macros with AI:** paste this whole page into the chat, then describe the macro you want. Ask for a complete `.keyloom` file.
+**Writing macros with AI:** paste this whole page into the chat, then describe the macro you want. Ask for a complete `.keyloom` file, save it, and import it with the folder button on the macro list (or drop it on the Keyloom window). Imported macros are added beside yours; a shortcut you already use comes in unset, and Keyloom says so.
 
 ## A first example
 

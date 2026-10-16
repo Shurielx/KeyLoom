@@ -16,6 +16,7 @@ public partial class App : Application
         }
         Services.AppSettings.Load();
         Services.ThemeManager.Apply(Services.AppSettings.Current.Theme);
+        Services.ClickSound.Hook();
         base.OnStartup(e);
     }
     protected override void OnExit(ExitEventArgs e)

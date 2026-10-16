@@ -26,6 +26,7 @@ public partial class SettingsView : UserControl
         BuilderBox.IsChecked = settings.MacroBuilder;
         (settings.Theme switch { AppTheme.Light => LightThemeRadio, AppTheme.Dark => DarkThemeRadio, _ => SystemThemeRadio }).IsChecked = true;
         IndicatorBox.IsChecked = settings.ShowRunIndicator;
+        SoundBox.IsChecked = settings.ClickSounds;
         (settings.IndicatorPlace switch { IndicatorPlace.TopRight => PlaceTopRightRadio, IndicatorPlace.BottomRight => PlaceBottomRightRadio, _ => PlaceTopRadio }).IsChecked = true;
         VersionText.Text = $"Keyloom {AppVersion.Display}";
         _loading = false;
@@ -54,6 +55,10 @@ public partial class SettingsView : UserControl
     private void Indicator_Changed(object sender, RoutedEventArgs e)
     {
         if (!_loading) Save(s => s.ShowRunIndicator = IndicatorBox.IsChecked == true);
+    }
+    private void Sound_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_loading) Save(s => s.ClickSounds = SoundBox.IsChecked == true);
     }
     private void Place_Checked(object sender, RoutedEventArgs e)
     {

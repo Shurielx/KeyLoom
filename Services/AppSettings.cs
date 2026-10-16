@@ -14,6 +14,8 @@ public sealed class AppSettings
     /// <summary>Keeps a small "running" card on screen while a macro runs.</summary>
     public bool ShowRunIndicator { get; set; } = true;
     public IndicatorPlace IndicatorPlace { get; set; }
+    /// <summary>A quiet sound when Keyloom's own buttons are clicked.</summary>
+    public bool ClickSounds { get; set; } = true;
 
     public static AppSettings Current { get; private set; } = new();
     private static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Keyloom", "settings.json");
@@ -32,7 +34,7 @@ public sealed class AppSettings
     }
     public AppSettings With(Action<AppSettings> change)
     {
-        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace };
+        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Theme = Theme, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace, ClickSounds = ClickSounds };
         change(next); return next;
     }
     public void Save(string? path = null)

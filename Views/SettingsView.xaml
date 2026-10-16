@@ -23,6 +23,17 @@
               <StackPanel><Path Data="{StaticResource IconMoon}" Style="{StaticResource AccentIcon}" Width="18" Height="18" Margin="0,1"/><TextBlock Text="Dark" HorizontalAlignment="Center" Margin="0,7,0,0" FontWeight="SemiBold"/></StackPanel>
             </RadioButton>
           </UniformGrid>
+          <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,14"/>
+          <CheckBox x:Name="SoundBox" Style="{StaticResource Switch}" Checked="Sound_Changed" Unchecked="Sound_Changed">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,12,0" VerticalAlignment="Top"><Path Data="{StaticResource IconSound}" Style="{StaticResource AccentIcon}"/></Border>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Click sounds" FontWeight="SemiBold"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,3,0,0" Text="A quiet tap when you click buttons and switches in Keyloom. Macros never make it."/>
+              </StackPanel>
+            </Grid>
+          </CheckBox>
         </StackPanel>
       </Border>
 

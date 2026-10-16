@@ -2,6 +2,13 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-4 · 2026-10-16
+
+### Added
+- Import macros from a .keyloom file, or drop it on the window
+- Export all macros, or one, to share or keep a copy
+- Quiet click sounds, with a switch in Settings to mute them
+
 ## 0.3-dev-3 · 2026-10-16
 
 ### Fixed
