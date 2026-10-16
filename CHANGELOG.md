@@ -2,6 +2,13 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-6 · 2026-10-16
+
+### Added
+- If: plays steps only when a target is, or is not, on screen
+- Else: steps for when the If does not play
+- Ifs fold, move and nest like groups, and save in the file
+
 ## 0.3-dev-5 · 2026-10-16
 
 ### Added

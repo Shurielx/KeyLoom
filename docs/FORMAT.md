@@ -74,6 +74,7 @@ Every step has `"do"`, which says what it does.
 | `type` | `text` | `{ "do": "type", "text": "Hello" }` |
 | `clickOn` | `target`, `button`, `timeoutMs`, `ifTimeUp` | `{ "do": "clickOn", "target": "Play button", "timeoutMs": 2000 }` |
 | `waitUntil` | `target`, `until`, `timeoutMs`, `ifTimeUp` | `{ "do": "waitUntil", "target": "Loading", "until": "gone" }` |
+| `if` | `target`, `when`, `timeoutMs`, `steps`, `else` | see [If](#if) |
 | `group` | `steps`, `repeat`, `gapMs`, `name`, `collapsed` | see below |
 
 - **Buttons:** `left`, `right`, `middle`, `back`, `forward`.
@@ -116,6 +117,19 @@ A target is something on the screen a macro looks for: a small `picture`, or one
 | `area` | Where to look: `x`, `y`, `width`, `height`, and `from`: `screen` (default) or `window`. Without it, Keyloom looks on the whole screen, or in the macro's `window` when it has one. A smaller area is faster. |
 
 A picture is found where it matches, wherever it moved to; a color is found as the first patch of it from the top, and clicked in its middle. Keyloom reads the screen, so the target has to be visible: not covered, and not on a minimized window.
+
+## If
+
+An `if` plays its `steps` only when its target is on the screen (`"when": "shows"`, the default) or not on it (`"when": "gone"`). Its `else` steps play when it does not. `timeoutMs` lets the `if` keep looking for up to that long before it decides; 0 (the default) checks once. An `if` can sit inside groups and other ifs.
+
+```json
+{ "do": "if", "target": "Reward chest", "steps": [
+  { "do": "clickOn", "target": "Reward chest" },
+  { "do": "wait", "ms": 500 }
+], "else": [
+  { "do": "press", "key": "R" }
+] }
+```
 
 ## Limits
 

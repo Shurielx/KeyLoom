@@ -76,7 +76,7 @@ public partial class MacroEditorView
     /// <summary>Keeps the targets that steps use; one captured and then left unused goes away on save.</summary>
     private void ApplyScreenTargets(MacroProfile p)
     {
-        var used = _steps.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil)
+        var used = _steps.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil || a.Block == BlockKind.If)
             .Select(a => a.Target ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
         p.Targets = _targets.Where(t => used.Contains(t.Name)).Select(t => t.Clone()).ToList();
     }
@@ -123,7 +123,7 @@ public partial class MacroEditorView
         if (_loadingStep || !IsInitialized) return;
         FindResultText.Text = "";
         ShowTargetCard();
-        CommitStep();
+        CommitLooking();
     }
     private void Tolerance_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
@@ -196,10 +196,10 @@ public partial class MacroEditorView
         if (color) target.Tolerance = 4;
         _targets.Add(target);
         _seenAt[target] = new(snip.Bounds.X, snip.Bounds.Y, snip.Bounds.Width, snip.Bounds.Height);
-        if (StepEditor.IsVisible && StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil)
+        if (IfPicked || StepEditor.IsVisible && StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil)
         {
             RefreshTargetBox(target.Name);
-            CommitStep();
+            CommitLooking();
         }
         else RefreshTargetBox(CurrentTarget?.Name);
         Say($"Added {target.Name}. Rename it so the steps read well, like \"Play button\".");

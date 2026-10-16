@@ -36,6 +36,7 @@ internal static partial class Program
             GroupEngineTests().GetAwaiter().GetResult();
             BuilderEngineTests().GetAwaiter().GetResult();
             VisionEngineTests().GetAwaiter().GetResult();
+            ConditionEngineTests().GetAwaiter().GetResult();
             StorageTests();
             FormatTests();
             PolishEngineTests();
@@ -54,6 +55,7 @@ internal static partial class Program
             BuilderUiTests();
             FileUiTests();
             VisionUiTests();
+            ConditionUiTests();
             UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();

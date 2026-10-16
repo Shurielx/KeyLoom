@@ -34,9 +34,9 @@ public static class ProfileValidator
         if (p.Targets.Count > MaxScreenTargets) throw new ArgumentException($"A macro can have up to {MaxScreenTargets} targets.");
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var t in p.Targets) ValidateScreenTarget(t, names);
-        foreach (var a in p.Actions.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil))
+        foreach (var a in p.Actions.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil || a is { ActionType: MacroActionType.GroupStart, Block: BlockKind.If }))
             if (!names.Contains(a.Target ?? ""))
-                throw new ArgumentException(string.IsNullOrWhiteSpace(a.Target) ? "A step that looks for a target needs one. Pick or capture it." : $"A step looks for '{a.Target}', but the macro has no target with that name.");
+                throw new ArgumentException(string.IsNullOrWhiteSpace(a.Target) ? "A step or an If that looks for a target needs one. Pick or capture it." : $"A step looks for '{a.Target}', but the macro has no target with that name.");
     }
     public static void ValidateScreenTarget(ScreenTarget t, HashSet<string>? names = null)
     {

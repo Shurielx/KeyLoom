@@ -106,7 +106,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                         if (p.TargetType == TargetInputType.Mouse) input.Click(p.TargetMouseButton);
                         else input.Press(keys);
                     }
-                    else foreach (var step in StepGroups.Expand(p.Actions))
+                    else foreach (var step in StepGroups.Expand(p.Actions, block => Holds(block, targets, token)))
                     {
                         token.ThrowIfCancellationRequested();
                         pointer.EnsureAlive();
@@ -189,6 +189,22 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     : $"'{a.TargetName}' did not go away, so the macro stopped.");
             }
             Wait((int)Math.Min(LookEveryMs, Math.Max(1, forever ? LookEveryMs : a.TimeoutMs - clock.ElapsedMilliseconds)), token);
+        }
+    }
+    /// <summary>
+    /// Answers an If: whether its target is on the screen (or, for "is not", gone). It looks for up to the If's time
+    /// for the answer to become yes, so a target that is about to show still counts.
+    /// </summary>
+    private static bool Holds(MacroAction block, TargetLocator targets, CancellationToken token)
+    {
+        var clock = Stopwatch.StartNew();
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+            bool found = targets.Locate(block.Target) != null;
+            if (found != block.Gone) return true;
+            if (clock.ElapsedMilliseconds >= block.TimeoutMs) return false;
+            Wait((int)Math.Clamp(block.TimeoutMs - clock.ElapsedMilliseconds, 1, LookEveryMs), token);
         }
     }
     private static FocusSwitchDriver WithCursor(FocusSwitchDriver driver, bool restore)

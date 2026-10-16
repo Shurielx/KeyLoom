@@ -66,11 +66,15 @@ public partial class MacroEditorView
     }
 
     /// <summary>Puts the steps in a new group where the first of them was. Steps that were apart are gathered in order.</summary>
-    private void GroupSteps(List<int> block)
+    private void GroupSteps(List<int> block) => MakeBlock(block, BlockKind.Group);
+    /// <summary>Puts the steps in a new group or If where the first of them was.</summary>
+    private void MakeBlock(List<int> block, BlockKind kind)
     {
         EnsureRoom(2);
         Remember();
-        var start = new MacroAction { ActionType = MacroActionType.GroupStart, Name = NextGroupName() };
+        var start = kind == BlockKind.If
+            ? new MacroAction { ActionType = MacroActionType.GroupStart, Block = BlockKind.If, Target = _targets.FirstOrDefault()?.Name }
+            : new MacroAction { ActionType = MacroActionType.GroupStart, Name = NextGroupName() };
         int at = block.Count > 0 ? block[0] : InsertionAfter(SelectedIndices().LastOrDefault(-1));
         var moving = block.Select(i => _steps[i]).ToList();
         _selecting = true;
@@ -83,7 +87,7 @@ public partial class MacroEditorView
         }
         finally { _selecting = false; }
         Select([at]); AnimateSteps(Enumerable.Range(at, moving.Count + 2), -6); FocusStep(at);
-        Dispatcher.BeginInvoke(() => { GroupNameTextBox.Focus(); GroupNameTextBox.SelectAll(); }, System.Windows.Threading.DispatcherPriority.Loaded);
+        if (kind == BlockKind.Group) Dispatcher.BeginInvoke(() => { GroupNameTextBox.Focus(); GroupNameTextBox.SelectAll(); }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
     private string NextGroupName()
     {
@@ -99,6 +103,12 @@ public partial class MacroEditorView
         _selecting = true;
         try
         {
+            // An Else left without its If keeps its steps as a plain group.
+            if (_steps[start].Block == BlockKind.If && end >= 0 && end + 1 < _steps.Count && _steps[end + 1] is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else } orphan)
+            {
+                var kept = orphan.Clone(); kept.Block = BlockKind.Group; kept.Name = "Else";
+                _steps[end + 1] = kept;
+            }
             if (end >= 0) _steps.RemoveAt(end);
             _steps.RemoveAt(start);
         }
@@ -150,6 +160,7 @@ public partial class MacroEditorView
         GroupRunsTextBox.Text = g.Runs.ToString();
         GroupGapTextBox.Text = g.GapMs.ToString();
         _loadingStep = false;
+        ShowBlock(g);
         ShowGroupHint("");
     }
     private void ShowGroupHint(string error)
@@ -164,7 +175,8 @@ public partial class MacroEditorView
         int inside = group.Count(a => !a.IsGroupMarker);
         var played = StepGroups.Expand(group).ToList();
         double seconds = MacroTimeline.Build(played).Duration / 1000;
-        GroupHintText.Text = inside == 0 ? "Empty group. Drag steps into it, or pick steps and press Ctrl+G."
+        GroupHintText.Text = inside == 0 ? (group[0].Block == BlockKind.Group ? "Empty group. Drag steps into it, or pick steps and press Ctrl+G."
+                : $"Empty {group[0].GroupName}. Drag steps into it, or add a step while it is picked.")
             : $"{inside:N0} {(inside == 1 ? "step" : "steps")} inside · plays {played.Count:N0} steps in {seconds:0.0} s";
         ShowGroupInfo(group, inside, played.Count);
     }
@@ -182,6 +194,7 @@ public partial class MacroEditorView
         GroupSummaryText.Text = $"Plays its {inside:N0} {(inside == 1 ? "step" : "steps")} {(head.Runs == 1 ? "once" : $"{head.Runs:N0} times")}"
             + (head.GapMs > 0 ? $", waiting {head.GapMs:N0} ms between steps{(head.Runs > 1 ? " and between passes" : "")}." : ".")
             + (playedCount > inside ? $" That is {playedCount:N0} steps in a run." : "");
+        if (head.Block != BlockKind.Group) GroupSummaryText.Text = BlockSummary(head, inside);
         GroupStartText.Text = (string)new StepLayoutConverter().Convert([head, _steps, StepsRevision], typeof(string), "Time", System.Globalization.CultureInfo.CurrentCulture);
         GroupPassText.Text = StepLayoutConverter.FormatTime(pass);
         GroupTotalText.Text = StepLayoutConverter.FormatTime(total);

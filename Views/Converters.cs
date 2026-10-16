@@ -32,6 +32,10 @@ public sealed record StepView(string Tone, Geometry? Icon, string Title, string 
             } + (a.GlideMs > 0 ? $" · {a.GlideMs:N0} ms" : ""), false, false),
             MacroActionType.MouseScroll => new("Move", Find("IconScroll"), "Scroll",
                 $"{Math.Abs(a.ScrollAmount)} notch{(Math.Abs(a.ScrollAmount) == 1 ? "" : "es")} {(a.ScrollAmount < 0 ? "down" : "up")}", false, false),
+            MacroActionType.GroupStart when a.Block == BlockKind.If => new("Group", Find("IconTarget"), "If",
+                a.Condition + (a.TimeoutMs > 0 ? $" · looks up to {a.TimeoutMs:N0} ms" : ""), false, false, IsGroup: true, Collapsed: a.Collapsed),
+            MacroActionType.GroupStart when a.Block == BlockKind.Else => new("Group", Find("IconGroup"), "Else", "when the If above does not play",
+                false, false, IsGroup: true, Collapsed: a.Collapsed),
             MacroActionType.GroupStart => new("Group", Find("IconGroup"), a.GroupName, string.Join(" · ", new[]
             {
                 a.Runs > 1 ? $"×{a.Runs:N0}" : "", a.GapMs > 0 ? $"{a.GapMs:N0} ms between steps" : ""

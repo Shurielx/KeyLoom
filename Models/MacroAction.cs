@@ -9,6 +9,11 @@ public enum MacroActionType { MouseClick, MouseDown, MouseUp, KeyPress, KeyDown,
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum CoordinateSpace { Screen, Window, Start }
 
+/// <summary>What a GroupStart opens: a plain group, an If that plays only when its target is (or is not) on the screen,
+/// or the Else right after an If, which plays when the If did not.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum BlockKind { Group, If, Else }
+
 public class MacroAction
 {
     public MacroActionType ActionType { get; set; }
@@ -27,6 +32,8 @@ public class MacroAction
     /// <summary>Extra wait between the group's steps, and between its runs.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int GapMs { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Collapsed { get; set; }
+    /// <summary>On a GroupStart: a plain group, an If or an Else. An If uses <see cref="Target"/>, <see cref="Gone"/> and <see cref="TimeoutMs"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public BlockKind Block { get; set; }
     /// <summary>A cursor position step glides there over this time instead of jumping. 0 jumps.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int GlideMs { get; set; }
     // Screen targets: Click on target and Wait until.
@@ -38,6 +45,8 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Gone { get; set; }
     /// <summary>Stop the macro when the target is not found in time, instead of going on with the next step.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool StopIfMissing { get; set; }
+    /// <summary>What an If checks, in words: "Play button is on the screen".</summary>
+    [JsonIgnore] public string Condition => $"{TargetName} {(Gone ? "is not on the screen" : "is on the screen")}";
     [JsonIgnore] public string TargetName => string.IsNullOrWhiteSpace(Target) ? "target" : Target;
     /// <summary>How long the step itself takes: a wait, or a cursor gliding to its spot.</summary>
     [JsonIgnore] public int DurationMs => ActionType switch
@@ -48,7 +57,11 @@ public class MacroAction
     };
     [JsonIgnore] public bool IsGroupMarker => ActionType is MacroActionType.GroupStart or MacroActionType.GroupEnd;
     [JsonIgnore] public int Runs => Math.Max(1, Repeat);
-    [JsonIgnore] public string GroupName => string.IsNullOrWhiteSpace(Name) ? "Group" : Name;
+    [JsonIgnore] public string GroupName => Block switch
+    {
+        BlockKind.If => "If", BlockKind.Else => "Else",
+        _ => string.IsNullOrWhiteSpace(Name) ? "Group" : Name
+    };
     [JsonIgnore] public string DisplayText => ActionType switch
     {
         MacroActionType.MouseClick => $"Click {MouseButton.ToLowerInvariant()}",
@@ -66,6 +79,8 @@ public class MacroAction
             _ => $"{X}, {Y}"
         } + (GlideMs > 0 ? $" in {GlideMs} ms" : ""),
         MacroActionType.MouseScroll => $"Scroll {ScrollAmount} notch(es)",
+        MacroActionType.GroupStart when Block == BlockKind.If => $"If {Condition}",
+        MacroActionType.GroupStart when Block == BlockKind.Else => "Else",
         MacroActionType.GroupStart => $"Group {GroupName}{(Runs > 1 ? $" ×{Runs}" : "")}{(GapMs > 0 ? $", {GapMs} ms between steps" : "")}",
         MacroActionType.GroupEnd => "End of group",
         MacroActionType.ClickTarget => $"Click {MouseButton.ToLowerInvariant()} on {TargetName}",

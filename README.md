@@ -29,7 +29,7 @@ Repeat a click, hold a key, or build a sequence of steps and play it with a shor
 - One window: the editor, settings and help open as pages, and dialogs appear inside it.
 - Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
 - Clicks land where you picked them inside a window, and follow it when it moves. Games get a moment to see the cursor before the click.
-- Steps can find a picture or a color on the screen: click it wherever it is, or wait until it shows up or goes away.
+- Steps can find a picture or a color on the screen: click it wherever it is, wait until it shows up or goes away, or play some steps only if it is there.
 - **Experimental:** build a macro right on the screen, and run modes for games that keep your mouse free.
 - Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
 - Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
@@ -72,6 +72,7 @@ A sequence can look at the screen instead of clicking fixed spots.
 - Each picture or color becomes a *target* with a name. Several steps can use the same one, and **Find it now** checks that Keyloom sees it.
 - **Tolerance** lets the screen look a little different and still count. **Only look near where it was** is faster and ignores the same thing elsewhere.
 - A step that looks for a target keeps trying for the time you set, then goes on, or stops the macro if you ask it to.
+- **Add step → If something is on the screen** puts the picked steps in an If: they play only when the target is there (or, if you choose, when it is not). **Add Else** adds steps for the other case. Ifs fold, move and nest like groups.
 
 Keyloom reads what the screen shows, so the target has to be visible: not covered, and not in a minimized window.
 

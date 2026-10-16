@@ -164,6 +164,7 @@
                     <MenuItem Header="Hold or release a button" Tag="MouseDown" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconHold}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Hold or release a key" Tag="KeyDown" Click="AddStep_Click"><MenuItem.Icon><Path Data="{StaticResource IconHold}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <Separator/>
+                    <MenuItem Header="If something is on the screen..." Click="AddIf_Click" ToolTip="Plays the picked steps only when a picture or a color is on the screen, with an Else for when it is not"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Group" Click="AddGroup_Click" InputGestureText="Ctrl+G" ToolTip="Groups the picked steps, or adds an empty group"><MenuItem.Icon><Path Data="{StaticResource IconGroup}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                   </ContextMenu>
                 </Button.ContextMenu>
@@ -435,6 +436,7 @@
               </Grid>
               <TextBlock x:Name="StepHintText" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0"/>
               <!-- Click on target and Wait until: what to find, and how long to look -->
+              <ContentControl x:Name="StepTargetHost" Focusable="False" IsTabStop="False">
               <StackPanel x:Name="TargetOptions" Visibility="Collapsed">
                 <TextBlock Text="Look for" Style="{StaticResource StackLabel}"/>
                 <ComboBox x:Name="TargetBox" SelectionChanged="TargetBox_Changed" AutomationProperties.Name="Target to look for"/>
@@ -479,7 +481,7 @@
                   </StackPanel>
                 </Border>
                 <StackPanel x:Name="UntilPanel">
-                  <TextBlock Text="Wait until it" Style="{StaticResource StackLabel}"/>
+                  <TextBlock x:Name="UntilLabel" Text="Wait until it" Style="{StaticResource StackLabel}"/>
                   <ComboBox x:Name="UntilBox" SelectedIndex="0" SelectionChanged="StepField_Changed" AutomationProperties.Name="Wait until it"><ComboBoxItem Content="Shows up"/><ComboBoxItem Content="Is gone"/></ComboBox>
                 </StackPanel>
                 <TextBlock x:Name="TimeoutLabel" Text="Keep looking for" Style="{StaticResource StackLabel}"/>
@@ -489,6 +491,7 @@
                 </StackPanel>
                 <CheckBox x:Name="StopIfMissingBox" Margin="0,10,0,0" Checked="StepField_Changed" Unchecked="StepField_Changed"/>
               </StackPanel>
+              </ContentControl>
               <StackPanel x:Name="MoveOptions" Margin="0,10,0,0" Visibility="Collapsed">
                 <Button Click="RepickPoint_Click" Padding="10,4" HorizontalAlignment="Left" ToolTip="Click the new spot in the target window. Esc cancels.">
                   <StackPanel Orientation="Horizontal"><Grid Width="12" Height="12" Margin="0,0,7,0" VerticalAlignment="Center"><Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.3"/><Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}"/></Grid><TextBlock Text="Pick the point again"/></StackPanel>
@@ -522,16 +525,21 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <Grid Width="26" Height="26" Margin="0,0,10,0" VerticalAlignment="Center">
                   <Border CornerRadius="7" Background="{DynamicResource StepGroupBrush}" Opacity=".16"/>
-                  <Path Data="{StaticResource IconGroup}" Fill="{DynamicResource StepGroupBrush}" Width="12" Height="12" Stretch="Uniform"/>
+                  <Path x:Name="GroupIconPath" Data="{StaticResource IconGroup}" Fill="{DynamicResource StepGroupBrush}" Width="12" Height="12" Stretch="Uniform"/>
                 </Grid>
-                <TextBlock Grid.Column="1" Text="Group" Style="{StaticResource InspectorTitle}" VerticalAlignment="Center"/>
-                <Button Grid.Column="2" Click="Ungroup_Click" Padding="10,4" ToolTip="Keep the steps and remove the group (Ctrl+Shift+G)">
-                  <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconGroup}" Style="{StaticResource Icon}" Width="11" Height="11" Margin="0,0,7,0"/><TextBlock Text="Ungroup"/></StackPanel>
+                <TextBlock x:Name="GroupTitleText" Grid.Column="1" Text="Group" Style="{StaticResource InspectorTitle}" VerticalAlignment="Center"/>
+                <Button x:Name="UngroupButton" Grid.Column="2" Click="Ungroup_Click" Padding="10,4" ToolTip="Keep the steps and remove the group (Ctrl+Shift+G)">
+                  <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconGroup}" Style="{StaticResource Icon}" Width="11" Height="11" Margin="0,0,7,0"/><TextBlock x:Name="UngroupText" Text="Ungroup"/></StackPanel>
                 </Button>
               </Grid>
-              <TextBlock Text="Name" Style="{StaticResource StackLabel}"/>
+              <!-- An If: what it checks, using the same target fields as Click on target -->
+              <ContentControl x:Name="IfTargetHost" Focusable="False" IsTabStop="False"/>
+              <Button x:Name="AddElseButton" Click="AddElse_Click" Padding="10,4" Margin="0,12,0,0" HorizontalAlignment="Left" ToolTip="Adds steps that play when this If does not">
+                <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconPlus}" Style="{StaticResource Icon}" Width="10" Height="10" Margin="0,0,7,0"/><TextBlock Text="Add Else"/></StackPanel>
+              </Button>
+              <TextBlock x:Name="GroupNameLabel" Text="Name" Style="{StaticResource StackLabel}"/>
               <TextBox x:Name="GroupNameTextBox" MaxLength="80" TextChanged="GroupField_Changed" AutomationProperties.Name="Group name"/>
-              <WrapPanel>
+              <WrapPanel x:Name="GroupTimingPanel">
                 <StackPanel Margin="0,0,20,0">
                   <TextBlock Text="Play" Style="{StaticResource StackLabel}"/>
                   <StackPanel Orientation="Horizontal">

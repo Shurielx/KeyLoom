@@ -69,10 +69,17 @@ public static class StepGroups
                 if (a.Name is { Length: > 80 }) throw new ArgumentException("Use a group name up to 80 characters.");
                 if (a.Repeat is < 0 or > MaxRepeat) throw new ArgumentException($"A group can run 1 to {MaxRepeat:N0} times.");
                 if (a.GapMs is < 0 or > 3600000) throw new ArgumentException("The wait between group steps must be between 0 and 3600000 ms.");
+                if (!Enum.IsDefined(a.Block)) throw new ArgumentException("Unknown kind of block.");
+                if (a.Block != BlockKind.Group && a.Repeat > 1) throw new ArgumentException("An If or an Else plays its steps once. Put a group inside it to repeat them.");
+                if (a.Block == BlockKind.If && a.TimeoutMs is < 0 or > 3600000) throw new ArgumentException("An If can look for its target for 0 to 3600000 ms.");
             }
             else if (a.ActionType == MacroActionType.GroupEnd && --depth < 0) throw new ArgumentException("A group end has no matching group start.");
         }
         if (depth > 0) throw new ArgumentException("A group has no end. Undo the last change or remove the group.");
+        for (int i = 0; i < steps.Count; i++)
+            if (steps[i] is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else } && !(i > 0 && steps[i - 1].ActionType == MacroActionType.GroupEnd
+                && StartOf(steps, i - 1) is var before and >= 0 && steps[before].Block == BlockKind.If))
+                throw new ArgumentException("An Else has to come right after an If.");
         if (PlayedCount(steps) > MaxPlayedSteps)
             throw new ArgumentException($"Groups repeat too much: one run would play over {MaxPlayedSteps:N0} steps. Lower a group's run count.");
     }
@@ -102,7 +109,9 @@ public static class StepGroups
     /// The steps one run plays, in order: groups repeat and add their waits, markers disappear. Enumerated lazily so a long run
     /// does not build a huge list. Added waits are new <see cref="MacroAction"/> objects; every other step is the original object.
     /// </summary>
-    public static IEnumerable<MacroAction> Expand(IReadOnlyList<MacroAction> steps) => Play(Parse(steps));
+    /// <param name="decide">Answers an If when playback reaches it, after every step before it has played. Without it, as in the
+    /// preview and the timing, an If and its Else both play.</param>
+    public static IEnumerable<MacroAction> Expand(IReadOnlyList<MacroAction> steps, Func<MacroAction, bool>? decide = null) => Play(Parse(steps), decide);
 
     /// <summary>
     /// When each step first plays in one run, in milliseconds from the start, counting waits and the waits groups add.
@@ -156,20 +165,32 @@ public static class StepGroups
         }
         return root;
     }
-    private static IEnumerable<MacroAction> Play(List<Node> nodes)
+    /// <summary>Plays sibling steps, with <paramref name="gapMs"/> between them, asking each If as it is reached.</summary>
+    private static IEnumerable<MacroAction> Play(List<Node> nodes, Func<MacroAction, bool>? decide, int gapMs = 0)
     {
+        bool? lastIf = null;
+        bool first = true;
         foreach (var node in nodes)
         {
+            bool? answer = null;
+            bool play = true;
+            // Without answers, as in the preview, an If and its Else both play.
+            if (node.Children != null && decide != null)
+            {
+                if (node.Step.Block == BlockKind.If) play = (answer = decide(node.Step)).Value;
+                else if (node.Step.Block == BlockKind.Else) play = lastIf == false;
+            }
+            lastIf = answer;
+            if (!play) continue;
+            if (!first && gapMs > 0) yield return new MacroAction { ActionType = MacroActionType.Delay, DelayMs = gapMs };
+            first = false;
             if (node.Children == null) { yield return node.Step; continue; }
             var group = node.Step;
-            bool first = true;
             for (int run = 0; run < group.Runs; run++)
-                foreach (var child in node.Children)
-                {
-                    if (!first && group.GapMs > 0) yield return new MacroAction { ActionType = MacroActionType.Delay, DelayMs = group.GapMs };
-                    first = false;
-                    foreach (var step in Play([child])) yield return step;
-                }
+            {
+                if (run > 0 && group.GapMs > 0 && node.Children.Count > 0) yield return new MacroAction { ActionType = MacroActionType.Delay, DelayMs = group.GapMs };
+                foreach (var step in Play(node.Children, decide, group.GapMs)) yield return step;
+            }
         }
     }
 }

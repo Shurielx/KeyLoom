@@ -187,6 +187,23 @@ public static class MacroFile
         var current = root;
         foreach (var a in actions)
         {
+            if (a is { ActionType: MacroActionType.GroupStart, Block: BlockKind.If })
+            {
+                var test = new StepDto
+                {
+                    Do = "if", Target = a.Target, When = a.Gone ? "gone" : "shows", TimeoutMs = a.TimeoutMs > 0 ? a.TimeoutMs : null,
+                    Name = NullIfEmpty(a.Name), Collapsed = a.Collapsed ? true : null, Steps = new()
+                };
+                current.Add(test); open.Push(current); current = test.Steps;
+                continue;
+            }
+            // An Else follows its If in the list; in the file it is the If's "else".
+            if (a is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else } && current.LastOrDefault() is { Do: "if", Else: null } owner)
+            {
+                owner.Else = new();
+                open.Push(current); current = owner.Else;
+                continue;
+            }
             if (a.ActionType == MacroActionType.GroupStart)
             {
                 var group = new StepDto
@@ -236,7 +253,7 @@ public static class MacroFile
         for (int i = 0; i < steps.Count; i++)
         {
             path.Add(i + 1);
-            string where = "Step " + string.Join(".", path);
+            string where = "Step " + string.Join(".", path.Select(n => n < 0 ? $"{-n} else" : n.ToString())).Replace(" else.", " else ");
             var s = steps[i] ?? throw new ArgumentException($"{where} is empty.");
             try
             {
@@ -290,12 +307,36 @@ public static class MacroFile
                             TimeoutMs = s.TimeoutMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp)
                         });
                         break;
+                    case "if":
+                        into.Add(new()
+                        {
+                            ActionType = MacroActionType.GroupStart, Block = BlockKind.If, Target = Need(s.Target, "target", "\"Play button\""),
+                            Gone = (s.When ?? "shows").ToLowerInvariant() switch
+                            {
+                                "shows" => false, "gone" => true,
+                                _ => throw new ArgumentException($"unknown \"when\" \"{s.When}\". Use \"shows\" or \"gone\".")
+                            },
+                            TimeoutMs = s.TimeoutMs ?? 0, Name = NullIfEmpty(s.Name), Collapsed = s.Collapsed ?? false
+                        });
+                        AddSteps(into, s.Steps ?? new(), path);
+                        into.Add(new() { ActionType = MacroActionType.GroupEnd });
+                        if (s.Else != null)
+                        {
+                            into.Add(new() { ActionType = MacroActionType.GroupStart, Block = BlockKind.Else });
+                            path[^1] = -path[^1];
+                            AddSteps(into, s.Else, path);
+                            path[^1] = -path[^1];
+                            into.Add(new() { ActionType = MacroActionType.GroupEnd });
+                        }
+                        break;
                     case "": throw new ArgumentException("it has no \"do\". Say what it does, such as \"do\": \"click\".");
-                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil or group.");
+                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil, if or group.");
                 }
-                if (s.Steps != null && !string.Equals(s.Do, "group", StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException("only a group can contain \"steps\".");
-                if (into.LastOrDefault() is { } added && added.ActionType != MacroActionType.GroupEnd) ProfileValidator.ValidateAction(added);
+                if (s.Steps != null && !(string.Equals(s.Do, "group", StringComparison.OrdinalIgnoreCase) || string.Equals(s.Do, "if", StringComparison.OrdinalIgnoreCase)))
+                    throw new ArgumentException("only a group or an if can contain \"steps\".");
+                if (s.Else != null && !string.Equals(s.Do, "if", StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("only an if can have \"else\".");
+                if (into.LastOrDefault() is { } added && !added.IsGroupMarker) ProfileValidator.ValidateAction(added);
             }
             catch (ArgumentException ex) when (ex is not StepError)
             {
@@ -410,8 +451,10 @@ public static class MacroFile
         public bool? Collapsed { get; set; }
         public string? Target { get; set; }
         public string? Until { get; set; }
+        public string? When { get; set; }
         public int? TimeoutMs { get; set; }
         public string? IfTimeUp { get; set; }
         public List<StepDto>? Steps { get; set; }
+        public List<StepDto>? Else { get; set; }
     }
 }

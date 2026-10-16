@@ -184,7 +184,12 @@ public partial class MacroEditorView : UserControl
     }
     private void StepField_Changed(object sender, EventArgs e)
     {
-        if (!_loadingStep && IsInitialized) CommitStep();
+        if (!_loadingStep && IsInitialized) CommitLooking();
+    }
+    /// <summary>The target fields belong to the picked If while one is picked, otherwise to the picked step.</summary>
+    private void CommitLooking()
+    {
+        if (IfPicked) CommitIf(); else CommitStep();
     }
     /// <summary>Writes the step editor into the selected step. Invalid input stays in the editor and is reported below it.</summary>
     private void CommitStep()
@@ -222,6 +227,12 @@ public partial class MacroEditorView : UserControl
         IsMultiSelect = count > 1;
         int group = PickedGroup();
         _groupStart = group;
+        if (group < 0)
+        {
+            PlaceTargetOptions(false); SetUntilWords(false);
+            StopIfMissingBox.Visibility = Visibility.Visible; UntilLabel.Text = "Wait until it";
+            ShowTargetOptions(StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil);
+        }
         bool sequence = Mode == 2;
         StepEditor.Visibility = sequence && count == 1 && group < 0 ? Visibility.Visible : Visibility.Collapsed;
         GroupEditor.Visibility = sequence && group >= 0 ? Visibility.Visible : Visibility.Collapsed;
