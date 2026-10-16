@@ -21,6 +21,31 @@ public static class Shortcut
         parts.Add(name);
         return string.Join(" + ", parts);
     }
+    /// <summary>Compact form for files, like "Ctrl+Shift+F9"; empty when there is no shortcut.</summary>
+    public static string ToText(uint modifiers, uint key) => key == 0 ? "" : Format(modifiers, key).Replace(" + ", "+");
+    /// <summary>Reads "Ctrl+Shift+F9" or "Ctrl + Shift + F9"; empty text means no shortcut.</summary>
+    public static (uint Modifiers, uint Key) Parse(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return (0, 0);
+        uint modifiers = 0, key = 0;
+        foreach (string part in text.Split('+', StringSplitOptions.TrimEntries))
+        {
+            if (key != 0) throw new ArgumentException($"The shortcut \"{text}\" has more than one key. Use modifiers and one key, such as Ctrl+Shift+F9.");
+            switch (part.ToLowerInvariant())
+            {
+                case "ctrl" or "control": modifiers |= Control; continue;
+                case "alt": modifiers |= Alt; continue;
+                case "shift": modifiers |= Shift; continue;
+                case "win" or "windows": modifiers |= Win; continue;
+            }
+            string name = part.Length == 1 && char.IsAsciiDigit(part[0]) ? "D" + part : part;
+            if (!Enum.TryParse<Key>(name, true, out var k) || !Enum.IsDefined(k) || k == Key.None || IsModifier(k) || KeyInterop.VirtualKeyFromKey(k) is <= 0 or > 254)
+                throw new ArgumentException($"Unknown key \"{part}\" in the shortcut \"{text}\". Use a key name such as F9, A or 1.");
+            key = (uint)KeyInterop.VirtualKeyFromKey(k);
+        }
+        if (key == 0) throw new ArgumentException($"The shortcut \"{text}\" has no key. Add one, such as Ctrl+Shift+F9.");
+        return (modifiers, key);
+    }
     public static bool IsModifier(Key key) => key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin;
     /// <summary>Why a key can't be a macro shortcut, or null when it can: F1–F24 work alone, other keys need Ctrl, Alt or Win.</summary>
     public static string? Problem(uint modifiers, uint key)

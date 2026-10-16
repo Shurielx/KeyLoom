@@ -48,7 +48,7 @@ internal static partial class Program
         string json = File.ReadAllText(storage.FilePath);
         var loaded = storage.LoadProfiles().Profiles[0].Actions;
         Check(loaded[1] is { ActionType: MacroActionType.GroupStart, Name: "Loop", Repeat: 3, GapMs: 5 } && loaded[4].ActionType == MacroActionType.GroupEnd
-            && json.Split("\"Repeat\"").Length == 2, "groups round-trip through storage without bloating other steps");
+            && json.Split("\"repeat\"").Length == 2,"groups round-trip through storage without bloating other steps");
         Directory.Delete(folder, true);
     }
 

@@ -29,6 +29,7 @@ internal static partial class Program
             GroupEngineTests().GetAwaiter().GetResult();
             BuilderEngineTests().GetAwaiter().GetResult();
             StorageTests();
+            FormatTests();
             PolishEngineTests();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });

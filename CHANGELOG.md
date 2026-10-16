@@ -2,6 +2,16 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-1 · 2026-10-16
+
+### New
+- Macros are saved in macros.keyloom, plain JSON you can edit
+- docs/FORMAT.md describes the file, for you or an AI tool
+- Mistakes in the file name the macro and the step
+
+### Changed
+- Macros from 0.2 move to the new file; the old one stays
+
 ## 0.2-dev-2 · 2026-10-16
 
 ### Fixed

@@ -1,0 +1,95 @@
+# The .keyloom macro file
+
+Keyloom keeps your macros in one plain JSON file: `%APPDATA%\Keyloom\macros.keyloom`. You can read it, edit it in any text editor, or ask an AI tool to write macros for you. Close Keyloom before editing the file by hand, or it may save over your changes.
+
+**Writing macros with AI:** paste this whole page into the chat, then describe the macro you want. Ask for a complete `.keyloom` file.
+
+## A first example
+
+```json
+{
+  "keyloom": 1,
+  "macros": [
+    {
+      "name": "Copy and paste",
+      "shortcut": "Ctrl+Shift+F9",
+      "type": "sequence",
+      "runs": 1,
+      "steps": [
+        { "do": "press", "key": "Ctrl+C" },
+        { "do": "wait", "ms": 100 },
+        { "do": "moveTo", "x": 800, "y": 400 },
+        { "do": "click" },
+        { "do": "press", "key": "Ctrl+V" }
+      ]
+    }
+  ]
+}
+```
+
+## Rules
+
+- `"keyloom": 1` at the top is the format version. A file with a higher number needs a newer Keyloom.
+- Names are case-insensitive: `"click"`, `"Click"` and `"CLICK"` all work. Keyloom writes them in camelCase.
+- `//` comments and trailing commas are allowed.
+- Unknown fields are refused, so a typo is never silently ignored. If something is wrong, Keyloom names the macro and the step, for example `Macro "Copy and paste": Step 2: it needs "ms", such as 200.`
+- Times are in milliseconds (`ms`). Positions are in pixels.
+
+## Macro fields
+
+| Field | Required | Meaning |
+|---|---|---|
+| `name` | yes | Up to 80 characters. |
+| `type` | yes | `"repeat"` presses one thing again and again, `"hold"` keeps it pressed, `"sequence"` plays `steps`. |
+| `shortcut` | no | Like `"Ctrl+Shift+F9"`. Needs Ctrl, Alt or Win with a key, or an F-key alone. Ctrl+Shift+F12 is reserved: it stops everything. |
+| `press` | repeat, hold | `{ "mouse": "left" }` or `{ "key": "Space" }`. |
+| `everyMs` | no | Repeat only. Time between presses, 1 to 3600000. Default 50. |
+| `at` | no | Repeat and hold with the mouse: click at `{ "x": 40, "y": 50 }` inside `window` instead of where the pointer is. Needs `window`. |
+| `runs` | no | Repeat and sequence. How many times it plays; `0` means until you stop it. Default 0. |
+| `startDelayMs` | no | Wait before the first input. Default 500. |
+| `steps` | sequence | The list of steps below. |
+| `clickDelayAfterMoveMs` | no | Wait after the pointer moves before a button is pressed, so games see the move. 0 to 1000, default 20. |
+| `window` | no | The window that positions are measured in: `{ "process": "chrome", "title": "Reports" }`. Also `class`, and `width` and `height` of its inside when the point was picked. |
+| `scaleWithWindow` | no | `true` scales positions when the window is resized. |
+| `input` | no | `"standard"` (default) sends real input. `"background"` sends it to `window` without moving your pointer. `"quickSwitch"` brings `window` to the front for each step, then hands it back. |
+| `restoreCursor` | no | Quick switch only. `false` leaves the pointer where the macro put it. |
+| `icon` | no | `{ "kind": "glyph", "glyph": "R" }`. Kinds: auto, mouse, keyboard, cursor, glyph, image. |
+| `id` | no | Keyloom adds one. Keep it when you edit a file so usage history stays with the macro. |
+
+## Steps
+
+Every step has `"do"`, which says what it does.
+
+| `do` | Fields | Example |
+|---|---|---|
+| `click` | `button` (default left) | `{ "do": "click", "button": "right" }` |
+| `hold` | `button` or `key` | `{ "do": "hold", "button": "left" }`, `{ "do": "hold", "key": "Shift" }` |
+| `release` | `button` or `key` | `{ "do": "release", "key": "Shift" }` |
+| `press` | `key` | `{ "do": "press", "key": "Ctrl+S" }` |
+| `wait` | `ms` | `{ "do": "wait", "ms": 250 }` |
+| `moveTo` | `x`, `y`, `from`, `glideMs` | `{ "do": "moveTo", "x": 412, "y": 260, "from": "window", "glideMs": 120 }` |
+| `moveBy` | `x`, `y` | `{ "do": "moveBy", "x": 0, "y": -40 }` |
+| `scroll` | `notches` | `{ "do": "scroll", "notches": -3 }` (negative scrolls down) |
+| `type` | `text` | `{ "do": "type", "text": "Hello" }` |
+| `group` | `steps`, `repeat`, `gapMs`, `name`, `collapsed` | see below |
+
+- **Buttons:** `left`, `right`, `middle`, `back`, `forward`.
+- **Keys:** names like `A`, `1`, `F8`, `Enter`, `Space`, `Esc`, `Tab`, `Left`, `Up`, `Delete`, `LeftCtrl`, `RightShift`, or combinations like `Ctrl+Shift+S`.
+- **`from`** in `moveTo`: `screen` (default) counts from the top-left of the screen, `window` from the top-left inside the macro's `window`, `start` from where the pointer was when the macro started.
+- **`glideMs`** moves the pointer there over that time instead of jumping.
+- A `hold` should have a matching `release` later in the steps.
+
+### Groups
+
+A group plays its steps `repeat` times, with `gapMs` between its steps and between its runs. Groups can hold other groups, up to 8 deep.
+
+```json
+{ "do": "group", "name": "Burst", "repeat": 5, "gapMs": 30, "steps": [
+  { "do": "click" },
+  { "do": "moveBy", "x": 10, "y": 0 }
+] }
+```
+
+## Limits
+
+Up to 20,000 steps per macro and 1,000,000 played steps per run once groups are repeated. The whole file can be up to 8 MB.
