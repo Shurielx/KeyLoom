@@ -4,6 +4,14 @@ Short list of changes per version, shown in Keyloom under **About**. Full notes 
 
 ## 0.3-dev-11 · 2026-10-17
 
+### Featured
+- **Find on screen:** click pictures and colors anywhere
+- **If and Else** by what the screen shows
+- **Grids:** read numbers, click or drag by them
+- **New editor** with the picked step beside the list
+- **Import and export** macros as .keyloom files
+- **Scripts and AI** to try under Settings, Features
+
 ### Changed
 - Every text is ready to translate; Keyloom stays English
 - A new language is one file, see docs/TRANSLATING.md

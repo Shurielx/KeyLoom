@@ -5,14 +5,14 @@
 # Keyloom
 
 **Keyboard and mouse macros for Windows.**<br>
-Repeat a click, hold a key, or build a sequence of steps and play it with a shortcut.
+Repeat a click, hold a key, or build a sequence of steps that finds things on the screen, and play it with a shortcut.
 
 [![Release](https://img.shields.io/github/v/release/Shurielx/KeyLoom?include_prereleases&label=release&color=0f6cbd)](https://github.com/Shurielx/KeyLoom/releases)
 [![Build](https://img.shields.io/github/actions/workflow/status/Shurielx/KeyLoom/build.yml?branch=main&label=build)](https://github.com/Shurielx/KeyLoom/actions/workflows/build.yml)
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0f6cbd)
 ![.NET 10](https://img.shields.io/badge/.NET-10-512bd4)
 
-[Download](https://github.com/Shurielx/KeyLoom/releases) · [Changelog](CHANGELOG.md) · [Build from source](#build)
+[Download](https://github.com/Shurielx/KeyLoom/releases) · [Changelog](CHANGELOG.md) · [Macro file](docs/FORMAT.md) · [Scripts](docs/SCRIPTS.md) · [Build from source](#build)
 
 <img src="docs/screenshot.png" width="760" alt="Keyloom macro list">
 
@@ -24,7 +24,16 @@ Repeat a click, hold a key, or build a sequence of steps and play it with a shor
 |---|---|
 | **Repeat** | Click or press a key again and again, as often as every 1 ms. |
 | **Hold** | Keep a key or mouse button held down until you stop it. |
-| **Sequence** | Clicks, holds, keys, waits, cursor moves, scrolling and text, recorded or built step by step. |
+| **Sequence** | Clicks, holds, keys, waits, cursor moves, scrolling and text, recorded or built step by step. Steps can find pictures and colors on the screen, read numbers in a grid, and play only when something is there. |
+| **Script** *(experimental)* | Write what the macro does in JavaScript, with simple functions like `press("E")` and `clickOn("Play")`. |
+
+### New in 0.3
+
+- **Find things on the screen.** Click a picture or a color wherever it is, wait until it shows up or goes away, and play steps only *If* it is there, with an *Else* for when it is not.
+- **Grids of numbers.** Keyloom reads the number in each cell, offline, and clicks the highest or drags two equal ones together.
+- **A new editor.** Steps take the full height, with the picked step and the run settings beside them, and less used options under *More options*.
+- **Macros in a readable file.** `macros.keyloom` is plain JSON; import and export it to share macros or move them to another PC.
+- **Scripts and AI** *(experimental)*. Write a macro in JavaScript, and let a running macro ask an AI about the screen, on your PC with Ollama or online with OpenRouter.
 
 - One window: the editor, settings and help open as pages, and dialogs appear inside it.
 - Shortcuts work everywhere, even while Keyloom sits in the tray. **Ctrl + Shift + F12** stops everything.
@@ -44,7 +53,7 @@ In the list, click a macro's **name**, **icon** or **shortcut** to change it rig
 
 ## Sequences
 
-<img src="docs/steps.png" width="640" alt="Sequence editor with the step list, route and run strip">
+<img src="docs/steps.png" width="640" alt="Sequence editor with the step list, the picked step and the run settings">
 
 Steps read like a table: the number, what the step does and **when it starts** in a run, counting the waits before it. Under the list, the **run strip** shows the whole run on one line, every input at its time. Hover a mark to see the step, click it to jump there. When the macro moves the pointer, its route sits beside the list.
 
@@ -75,6 +84,8 @@ A sequence can look at the screen instead of clicking fixed spots.
 - **Add step → If something is on the screen** puts the picked steps in an If: they play only when the target is there (or, if you choose, when it is not). **Add Else** adds steps for the other case. Ifs fold, move and nest like groups.
 
 Keyloom reads what the screen shows, so the target has to be visible: not covered, and not in a minimized window.
+
+<img src="docs/if.png" width="640" alt="An If that plays its steps only when a color is not on the screen, with its Else">
 
 ### Grids of numbers
 
@@ -124,6 +135,8 @@ Turn on **Settings → Features → Macro builder**. **Build on screen** in the 
 <br>
 
 Turn on **Settings → Features → Scripts**, then pick **Script** next to Sequence. A script macro is a short JavaScript program with functions named after what they do:
+
+<img src="docs/script.png" width="640" alt="The script editor with its targets and grids, and the Output of a test run">
 
 ```js
 if (waitFor("Play", 10000)) clickOn("Play")
@@ -210,6 +223,7 @@ dotnet run --project Keyloom.csproj
 
 - Builds are unsigned while Keyloom is in development, so Windows may ask before the first start.
 - Some apps reject synthetic input, and some games forbid automation in their rules. Check before you use it there.
+- Keyloom is in English. Every text is ready to be translated; [docs/TRANSLATING.md](docs/TRANSLATING.md) says how to add a language.
 - One macro runs at a time. Sequences hold up to 20,000 steps; recordings stop after 10 active minutes.
 - Macros with groups need Keyloom 0.1-dev-4 or newer. Older versions play a glide as a jump and skip the click delay.
 - See the [validation notes](docs/VALIDATION.md) for what has been tested.
