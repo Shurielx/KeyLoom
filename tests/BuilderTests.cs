@@ -177,6 +177,20 @@ internal static partial class Program
         sheets.CloseTop(false); Pump(200);
         host.Close();
 
+        // The route card opens the preview the same way the Preview button does.
+        var window = new MainWindow { Left = -20000, Top = -20000, ShowActivated = false };
+        window.Show(); Pump(100);
+        var routed = Profile(MacroBehaviorType.Sequence);
+        routed.Actions.Add(new() { ActionType = MacroActionType.MousePosition, X = 10, Y = 10 });
+        routed.Actions.Add(new() { ActionType = MacroActionType.MousePosition, X = 300, Y = 200 });
+        Invoke(window, "OpenEditor", routed, false, (Action)(() => { })); Pump(300);
+        var routeCard = (Button)((MacroEditorView)Field(window, "_activeEditor")).FindName("PreviewCard");
+        routeCard.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent)); Pump(300);
+        var windowSheets = (SheetLayer)window.FindName("Sheets");
+        Check(routeCard.IsVisible && windowSheets.Top is PreviewView, "clicking the route card opens the preview");
+        windowSheets.CloseTop(false); Pump(200);
+        window.Close();
+
         // Picking a step rings its spot on the route.
         var p = Profile(MacroBehaviorType.Sequence);
         p.Actions.Add(new() { ActionType = MacroActionType.MousePosition, X = 10, Y = 10 });

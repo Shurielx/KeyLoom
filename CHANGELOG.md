@@ -2,6 +2,11 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.2-dev-2 · 2026-10-16
+
+### Fixed
+- Clicking the Route card opens the preview every time
+
 ## 0.2-dev-1 · 2026-10-16
 
 ### New
