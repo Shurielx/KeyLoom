@@ -2,6 +2,15 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-7 · 2026-10-16
+
+### Changed
+- Builder: targets show as boxes where they are on screen
+- Builder: pick a target to see, rename and tune it
+- Builder: drag around a picture to add it as a target
+- Builder: other points fade and the picked one says Editing
+- Builder: Click on, Wait until and If can be edited
+
 ## 0.3-dev-6 · 2026-10-16
 
 ### Added

@@ -158,6 +158,9 @@ public sealed class RouteSpace(IWindowSystem windows, IntPtr window, MacroProfil
     private readonly PointerResolver _resolver = new(windows, window, profile);
     private readonly (int X, int Y) _start = windows.Cursor();
     public bool HasWindow => window != IntPtr.Zero;
+    /// <summary>The target window, for finding targets that look inside it.</summary>
+    public IntPtr Window => window;
+    public IWindowSystem Windows => windows;
     public (int X, int Y) ToScreen(MacroAction step) => step.Space == CoordinateSpace.Start
         ? (_start.X + step.X, _start.Y + step.Y) : _resolver.Resolve(step.Space, step.X, step.Y);
     public (int X, int Y) FromScreen(CoordinateSpace space, int x, int y)

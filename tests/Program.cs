@@ -23,6 +23,13 @@ internal static partial class Program
     {
         try
         {
+            if (args.Contains("--only-builder-targets"))
+            {
+                var one = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+                one.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
+                one.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Theme.xaml", UriKind.Relative) });
+                BuilderTargetTests(); one.Shutdown(); return 0;
+            }
             if (args.Contains("--live"))
             {
                 var live = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -56,6 +63,7 @@ internal static partial class Program
             FileUiTests();
             VisionUiTests();
             ConditionUiTests();
+            BuilderTargetTests();
             UpdateTests();
             BackgroundInputTests();
             if (args.Contains("--input")) NativeInputTests();

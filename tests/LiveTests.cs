@@ -11,9 +11,9 @@ internal static partial class Program
     [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] private static extern void mouse_event(uint flags, int dx, int dy, uint data, UIntPtr extra);
     /// <summary>A real click with the real pointer, as a person would make it.</summary>
-    private static void RealClick(FrameworkElement element)
+    private static void RealClick(FrameworkElement element, double across = 0.5)
     {
-        var center = element.PointToScreen(new Point(element.ActualWidth / 2, element.ActualHeight / 2));
+        var center = element.PointToScreen(new Point(element.ActualWidth * across, element.ActualHeight / 2));
         SetCursorPos((int)center.X, (int)center.Y); Pump(120);
         mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero); Pump(60); mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
     }
@@ -60,6 +60,7 @@ internal static partial class Program
         Capture(window, "live-route-click.png");
         ((SheetLayer)window.FindName("Sheets")).CloseTop(false); Pump(400);
         LiveVision(window);
+        LiveBuilder();
         window.Close();
     }
     /// <summary>
@@ -89,6 +90,61 @@ internal static partial class Program
         var monitor = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(r.Left + 40, r.Top + 40)).Bounds;
         Console.WriteLine($"snip covers {r.Right - r.Left}x{r.Bottom - r.Top} of monitor {monitor.Width}x{monitor.Height}; picked {(picked == null ? "nothing" : $"color at {picked.Bounds.X},{picked.Bounds.Y}")}; open windows {Application.Current.Windows.OfType<ScreenSnipWindow>().Count()}");
         editor.Cancel(); Pump(300);
+
+        // An If with an Else, picked in the real editor.
+        var q = Profile(MacroBehaviorType.Sequence);
+        q.Targets.Add(new ScreenTarget { Name = "Reward chest", Kind = ScreenTargetKind.Color, Color = "#FFCC00" });
+        q.Actions = new([
+            new() { ActionType = MacroActionType.KeyPress, KeyName = "E" },
+            new() { ActionType = MacroActionType.GroupStart, Block = BlockKind.If, Target = "Reward chest", TimeoutMs = 500 },
+            new() { ActionType = MacroActionType.ClickTarget, Target = "Reward chest", TimeoutMs = 1000 },
+            new() { ActionType = MacroActionType.GroupEnd },
+            new() { ActionType = MacroActionType.GroupStart, Block = BlockKind.Else },
+            new() { ActionType = MacroActionType.KeyPress, KeyName = "R" },
+            new() { ActionType = MacroActionType.GroupEnd }]);
+        Invoke(window, "OpenEditor", q, false, (Action)(() => { })); Pump(600);
+        editor = (MacroEditorView)Field(window, "_activeEditor")!;
+        var steps = (System.Windows.Controls.ListBox)editor.FindName("ActionsListBox");
+        RealClick((FrameworkElement)steps.ItemContainerGenerator.ContainerFromIndex(1), 0.2); Pump(500);
+        Capture(window, "live-if.png");
+        RealClick((FrameworkElement)steps.ItemContainerGenerator.ContainerFromIndex(4), 0.2); Pump(500);
+        Capture(window, "live-else.png");
+        RealClick((FrameworkElement)steps.ItemContainerGenerator.ContainerFromIndex(2), 0.25); Pump(500);
+        Capture(window, "live-if-inner-step.png");
+        editor.Cancel(); Pump(300);
+    }
+    /// <summary>
+    /// The builder on the real screen finds a picture shown in a Keyloom test window. Nothing is captured: the builder covers
+    /// the whole desktop, so only where it found the picture is printed.
+    /// </summary>
+    private static void LiveBuilder()
+    {
+        var picture = Button(48, 28);
+        var shown = new Window
+        {
+            Title = "Keyloom live target", WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, Topmost = true, ShowActivated = false,
+            Left = 300, Top = 300, SizeToContent = SizeToContent.WidthAndHeight,
+            Content = new System.Windows.Controls.Image { Source = ScreenSnipWindow.ToBitmap(picture), Stretch = System.Windows.Media.Stretch.None }
+        };
+        System.Windows.Media.RenderOptions.SetBitmapScalingMode((DependencyObject)shown.Content, System.Windows.Media.BitmapScalingMode.NearestNeighbor);
+        shown.Show(); Pump(200);
+        var image = (System.Windows.Controls.Image)shown.Content;
+        // One picture pixel per screen pixel, whatever the scale, so the screen shows exactly the picture.
+        double dpi = System.Windows.Media.VisualTreeHelper.GetDpi(shown).DpiScaleX;
+        image.Stretch = System.Windows.Media.Stretch.Fill; image.Width = picture.Width / dpi; image.Height = picture.Height / dpi;
+        shown.UseLayoutRounding = true; shown.SnapsToDevicePixels = true;
+        Pump(400);
+        var at = image.PointToScreen(new Point(0, 0));
+        var p = Profile(MacroBehaviorType.Sequence);
+        p.Targets.Add(new ScreenTarget { Name = "Live", Picture = Keyloom.Engine.TargetPicture.Encode(picture) });
+        p.Actions.Add(new() { ActionType = MacroActionType.ClickTarget, Target = "Live" });
+        var monitor = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)at.X, (int)at.Y)).Bounds;
+        var builder = new MacroBuilderWindow("Live", p.Actions, new Keyloom.Engine.RouteSpace(Keyloom.Engine.WindowSystem.Instance, IntPtr.Zero, p),
+            new Int32Rect(monitor.X, monitor.Y, monitor.Width, monitor.Height), targets: p.Targets) { ShowActivated = false };
+        builder.Show(); Pump(1500);
+        var found = ((Dictionary<string, Keyloom.Engine.Match?>)Field(builder, "_found")).GetValueOrDefault("Live");
+        Console.WriteLine($"builder found the live picture at {found?.X},{found?.Y} (shown at {(int)at.X},{(int)at.Y}); builder opacity {builder.Opacity}");
+        builder.Close(); shown.Close(); Pump(200);
     }
     private static void Capture(Window window, string name)
     {

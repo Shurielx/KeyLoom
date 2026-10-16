@@ -95,6 +95,8 @@ Turn on **Settings → Features → Macro builder**. **Build on screen** in the 
 - A **dashed** line jumps the cursor to the next point, a **solid** one glides it. The time on a line is how long the macro stays at a point before going on; click it to change it.
 - The **panel** shows the picked point as a small timeline: how the cursor gets there, each step with the time it starts after the cursor arrives, and the wait before the next point. A hold is one row, like *Hold Left for 200 ms*; for keys, click the field and press the key. **All steps** lists the whole macro with start times, groups and the click delay. Drag the panel by its title or hide it with **H**.
 - A **group** plays its points together: *Repeat* sets how many times in a row, *Extra wait* adds a pause after every step inside it (usually 0).
+- **Targets** show as green boxes where Keyloom finds them on the screen right now, labelled with what steps do with them (click, wait, if). Click one to see its picture, rename it, change its tolerance, or add a click or a wait for it. Right click → **New picture to find** lets you drag around something on the screen; it becomes a target with a click on it. **Look again** finds them as the screen is now.
+- Whatever you are not editing fades, and the picked point says **Editing point N**, so the panel and the screen always point at the same thing.
 
 | Keys | In the builder |
 |---|---|

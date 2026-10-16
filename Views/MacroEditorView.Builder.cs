@@ -35,7 +35,7 @@ public partial class MacroEditorView
         var screen = (place != IntPtr.Zero ? System.Windows.Forms.Screen.FromHandle(place) : System.Windows.Forms.Screen.PrimaryScreen!).Bounds;
         string name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : "Macro";
         int settle = int.TryParse(SettleTextBox.Text.Trim(), out int ms) ? ms : Profile.PointerSettleMs;
-        var builder = new MacroBuilderWindow(name, _steps, new RouteSpace(WindowSystem.Instance, window, p), new Int32Rect(screen.X, screen.Y, screen.Width, screen.Height), settle);
+        var builder = new MacroBuilderWindow(name, _steps, new RouteSpace(WindowSystem.Instance, window, p), new Int32Rect(screen.X, screen.Y, screen.Width, screen.Height), settle, _targets);
         // Keyloom steps out of the way while you build, and comes back when you're done.
         var host = Host;
         var state = host?.WindowState ?? WindowState.Normal;
@@ -54,11 +54,14 @@ public partial class MacroEditorView
     private void ApplyBuilt(BuilderResult result)
     {
         var steps = result.Steps;
+        bool targetsChanged = result.Targets.Count != _targets.Count || result.Targets.Zip(_targets).Any(pair => pair.First.Name != pair.Second.Name || pair.First.Tolerance != pair.Second.Tolerance);
+        _targets = result.Targets.Select(t => t.Clone()).ToList();
+        RefreshTargetBox(CurrentTarget?.Name);
         bool delayChanged = SettleTextBox.Text.Trim() != result.ClickDelayMs.ToString();
         SettleTextBox.Text = result.ClickDelayMs.ToString();
         if (steps.Count == _steps.Count && steps.Zip(_steps).All(pair => Same(pair.First, pair.Second)))
         {
-            Say(delayChanged ? $"Click delay after moving is now {result.ClickDelayMs} ms. Save to keep it." : "Nothing changed in the builder.");
+            Say(delayChanged ? $"Click delay after moving is now {result.ClickDelayMs} ms. Save to keep it." : targetsChanged ? "Targets changed in the builder. Save to keep them." : "Nothing changed in the builder.");
             return;
         }
         if (steps.Count > ProfileValidator.MaxActions) throw new ArgumentException($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps.");
@@ -73,5 +76,6 @@ public partial class MacroEditorView
     }
     private static bool Same(MacroAction a, MacroAction b) =>
         a.ActionType == b.ActionType && a.MouseButton == b.MouseButton && a.KeyName == b.KeyName && a.DelayMs == b.DelayMs && a.X == b.X && a.Y == b.Y
-        && a.Space == b.Space && a.ScrollAmount == b.ScrollAmount && a.Text == b.Text && a.Name == b.Name && a.Repeat == b.Repeat && a.GapMs == b.GapMs && a.Collapsed == b.Collapsed;
+        && a.Space == b.Space && a.ScrollAmount == b.ScrollAmount && a.Text == b.Text && a.Name == b.Name && a.Repeat == b.Repeat && a.GapMs == b.GapMs && a.Collapsed == b.Collapsed
+        && a.Target == b.Target && a.TimeoutMs == b.TimeoutMs && a.Gone == b.Gone && a.StopIfMissing == b.StopIfMissing && a.Block == b.Block && a.GlideMs == b.GlideMs;
 }

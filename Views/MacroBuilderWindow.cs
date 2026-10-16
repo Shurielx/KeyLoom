@@ -10,8 +10,8 @@ using Keyloom.Models;
 
 namespace Keyloom.Views;
 
-/// <summary>What the builder hands back on Done: the steps and the macro's click delay after moving.</summary>
-public sealed record BuilderResult(List<MacroAction> Steps, int ClickDelayMs);
+/// <summary>What the builder hands back on Done: the steps, the macro's click delay after moving, and its targets.</summary>
+public sealed record BuilderResult(List<MacroAction> Steps, int ClickDelayMs, List<ScreenTarget> Targets);
 
 /// <summary>
 /// Experimental: builds a sequence right on the screen. Every cursor position step is a numbered point where it will
@@ -19,7 +19,7 @@ public sealed record BuilderResult(List<MacroAction> Steps, int ClickDelayMs);
 /// A side panel, which can be moved and hidden, shows the picked point on a small timeline, or every step of the macro.
 /// Works on a copy; <see cref="Finished"/> hands back the new steps, or null when cancelled.
 /// </summary>
-public sealed class MacroBuilderWindow : OverlayWindow
+public sealed partial class MacroBuilderWindow : OverlayWindow
 {
     public const int MaxPoints = 400, DefaultGlideMs = 200;
     private const double PanelWidth = 400;
@@ -62,9 +62,14 @@ public sealed class MacroBuilderWindow : OverlayWindow
 
     /// <param name="monitor">The monitor to cover, in screen pixels.</param>
     /// <param name="settleMs">The macro's click delay after moving, shown on the point timeline and changeable here.</param>
-    public MacroBuilderWindow(string name, IEnumerable<MacroAction> steps, RouteSpace space, Int32Rect monitor, int settleMs = MacroProfile.DefaultPointerSettleMs)
+    /// <param name="targets">The macro's pictures and colors to find; shown where they are on the screen.</param>
+    /// <param name="screen">Where targets are looked for; tests put in a made-up screen.</param>
+    public MacroBuilderWindow(string name, IEnumerable<MacroAction> steps, RouteSpace space, Int32Rect monitor, int settleMs = MacroProfile.DefaultPointerSettleMs,
+        IEnumerable<ScreenTarget>? targets = null, IScreen? screen = null)
     {
         _steps = steps.Select(a => a.Clone()).ToList();
+        _targets = (targets ?? []).Select(t => t.Clone()).ToList();
+        _screen = screen ?? ScreenCapture.Instance;
         if (RouteBuilder.Points(_steps).Count > MaxPoints)
             throw new ArgumentException($"The builder shows up to {MaxPoints:N0} points. Recorded macros with more are easier to change in the list.");
         _space = space; _monitor = monitor; _name = name; _settleMs = settleMs;
@@ -93,7 +98,10 @@ public sealed class MacroBuilderWindow : OverlayWindow
         _overlay.Children.Add(_showPanel);
         Content = new Grid { Children = { backdrop, _canvas, _overlay } };
         SourceInitialized += (_, _) => Place(_monitor.X, _monitor.Y, _monitor.Width, _monitor.Height);
-        Loaded += (_, _) => { if (ShowActivated) { Activate(); Keyboard.Focus(this); } Refresh(); };
+        Loaded += (_, _) => { if (ShowActivated) { Activate(); Keyboard.Focus(this); } Refresh(); if (_targets.Count > 0) _ = LocateAsync(); };
+        PreviewMouseLeftButtonDown += Snip_MouseDown;
+        PreviewMouseMove += Snip_MouseMove;
+        PreviewMouseLeftButtonUp += Snip_MouseUp;
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(() => { Place(_monitor.X, _monitor.Y, _monitor.Width, _monitor.Height); _panelPlaced = false; Refresh(); });
         PreviewKeyDown += Builder_KeyDown;
         Closed += (_, _) => { if (!_done) { _done = true; Finished?.Invoke(null); } };
@@ -123,8 +131,9 @@ public sealed class MacroBuilderWindow : OverlayWindow
         {
             bool glides = _steps[_points[k].Index].GlideMs > 0;
             var dashes = glides ? null : new DoubleCollection { 3, 2.5 };
-            _canvas.Children.Add(new Line { X1 = spots[k - 1].X, Y1 = spots[k - 1].Y, X2 = spots[k].X, Y2 = spots[k].Y, Stroke = HaloBrush, StrokeThickness = 5, IsHitTestVisible = false });
-            _canvas.Children.Add(new Line { X1 = spots[k - 1].X, Y1 = spots[k - 1].Y, X2 = spots[k].X, Y2 = spots[k].Y, Stroke = LineBrush, StrokeThickness = 2, StrokeDashArray = dashes, IsHitTestVisible = false });
+            double opacity = Faded(k - 1) && Faded(k) ? FadedOpacity : 1;
+            _canvas.Children.Add(new Line { X1 = spots[k - 1].X, Y1 = spots[k - 1].Y, X2 = spots[k].X, Y2 = spots[k].Y, Stroke = HaloBrush, StrokeThickness = 5, IsHitTestVisible = false, Opacity = opacity });
+            _canvas.Children.Add(new Line { X1 = spots[k - 1].X, Y1 = spots[k - 1].Y, X2 = spots[k].X, Y2 = spots[k].Y, Stroke = LineBrush, StrokeThickness = 2, StrokeDashArray = dashes, IsHitTestVisible = false, Opacity = opacity });
         }
         // How long the run stays at a point sits on the line to the next one; the last point's beside it.
         for (int k = 0; k < _points.Count; k++)
@@ -136,7 +145,9 @@ public sealed class MacroBuilderWindow : OverlayWindow
             var at = !last ? new Point((spots[k].X + spots[k + 1].X) / 2, (spots[k].Y + spots[k + 1].Y) / 2) : spots[k] + new Vector(0, 38);
             AddTimePill(k, ms, glide, at, last);
         }
+        DrawTargets();
         for (int k = 0; k < _points.Count; k++) AddPoint(k, spots[k]);
+        if (Current >= 0 && Current < spots.Count) AddEditingLabel(spots[Current]);
     }
     private void AddTimePill(int k, int waitMs, int glideMs, Point at, bool last)
     {
@@ -164,7 +175,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
         var p = _points[k];
         var own = p.Steps.Select(i => _steps[i]).ToList();
         bool hold = own.Any(a => a.ActionType == MacroActionType.MouseDown), click = own.Any(a => a.ActionType == MacroActionType.MouseClick);
-        var dot = new Grid { Width = 30, Height = 30, Cursor = Cursors.SizeAll, ToolTip = Summary(k) };
+        var dot = new Grid { Width = 30, Height = 30, Cursor = Cursors.SizeAll, ToolTip = Summary(k), Opacity = Faded(k) ? FadedOpacity : 1 };
         if (_picked.Contains(k))
             dot.Children.Add(new Ellipse { Width = 42, Height = 42, Margin = new(-6), Stroke = Brushes.White, StrokeThickness = k == Current ? 3 : 2, Fill = Frozen(new SolidColorBrush(Color.FromArgb(0x40, 255, 255, 255))) });
         // Points inside a group get a dashed ring, and the repeat count when the group plays more than once.
@@ -224,8 +235,10 @@ public sealed class MacroBuilderWindow : OverlayWindow
     private void Pick(IEnumerable<int> points, bool fromList = false)
     {
         var next = points.Distinct().ToList();
+        bool hadTarget = _pickedTarget != null;
+        _pickedTarget = null;
         if (!fromList && next.Count > 0 && ShowingAll) { _rebuilding = true; _pointTab.IsChecked = true; _rebuilding = false; }
-        else if (next.SequenceEqual(_picked)) return;
+        else if (next.SequenceEqual(_picked) && !hadTarget) return;
         _picked.Clear(); _picked.AddRange(next);
         Refresh();
     }
@@ -270,6 +283,9 @@ public sealed class MacroBuilderWindow : OverlayWindow
         menu.Items.Add(Item("Click here", "IconMouse", () => AddPointAt(at, [new() { ActionType = MacroActionType.MouseClick, MouseButton = _lastButton }])));
         menu.Items.Add(Item("Hold here", "IconHold", () => AddPointAt(at, RouteBuilder.Hold(_lastButton))));
         menu.Items.Add(Item("Cursor here, no click", "IconTarget", () => AddPointAt(at, [])));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(Item("New picture to find...", "IconImage", () => StartSnip(color: false)));
+        menu.Items.Add(Item("New color to find...", "IconTarget", () => StartSnip(color: true)));
         menu.Items.Add(new Separator());
         if (Current >= 0) menu.Items.Add(AddMenu($"Add to point {Current + 1}", AtPoint(Current), Current));
         menu.Items.Add(AddMenu("Add at the end", () => _steps.Count, -1));
@@ -325,7 +341,10 @@ public sealed class MacroBuilderWindow : OverlayWindow
             Item("Press a key", "IconKeyboard", () => Add(new MacroAction { ActionType = MacroActionType.KeyPress, KeyName = "E" })),
             Item("Hold a key", "IconHold", () => Add(RouteBuilder.HoldKey("W"))),
             Item("Type text", "IconText", () => Add(new MacroAction { ActionType = MacroActionType.Text, Text = "Hello" })),
-            Item("Scroll", "IconScroll", () => Add(new MacroAction { ActionType = MacroActionType.MouseScroll, ScrollAmount = 1 }))
+            Item("Scroll", "IconScroll", () => Add(new MacroAction { ActionType = MacroActionType.MouseScroll, ScrollAmount = 1 })),
+            new Separator(),
+            TargetItems("Click on a target", "IconImage", t => Add(new MacroAction { ActionType = MacroActionType.ClickTarget, Target = t, MouseButton = _lastButton, TimeoutMs = 1000 })),
+            TargetItems("Wait until a target shows", "IconClock", t => Add(new MacroAction { ActionType = MacroActionType.WaitUntil, Target = t }))
         ];
     }
 
@@ -508,7 +527,8 @@ public sealed class MacroBuilderWindow : OverlayWindow
         {
             _editors.Clear();
             var body = new StackPanel();
-            if (ShowingAll) AllStepsPanel(body);
+            if (_pickedTarget != null && TargetNamed(_pickedTarget) is { } target) TargetPanel(body, target);
+            else if (ShowingAll) AllStepsPanel(body);
             else if (_picked.Count > 1) PickedPanel(body);
             else if (Current >= 0) PointPanel(body, Current);
             else OverviewPanel(body);
@@ -532,6 +552,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
         body.Children.Add(Heading(_points.Count == 0 ? "No points yet" : $"{_points.Count:N0} {(_points.Count == 1 ? "point" : "points")} · {steps:N0} steps"));
         body.Children.Add(Muted(_points.Count == 0 ? "Right click where the cursor should go and choose Click here, Hold here or Cursor here." : "Pick a point to see what happens there, or open All steps.", new(0, 0, 0, 12)));
         body.Children.Add(ClickDelayField());
+        TargetsSummary(body);
         var (start, end) = RouteBuilder.Opening(_steps);
         if (end > start || _points.Count == 0)
         {
@@ -737,6 +758,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
     private void GroupSection(StackPanel body, int start)
     {
         var g = _steps[start];
+        if (g.Block != BlockKind.Group) { BlockSection(body, g); return; }
         var box = new Border { Margin = new(0, 14, 0, 0), Padding = new(10, 8, 6, 8), CornerRadius = new(8), BorderThickness = new(1) };
         box.SetResourceReference(Border.BackgroundProperty, "SurfaceAltBrush");
         box.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
@@ -830,6 +852,8 @@ public sealed class MacroBuilderWindow : OverlayWindow
                 MacroActionType.MouseMove => ("IconMove", "Move by"),
                 MacroActionType.MouseScroll => ("IconScroll", "Scroll"),
                 MacroActionType.Text => ("IconText", "Type"),
+                MacroActionType.ClickTarget => ("IconImage", "Click on"),
+                MacroActionType.WaitUntil => ("IconClock", "Wait until"),
                 _ => ("IconInfo", "Step")
             };
         AddCell(row, 1, Glyph(icon, 12));
@@ -878,6 +902,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
             RouteBuilder.Change(_steps, i, s => { s.X = Whole(parts[0], "x", true); s.Y = Whole(parts[1], "y", true); });
         }),
         MacroActionType.Text => Box(a.Text, 150, "Text to type", text => RouteBuilder.Change(_steps, i, s => s.Text = text)),
+        MacroActionType.ClickTarget or MacroActionType.WaitUntil => TargetEditor(i, a),
         _ => Muted(a.DisplayText, new())
     };
     private ComboBox ButtonBox(string value, Action<string> apply, double width = 100)
@@ -961,7 +986,8 @@ public sealed class MacroBuilderWindow : OverlayWindow
         var mods = Keyboard.Modifiers;
         switch (e.Key)
         {
-            case Key.Escape when _picked.Count > 0: Pick([]); break;
+            case Key.Escape when _snip != SnipMode.None: EndSnip(); break;
+            case Key.Escape when _picked.Count > 0 || _pickedTarget != null: Pick([]); break;
             case Key.Escape: Done(); break;
             case Key.Delete: DeletePicked(); break;
             case Key.H when mods == ModifierKeys.None: TogglePanel(); break;
@@ -976,7 +1002,7 @@ public sealed class MacroBuilderWindow : OverlayWindow
     private void Done()
     {
         CommitEdits();
-        Finish(new(_steps, _settleMs));
+        Finish(new(_steps, _settleMs, _targets.Select(t => t.Clone()).ToList()));
     }
     private void Finish(BuilderResult? result)
     {
