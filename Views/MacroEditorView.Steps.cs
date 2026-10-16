@@ -29,15 +29,8 @@ public partial class MacroEditorView
     private readonly List<UndoState> _undo = [], _redo = [];
     private bool _selecting, _editRemembered;
 
-    /// <summary>Room the steps card needs besides the list: its header, the step editor and margins.</summary>
-    private const double StepListReserve = 200, StepListMinimum = 216;
     private void InitializeStepList()
     {
-        FormScroll.ScrollChanged += (_, e) =>
-        {
-            // The list has its own scroll viewer whose events bubble up here; only the form's own viewport counts.
-            if (e.OriginalSource == FormScroll && e.ViewportHeightChange != 0) ActionsListBox.MaxHeight = Math.Max(StepListMinimum, e.ViewportHeight - StepListReserve);
-        };
         _loadingStep = true; BulkMouseBox.SelectedIndex = -1; _loadingStep = false;
     }
 

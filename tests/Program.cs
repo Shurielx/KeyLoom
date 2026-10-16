@@ -222,6 +222,15 @@ internal static partial class Program
             Render(editor, 800, 760, "editor-" + mode + ".png");
             Check(((FrameworkElement)editor.FindName("SequencePanel")).Visibility == (mode == MacroBehaviorType.Sequence ? Visibility.Visible : Visibility.Collapsed), mode + " editor visibility");
         }
+        var narrow = Profile(MacroBehaviorType.Sequence);
+        for (int i = 0; i < 12; i++) narrow.Actions.Add(new() { ActionType = MacroActionType.KeyPress, KeyName = "F" + (i + 1) });
+        var narrowEditor = new MacroEditorView(narrow);
+        ((ListBox)narrowEditor.FindName("ActionsListBox")).SelectedIndex = 2;
+        Render(narrowEditor, 620, 760, "editor-narrow.png");
+        var inspector = (FrameworkElement)narrowEditor.FindName("Inspector");
+        Check(Grid.GetRow(inspector) == 1 && Grid.GetColumn(inspector) == 0 && inspector.ActualHeight <= 760 * 0.45 + 1, "narrow editors put the inspector under the steps and keep the steps in view");
+        Render(narrowEditor, 900, 760, "editor-wide.png");
+        Check(Grid.GetColumn(inspector) == 1, "wide editors put the inspector beside the steps");
         var validationEditor = new MacroEditorView(Profile(MacroBehaviorType.Sequence));
         Invoke(validationEditor, "Save_Click", validationEditor, new RoutedEventArgs());
         Check(((TextBlock)validationEditor.FindName("ErrorText")).Text.Contains("sequence"), "editor blocks saving an empty sequence");

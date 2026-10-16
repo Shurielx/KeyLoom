@@ -2,6 +2,17 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-2 · 2026-10-16
+
+### Changed
+- Editor: steps use the full height, no scroll inside scroll
+- The picked step and run settings sit in a panel beside them
+- Narrow windows put that panel under the steps
+- Less used settings live under More options
+- Repeat, Hold or Sequence is a switch under the name
+- Preview and Test run moved next to Save
+- The window opens larger
+
 ## 0.3-dev-1 · 2026-10-16
 
 ### New

@@ -101,8 +101,12 @@ public partial class MacroEditorView : UserControl
     {
         if (!IsInitialized || TimingPanel == null) return;
         bool sequence = Mode == 2, hold = Mode == 1, keyboard = KeyboardTarget;
-        TargetPanel.Visibility = sequence ? Visibility.Collapsed : Visibility.Visible;
-        SequencePanel.Visibility = sequence ? Visibility.Visible : Visibility.Collapsed;
+        TargetScroll.Visibility = sequence ? Visibility.Collapsed : Visibility.Visible;
+        SequencePanel.Visibility = RunButtons.Visibility = sequence ? Visibility.Visible : Visibility.Collapsed;
+        PreviewCard.Visibility = _hasRoute && sequence ? Visibility.Visible : Visibility.Collapsed;
+        // Repeat and hold have a few settings; their card only grows as tall as they are.
+        Inspector.VerticalAlignment = sequence ? VerticalAlignment.Stretch : VerticalAlignment.Top;
+        ModeText.Text = sequence ? "Plays steps you record or build" : hold ? "Keeps a key or button held down" : "Clicks or presses again and again";
         ButtonLabel.Visibility = MouseButtonPanel.Visibility = keyboard ? Visibility.Collapsed : Visibility.Visible;
         KeyLabel.Visibility = KeyPanel.Visibility = keyboard ? Visibility.Visible : Visibility.Collapsed;
         IntervalPanel.Visibility = RunsPanel.Visibility = hold ? Visibility.Collapsed : Visibility.Visible;
@@ -112,6 +116,20 @@ public partial class MacroEditorView : UserControl
         ModeHintText.Visibility = hold ? Visibility.Visible : Visibility.Collapsed;
         UpdateTargetUi();
         UpdateIconPreview();
+        ShowSelection();
+    }
+    /// <summary>Below this width the inspector moves under the steps instead of beside them.</summary>
+    private const double StackBelow = 720;
+    private void Body_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool stacked = e.NewSize.Width < StackBelow;
+        InspectorColumn.Width = new GridLength(stacked ? 0 : 320);
+        InspectorRow.Height = stacked ? GridLength.Auto : new GridLength(0);
+        Grid.SetColumn(Inspector, stacked ? 0 : 1);
+        Grid.SetRow(Inspector, stacked ? 1 : 0);
+        Inspector.Margin = stacked ? new Thickness(0, 10, 0, 0) : new Thickness(10, 0, 0, 0);
+        // Stacked, the steps keep at least half of the height.
+        Inspector.MaxHeight = stacked ? Math.Max(140, e.NewSize.Height * 0.45) : double.PositiveInfinity;
     }
 
     private MacroActionType StepType => StepTypeBox.SelectedValue is MacroActionType kind ? kind : MacroActionType.MouseClick;
@@ -130,7 +148,17 @@ public partial class MacroEditorView : UserControl
         if (StepValueTextBox == null) return;
         bool mouse = StepType is MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp;
         StepMouseBox.Visibility = mouse ? Visibility.Visible : Visibility.Collapsed;
-        StepSpaceBox.Visibility = MoveOptions.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
+        MoveOptions.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
+        StepValueLabel.Text = StepType switch
+        {
+            MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => "Key",
+            MacroActionType.Delay => "Wait (ms)",
+            MacroActionType.MouseMove => "Move by x, y",
+            MacroActionType.MousePosition => "Position x, y",
+            MacroActionType.MouseScroll => "Notches",
+            MacroActionType.Text => "Text",
+            _ => "Button"
+        };
         StepValueTextBox.Visibility = mouse ? Visibility.Collapsed : Visibility.Visible;
         StepValueTextBox.AcceptsReturn = StepType == MacroActionType.Text;
         StepValueTextBox.TextWrapping = StepType == MacroActionType.Text ? TextWrapping.Wrap : TextWrapping.NoWrap;
@@ -186,9 +214,11 @@ public partial class MacroEditorView : UserControl
         IsMultiSelect = count > 1;
         int group = PickedGroup();
         _groupStart = group;
-        StepEditor.Visibility = count == 1 && group < 0 ? Visibility.Visible : Visibility.Collapsed;
-        GroupEditor.Visibility = group >= 0 ? Visibility.Visible : Visibility.Collapsed;
-        BulkEditor.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        bool sequence = Mode == 2;
+        StepEditor.Visibility = sequence && count == 1 && group < 0 ? Visibility.Visible : Visibility.Collapsed;
+        GroupEditor.Visibility = sequence && group >= 0 ? Visibility.Visible : Visibility.Collapsed;
+        BulkEditor.Visibility = sequence && count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        PickHint.Visibility = sequence && count == 0 && _steps.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         Strip.Picked = count == 1 ? ActionsListBox.SelectedIndex : -1;
         ShowRouteFocus();
         if (count > 1) { ShowStepHint(""); ShowBulk(); return; }
@@ -202,6 +232,7 @@ public partial class MacroEditorView : UserControl
         StepSpaceBox.SelectedIndex = (int)a.Space;
         ThenClickBox.IsChecked = HasClickAfter(i);
         GlideTextBox.Text = a.GlideMs.ToString();
+        if (a.ActionType == MacroActionType.MousePosition && (a.Space != CoordinateSpace.Screen || a.GlideMs > 0)) StepMoreToggle.IsChecked = true;
         StepValueTextBox.Text = a.ActionType switch
         {
             MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",

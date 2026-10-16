@@ -14,7 +14,7 @@ public partial class MacroEditorView
     private WindowTarget? _window;
     private int _pointX, _pointY;
     private PointPicker? _picker;
-    private bool _thumbnailQueued;
+    private bool _thumbnailQueued, _hasRoute;
     private void InitializeTarget()
     {
         _window = Profile.Window;
@@ -253,9 +253,8 @@ public partial class MacroEditorView
         Thumbnail.Timeline = timeline;
         ShowRouteFocus();
         // One position is a spot, not a route; the strip already shows it.
-        bool route = timeline.Points.Select(p => (p.X, p.Y)).Distinct().Skip(1).Any();
-        PreviewCard.Visibility = route ? Visibility.Visible : Visibility.Collapsed;
-        RouteColumn.Width = new GridLength(route ? 190 : 0);
+        _hasRoute = timeline.Points.Select(p => (p.X, p.Y)).Distinct().Skip(1).Any();
+        PreviewCard.Visibility = _hasRoute && Mode == 2 ? Visibility.Visible : Visibility.Collapsed;
         ThumbnailInfo.Text = $"{timeline.Duration / 1000:0.0} s";
         Strip.Show(played, played.Select(a => index.TryGetValue(a, out int i) ? i : -1).ToArray());
         Strip.Picked = ActionsListBox.SelectedItems.Count == 1 ? ActionsListBox.SelectedIndex : -1;
