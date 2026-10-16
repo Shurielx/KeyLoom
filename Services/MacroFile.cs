@@ -35,17 +35,17 @@ public static class MacroFile
     public static List<MacroProfile> Read(string json)
     {
         FileDto file;
-        try { file = JsonSerializer.Deserialize<FileDto>(json, Options) ?? throw new JsonException("The file is empty."); }
+        try { file = JsonSerializer.Deserialize<FileDto>(json, Options) ?? throw new JsonException(L.T("The file is empty.")); }
         catch (JsonException ex) { throw new JsonException(Friendly(ex), ex); }
-        if (file.Keyloom == 0) throw new JsonException("This is not a Keyloom macro file. It needs \"keyloom\": 1 at the top.");
-        if (file.Keyloom > Version) throw new JsonException($"This file was made by a newer Keyloom (format {file.Keyloom}). Update Keyloom to open it.");
-        if (file.Keyloom < 0) throw new JsonException("The \"keyloom\" format number is invalid.");
+        if (file.Keyloom == 0) throw new JsonException(L.T("This is not a Keyloom macro file. It needs \"keyloom\": 1 at the top."));
+        if (file.Keyloom > Version) throw new JsonException(L.T($"This file was made by a newer Keyloom (format {file.Keyloom}). Update Keyloom to open it."));
+        if (file.Keyloom < 0) throw new JsonException(L.T("The \"keyloom\" format number is invalid."));
         var macros = new List<MacroProfile>();
         var ids = new HashSet<string>();
         for (int i = 0; i < (file.Macros?.Count ?? 0); i++)
         {
-            var dto = file.Macros![i] ?? throw new JsonException($"Macro {i + 1} is empty.");
-            string label = string.IsNullOrWhiteSpace(dto.Name) ? $"Macro {i + 1}" : $"Macro \"{dto.Name}\"";
+            var dto = file.Macros![i] ?? throw new JsonException(L.T($"Macro {i + 1} is empty."));
+            string label = string.IsNullOrWhiteSpace(dto.Name) ? $"Macro {i + 1}" : L.T($"Macro \"{dto.Name}\"");
             try
             {
                 var p = FromDto(dto);
@@ -61,16 +61,17 @@ public static class MacroFile
     /// <summary>System.Text.Json names the path and the position; keep that, drop the type names people can't act on.</summary>
     private static string Friendly(JsonException ex)
     {
-        string where = ex.Path is { Length: > 1 } path ? $" (at {path.TrimStart('$', '.')}" + (ex.LineNumber is { } line ? $", line {line + 1}" : "") + ")" : "";
+        string where = ex.Path is { Length: > 1 } path
+            ? " " + (ex.LineNumber is { } line ? L.T($"(at {path.TrimStart('$', '.')}, line {line + 1})") : L.T($"(at {path.TrimStart('$', '.')})")) : "";
         string message = ex.Message;
         if (message.Contains("could not be mapped", StringComparison.Ordinal))
         {
             int start = message.IndexOf('\''), end = start < 0 ? -1 : message.IndexOf('\'', start + 1);
-            string name = start >= 0 && end > start ? message[(start + 1)..end] : "a field";
-            return $"Unknown field \"{name}\"{where}. Check its spelling against docs/FORMAT.md.";
+            string name = start >= 0 && end > start ? message[(start + 1)..end] : L.T("a field");
+            return L.T($"Unknown field \"{name}\"{where}. Check its spelling against docs/FORMAT.md.");
         }
-        if (message.Contains("could not be converted", StringComparison.Ordinal)) return $"A value has the wrong type{where}. Numbers go without quotes, text goes in quotes.";
-        return $"The file is not valid JSON{where}.";
+        if (message.Contains("could not be converted", StringComparison.Ordinal)) return L.T($"A value has the wrong type{where}. Numbers go without quotes, text goes in quotes.");
+        return L.T($"The file is not valid JSON{where}.");
     }
 
     private static MacroDto ToDto(MacroProfile p)
@@ -117,7 +118,7 @@ public static class MacroFile
     private static MacroProfile FromDto(MacroDto d)
     {
         var p = new MacroProfile { Id = d.Id ?? "", Name = d.Name?.Trim() ?? "" };
-        if (p.Name.Length == 0) throw new ArgumentException("Give the macro a \"name\".");
+        if (p.Name.Length == 0) throw new ArgumentException(L.T("Give the macro a \"name\"."));
         (p.PrimaryModifiers, p.PrimaryVk) = Shortcut.Parse(d.Shortcut);
         p.Behavior = (d.Type ?? "").ToLowerInvariant() switch
         {
@@ -125,19 +126,19 @@ public static class MacroFile
             "hold" => MacroBehaviorType.PressAndHold,
             "sequence" => MacroBehaviorType.Sequence,
             "script" => MacroBehaviorType.Script,
-            "" => throw new ArgumentException("Set \"type\" to \"repeat\", \"hold\", \"sequence\" or \"script\"."),
-            _ => throw new ArgumentException($"Unknown type \"{d.Type}\". Use \"repeat\", \"hold\", \"sequence\" or \"script\".")
+            "" => throw new ArgumentException(L.T("Set \"type\" to \"repeat\", \"hold\", \"sequence\" or \"script\".")),
+            _ => throw new ArgumentException(L.T($"Unknown type \"{d.Type}\". Use \"repeat\", \"hold\", \"sequence\" or \"script\"."))
         };
         if (d.Press is { } press)
         {
-            if (press.Mouse != null && press.Key != null) throw new ArgumentException("\"press\" takes either \"mouse\" or \"key\", not both.");
+            if (press.Mouse != null && press.Key != null) throw new ArgumentException(L.T("\"press\" takes either \"mouse\" or \"key\", not both."));
             if (press.Key != null) { p.TargetType = TargetInputType.Keyboard; p.TargetKey = press.Key; }
             else { p.TargetType = TargetInputType.Mouse; p.TargetMouseButton = Button(press.Mouse); }
         }
-        else if (!p.LooksAtScreen) throw new ArgumentException("Add \"press\", such as { \"mouse\": \"left\" } or { \"key\": \"Space\" }.");
+        else if (!p.LooksAtScreen) throw new ArgumentException(L.T("Add \"press\", such as { \"mouse\": \"left\" } or { \"key\": \"Space\" }."));
         if (d.Script != null)
         {
-            if (p.Behavior != MacroBehaviorType.Script) throw new ArgumentException("Only a macro with \"type\": \"script\" has a \"script\".");
+            if (p.Behavior != MacroBehaviorType.Script) throw new ArgumentException(L.T("Only a macro with \"type\": \"script\" has a \"script\"."));
             p.Script = string.Join("\n", d.Script.Select(line => line ?? ""));
         }
         if (d.At is { } at) { p.UsePoint = true; p.PointX = at.X; p.PointY = at.Y; }
@@ -150,33 +151,33 @@ public static class MacroFile
             "standard" => ExecutionMode.Standard,
             "background" => ExecutionMode.Background,
             "quickswitch" => ExecutionMode.QuickSwitch,
-            _ => throw new ArgumentException($"Unknown input \"{d.Input}\". Use \"standard\", \"background\" or \"quickSwitch\".")
+            _ => throw new ArgumentException(L.T($"Unknown input \"{d.Input}\". Use \"standard\", \"background\" or \"quickSwitch\"."))
         };
         if (d.RestoreCursor is { } restore) p.RestoreCursor = restore;
         if (d.ScaleWithWindow is { } scale) p.ScaleWithWindow = scale;
         if (d.Window is { } w)
         {
-            if (string.IsNullOrWhiteSpace(w.Process)) throw new ArgumentException("\"window\" needs a \"process\", such as \"chrome\".");
+            if (string.IsNullOrWhiteSpace(w.Process)) throw new ArgumentException(L.T("\"window\" needs a \"process\", such as \"chrome\"."));
             p.Window = new WindowTarget { ProcessName = w.Process, ClassName = w.Class ?? "", Title = w.Title ?? "", ClientWidth = w.Width ?? 0, ClientHeight = w.Height ?? 0 };
         }
         if (d.Icon is { } icon)
         {
             if (!Enum.TryParse<MacroIconKind>(icon.Kind ?? "auto", true, out var kind) || !Enum.IsDefined(kind))
-                throw new ArgumentException($"Unknown icon kind \"{icon.Kind}\". Use auto, mouse, keyboard, cursor, glyph or image.");
+                throw new ArgumentException(L.T($"Unknown icon kind \"{icon.Kind}\". Use auto, mouse, keyboard, cursor, glyph or image."));
             p.IconKind = kind; p.IconGlyph = icon.Glyph ?? ""; p.IconImage = icon.Image ?? "";
         }
         for (int i = 0; i < (d.Targets?.Count ?? 0); i++)
         {
-            var t = d.Targets![i] ?? throw new ArgumentException($"Target {i + 1} is empty.");
-            string label = string.IsNullOrWhiteSpace(t.Name) ? $"Target {i + 1}" : $"Target \"{t.Name}\"";
-            if ((t.Picture == null) == (t.Color == null)) throw new ArgumentException($"{label}: give it either a \"picture\" or a \"color\", like \"#FF8800\".");
+            var t = d.Targets![i] ?? throw new ArgumentException(L.T($"Target {i + 1} is empty."));
+            string label = string.IsNullOrWhiteSpace(t.Name) ? $"Target {i + 1}" : L.T($"Target \"{t.Name}\"");
+            if ((t.Picture == null) == (t.Color == null)) throw new ArgumentException(L.T($"{label}: give it either a \"picture\" or a \"color\", like \"#FF8800\"."));
             ScreenArea? area = null;
             if (t.Area is { } a)
                 area = new(a.X, a.Y, a.Width, a.Height, (a.From ?? "screen").ToLowerInvariant() switch
                 {
                     "screen" => CoordinateSpace.Screen,
                     "window" => CoordinateSpace.Window,
-                    _ => throw new ArgumentException($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\".")
+                    _ => throw new ArgumentException(L.T($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\"."))
                 });
             p.Targets.Add(new ScreenTarget
             {
@@ -186,9 +187,9 @@ public static class MacroFile
         }
         for (int i = 0; i < (d.Grids?.Count ?? 0); i++)
         {
-            var g = d.Grids![i] ?? throw new ArgumentException($"Grid {i + 1} is empty.");
-            string label = string.IsNullOrWhiteSpace(g.Name) ? $"Grid {i + 1}" : $"Grid \"{g.Name}\"";
-            var a = g.Area ?? throw new ArgumentException($"{label}: it needs an \"area\", such as {{ \"x\": 100, \"y\": 200, \"width\": 400, \"height\": 400 }}.");
+            var g = d.Grids![i] ?? throw new ArgumentException(L.T($"Grid {i + 1} is empty."));
+            string label = string.IsNullOrWhiteSpace(g.Name) ? $"Grid {i + 1}" : L.T($"Grid \"{g.Name}\"");
+            var a = g.Area ?? throw new ArgumentException(L.T($"{label}: it needs an \"area\", such as {{ \"x\": 100, \"y\": 200, \"width\": 400, \"height\": 400 }}."));
             p.Grids.Add(new ScreenGrid
             {
                 Name = g.Name?.Trim() ?? "", Rows = Need(g.Rows, "rows", "4"), Columns = Need(g.Columns, "columns", "4"),
@@ -196,7 +197,7 @@ public static class MacroFile
                 {
                     "screen" => CoordinateSpace.Screen,
                     "window" => CoordinateSpace.Window,
-                    _ => throw new ArgumentException($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\".")
+                    _ => throw new ArgumentException(L.T($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\"."))
                 })
             });
         }
@@ -293,7 +294,7 @@ public static class MacroFile
         {
             path.Add(i + 1);
             string where = "Step " + string.Join(".", path.Select(n => n < 0 ? $"{-n} else" : n.ToString())).Replace(" else.", " else ");
-            var s = steps[i] ?? throw new ArgumentException($"{where} is empty.");
+            var s = steps[i] ?? throw new ArgumentException(L.T($"{where} is empty."));
             try
             {
                 switch ((s.Do ?? "").ToLowerInvariant())
@@ -303,7 +304,7 @@ public static class MacroFile
                     case "hold": into.Add(new() { ActionType = MacroActionType.MouseDown, MouseButton = Button(s.Button) }); break;
                     case "release" when s.Key != null: into.Add(new() { ActionType = MacroActionType.KeyUp, KeyName = s.Key }); break;
                     case "release": into.Add(new() { ActionType = MacroActionType.MouseUp, MouseButton = Button(s.Button) }); break;
-                    case "press": into.Add(new() { ActionType = MacroActionType.KeyPress, KeyName = Need(s.Key, "key", "\"Enter\" or \"Ctrl+C\"") }); break;
+                    case "press": into.Add(new() { ActionType = MacroActionType.KeyPress, KeyName = Need(s.Key, "key", L.T("\"Enter\" or \"Ctrl+C\"")) }); break;
                     case "wait": into.Add(new() { ActionType = MacroActionType.Delay, DelayMs = Need(s.Ms, "ms", "200") }); break;
                     case "moveby": into.Add(new() { ActionType = MacroActionType.MouseMove, X = s.X ?? 0, Y = s.Y ?? 0 }); break;
                     case "moveto":
@@ -315,12 +316,12 @@ public static class MacroFile
                                 "screen" => CoordinateSpace.Screen,
                                 "window" => CoordinateSpace.Window,
                                 "start" => CoordinateSpace.Start,
-                                _ => throw new ArgumentException($"unknown \"from\" \"{s.From}\". Use \"screen\", \"window\" or \"start\".")
+                                _ => throw new ArgumentException(L.T($"unknown \"from\" \"{s.From}\". Use \"screen\", \"window\" or \"start\"."))
                             },
                             GlideMs = s.GlideMs ?? 0
                         });
                         break;
-                    case "scroll": into.Add(new() { ActionType = MacroActionType.MouseScroll, ScrollAmount = Need(s.Notches, "notches", "3 (or -3 to scroll down)") }); break;
+                    case "scroll": into.Add(new() { ActionType = MacroActionType.MouseScroll, ScrollAmount = Need(s.Notches, "notches", L.T("3 (or -3 to scroll down)")) }); break;
                     case "type": into.Add(new() { ActionType = MacroActionType.Text, Text = Need(s.Text, "text", "\"Hello\"") }); break;
                     case "group":
                         into.Add(new() { ActionType = MacroActionType.GroupStart, Name = NullIfEmpty(s.Name), Repeat = s.Repeat ?? 0, GapMs = s.GapMs ?? 0, Collapsed = s.Collapsed ?? false });
@@ -330,18 +331,18 @@ public static class MacroFile
                     case "clickon":
                         into.Add(new()
                         {
-                            ActionType = MacroActionType.ClickTarget, Target = Need(s.Target, "target", "\"Play button\""), MouseButton = Button(s.Button),
+                            ActionType = MacroActionType.ClickTarget, Target = Need(s.Target, "target", L.T("\"Play button\"")), MouseButton = Button(s.Button),
                             TimeoutMs = s.TimeoutMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp)
                         });
                         break;
                     case "waituntil":
                         into.Add(new()
                         {
-                            ActionType = MacroActionType.WaitUntil, Target = Need(s.Target, "target", "\"Loading screen\""),
+                            ActionType = MacroActionType.WaitUntil, Target = Need(s.Target, "target", L.T("\"Loading screen\"")),
                             Gone = (s.Until ?? "shows").ToLowerInvariant() switch
                             {
                                 "shows" => false, "gone" => true,
-                                _ => throw new ArgumentException($"unknown \"until\" \"{s.Until}\". Use \"shows\" or \"gone\".")
+                                _ => throw new ArgumentException(L.T($"unknown \"until\" \"{s.Until}\". Use \"shows\" or \"gone\"."))
                             },
                             TimeoutMs = s.TimeoutMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp)
                         });
@@ -353,11 +354,11 @@ public static class MacroFile
                             Pick = (s.Pick ?? "highest").ToLowerInvariant() switch
                             {
                                 "highest" => CellPick.Highest, "lowest" => CellPick.Lowest, "equals" => CellPick.Equals, "empty" => CellPick.Empty,
-                                _ => throw new ArgumentException($"unknown \"pick\" \"{s.Pick}\". Use \"highest\", \"lowest\", \"equals\" or \"empty\".")
+                                _ => throw new ArgumentException(L.T($"unknown \"pick\" \"{s.Pick}\". Use \"highest\", \"lowest\", \"equals\" or \"empty\"."))
                             },
                             CellValue = s.Value ?? 0
                         });
-                        if (into.Last().Pick == CellPick.Equals && s.Value == null) throw new ArgumentException("\"pick\": \"equals\" needs a \"value\", such as 32.");
+                        if (into.Last().Pick == CellPick.Equals && s.Value == null) throw new ArgumentException(L.T("\"pick\": \"equals\" needs a \"value\", such as 32."));
                         break;
                     case "dragpair":
                         into.Add(new() { ActionType = MacroActionType.DragPair, Grid = Need(s.Grid, "grid", "\"Board\""), MouseButton = Button(s.Button), GlideMs = s.GlideMs ?? 0, StopIfMissing = IfTimeUp(s.IfTimeUp) });
@@ -366,19 +367,19 @@ public static class MacroFile
                         into.Add(new()
                         {
                             ActionType = MacroActionType.GroupStart, Block = BlockKind.If,
-                            Target = s.Ask != null ? (s.Target == null ? null : throw new ArgumentException("an \"if\" takes a \"target\" or an \"ask\", not both."))
-                                : Need(s.Target, "target", "\"Play button\""),
-                            Question = s.Ask != null ? (s.Ask.Trim().Length > 0 ? s.Ask.Trim() : throw new ArgumentException("\"ask\" needs a yes-or-no question.")) : null,
+                            Target = s.Ask != null ? (s.Target == null ? null : throw new ArgumentException(L.T("an \"if\" takes a \"target\" or an \"ask\", not both.")))
+                                : Need(s.Target, "target", L.T("\"Play button\"")),
+                            Question = s.Ask != null ? (s.Ask.Trim().Length > 0 ? s.Ask.Trim() : throw new ArgumentException(L.T("\"ask\" needs a yes-or-no question."))) : null,
                             Gone = s.Ask != null
                                 ? (s.When ?? "yes").ToLowerInvariant() switch
                                 {
                                     "yes" => false, "no" => true,
-                                    _ => throw new ArgumentException($"unknown \"when\" \"{s.When}\". An \"if\" that asks takes \"yes\" or \"no\".")
+                                    _ => throw new ArgumentException(L.T($"unknown \"when\" \"{s.When}\". An \"if\" that asks takes \"yes\" or \"no\"."))
                                 }
                                 : (s.When ?? "shows").ToLowerInvariant() switch
                                 {
                                     "shows" => false, "gone" => true,
-                                    _ => throw new ArgumentException($"unknown \"when\" \"{s.When}\". Use \"shows\" or \"gone\".")
+                                    _ => throw new ArgumentException(L.T($"unknown \"when\" \"{s.When}\". Use \"shows\" or \"gone\"."))
                                 },
                             TimeoutMs = s.TimeoutMs ?? 0, Name = NullIfEmpty(s.Name), Collapsed = s.Collapsed ?? false
                         });
@@ -393,13 +394,13 @@ public static class MacroFile
                             into.Add(new() { ActionType = MacroActionType.GroupEnd });
                         }
                         break;
-                    case "": throw new ArgumentException("it has no \"do\". Say what it does, such as \"do\": \"click\".");
-                    default: throw new ArgumentException($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil, clickCell, dragPair, if or group.");
+                    case "": throw new ArgumentException(L.T("it has no \"do\". Say what it does, such as \"do\": \"click\"."));
+                    default: throw new ArgumentException(L.T($"unknown \"do\": \"{s.Do}\". Use click, hold, release, press, wait, moveTo, moveBy, scroll, type, clickOn, waitUntil, clickCell, dragPair, if or group."));
                 }
                 if (s.Steps != null && !(string.Equals(s.Do, "group", StringComparison.OrdinalIgnoreCase) || string.Equals(s.Do, "if", StringComparison.OrdinalIgnoreCase)))
-                    throw new ArgumentException("only a group or an if can contain \"steps\".");
+                    throw new ArgumentException(L.T("only a group or an if can contain \"steps\"."));
                 if (s.Else != null && !string.Equals(s.Do, "if", StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException("only an if can have \"else\".");
+                    throw new ArgumentException(L.T("only an if can have \"else\"."));
                 if (into.LastOrDefault() is { } added && !added.IsGroupMarker) ProfileValidator.ValidateAction(added);
             }
             catch (ArgumentException ex) when (ex is not StepError)
@@ -414,19 +415,19 @@ public static class MacroFile
     private sealed class StepError(string message, Exception inner) : ArgumentException(message, inner);
 
     private static T Need<T>(T? value, string field, string example) where T : struct =>
-        value ?? throw new ArgumentException($"it needs \"{field}\", such as {example}.");
+        value ?? throw new ArgumentException(L.T($"it needs \"{field}\", such as {example}."));
     private static string Need(string? value, string field, string example) =>
-        value ?? throw new ArgumentException($"it needs \"{field}\", such as {example}.");
+        value ?? throw new ArgumentException(L.T($"it needs \"{field}\", such as {example}."));
 
     private static bool IfTimeUp(string? text) => (text ?? "continue").ToLowerInvariant() switch
     {
         "continue" => false, "stop" => true,
-        _ => throw new ArgumentException($"unknown \"ifTimeUp\" \"{text}\". Use \"continue\" or \"stop\".")
+        _ => throw new ArgumentException(L.T($"unknown \"ifTimeUp\" \"{text}\". Use \"continue\" or \"stop\"."))
     };
     private static string Button(string? text) => (text ?? "left").ToLowerInvariant() switch
     {
         "left" => "Left", "right" => "Right", "middle" => "Middle", "x1" or "back" => "X1", "x2" or "forward" => "X2",
-        _ => throw new ArgumentException($"unknown mouse button \"{text}\". Use left, right, middle, back or forward.")
+        _ => throw new ArgumentException(L.T($"unknown mouse button \"{text}\". Use left, right, middle, back or forward."))
     };
     private static string ButtonText(string button) => button switch { "X1" => "back", "X2" => "forward", _ => button.ToLowerInvariant() };
     private static string Camel(string name) => char.ToLowerInvariant(name[0]) + name[1..];

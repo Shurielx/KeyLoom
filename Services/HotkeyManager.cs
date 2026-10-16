@@ -26,17 +26,17 @@ public sealed class HotkeyManager : IDisposable
     {
         UnregisterAll();
         var errors = new List<string>();
-        if (!Register(StopId, Shortcut.AppModifiers, Shortcut.StopKey)) errors.Add("Stop shortcut is unavailable. Use Stop all or the tray menu.");
+        if (!Register(StopId, Shortcut.AppModifiers, Shortcut.StopKey)) errors.Add(L.T("Stop shortcut is unavailable. Use Stop all or the tray menu."));
         int id = 100;
         foreach (var profile in profiles)
         {
             profile.HotkeyStatus = "";
             if (profile.PrimaryVk == 0) continue;
             if (Shortcut.IsReserved(profile.PrimaryModifiers, profile.PrimaryVk))
-                profile.HotkeyStatus = "Reserved app shortcut";
+                profile.HotkeyStatus = L.T("Reserved app shortcut");
             else if (Register(id, profile.PrimaryModifiers, profile.PrimaryVk))
                 _profiles[id] = profile;
-            else profile.HotkeyStatus = "Shortcut is already in use";
+            else profile.HotkeyStatus = L.T("Shortcut is already in use");
             id++;
         }
         return string.Join(" ", errors);

@@ -65,23 +65,23 @@ public static class StepGroups
         {
             if (a.ActionType == MacroActionType.GroupStart)
             {
-                if (++depth > MaxDepth) throw new ArgumentException($"Groups can be nested up to {MaxDepth} levels.");
-                if (a.Name is { Length: > 80 }) throw new ArgumentException("Use a group name up to 80 characters.");
-                if (a.Repeat is < 0 or > MaxRepeat) throw new ArgumentException($"A group can run 1 to {MaxRepeat:N0} times.");
-                if (a.GapMs is < 0 or > 3600000) throw new ArgumentException("The wait between group steps must be between 0 and 3600000 ms.");
-                if (!Enum.IsDefined(a.Block)) throw new ArgumentException("Unknown kind of block.");
-                if (a.Block != BlockKind.Group && a.Repeat > 1) throw new ArgumentException("An If or an Else plays its steps once. Put a group inside it to repeat them.");
-                if (a.Block == BlockKind.If && a.TimeoutMs is < 0 or > 3600000) throw new ArgumentException("An If can look for its target for 0 to 3600000 ms.");
+                if (++depth > MaxDepth) throw new ArgumentException(L.T($"Groups can be nested up to {MaxDepth} levels."));
+                if (a.Name is { Length: > 80 }) throw new ArgumentException(L.T("Use a group name up to 80 characters."));
+                if (a.Repeat is < 0 or > MaxRepeat) throw new ArgumentException(L.T($"A group can run 1 to {MaxRepeat:N0} times."));
+                if (a.GapMs is < 0 or > 3600000) throw new ArgumentException(L.T("The wait between group steps must be between 0 and 3600000 ms."));
+                if (!Enum.IsDefined(a.Block)) throw new ArgumentException(L.T("Unknown kind of block."));
+                if (a.Block != BlockKind.Group && a.Repeat > 1) throw new ArgumentException(L.T("An If or an Else plays its steps once. Put a group inside it to repeat them."));
+                if (a.Block == BlockKind.If && a.TimeoutMs is < 0 or > 3600000) throw new ArgumentException(L.T("An If can look for its target for 0 to 3600000 ms."));
             }
-            else if (a.ActionType == MacroActionType.GroupEnd && --depth < 0) throw new ArgumentException("A group end has no matching group start.");
+            else if (a.ActionType == MacroActionType.GroupEnd && --depth < 0) throw new ArgumentException(L.T("A group end has no matching group start."));
         }
-        if (depth > 0) throw new ArgumentException("A group has no end. Undo the last change or remove the group.");
+        if (depth > 0) throw new ArgumentException(L.T("A group has no end. Undo the last change or remove the group."));
         for (int i = 0; i < steps.Count; i++)
             if (steps[i] is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else } && !(i > 0 && steps[i - 1].ActionType == MacroActionType.GroupEnd
                 && StartOf(steps, i - 1) is var before and >= 0 && steps[before].Block == BlockKind.If))
-                throw new ArgumentException("An Else has to come right after an If.");
+                throw new ArgumentException(L.T("An Else has to come right after an If."));
         if (PlayedCount(steps) > MaxPlayedSteps)
-            throw new ArgumentException($"Groups repeat too much: one run would play over {MaxPlayedSteps:N0} steps. Lower a group's run count.");
+            throw new ArgumentException(L.T($"Groups repeat too much: one run would play over {MaxPlayedSteps:N0} steps. Lower a group's run count."));
     }
     /// <summary>Steps one run plays once groups are expanded, including the waits groups add.</summary>
     public static long PlayedCount(IReadOnlyList<MacroAction> steps)

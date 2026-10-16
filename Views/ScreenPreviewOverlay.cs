@@ -16,7 +16,7 @@ public sealed class ScreenPreviewOverlay : OverlayWindow
     public ScreenPreviewOverlay(MacroTimeline timeline)
     {
         _timeline = timeline;
-        Title = "Keyloom preview overlay";
+        Title = L.T("Keyloom preview overlay");
         Content = _preview;
         SourceInitialized += (_, _) =>
         {

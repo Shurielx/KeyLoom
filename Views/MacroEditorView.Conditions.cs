@@ -24,17 +24,17 @@ public partial class MacroEditorView
     {
         TargetOptions.Visibility = Visibility.Visible;
         UntilPanel.Visibility = Visibility.Visible;
-        UntilLabel.Text = "Plays its steps when it";
-        TimeoutLabel.Text = "Look for up to";
-        TimeoutUnit.Text = "ms · 0 looks once";
+        UntilLabel.Text = L.T("Plays its steps when it");
+        TimeoutLabel.Text = L.T("Look for up to");
+        TimeoutUnit.Text = L.T("ms · 0 looks once");
         StopIfMissingBox.Visibility = Visibility.Collapsed;
         SetUntilWords(true);
     }
     /// <summary>The same choice reads "shows up or is gone" for Wait until and "is or is not on the screen" for an If.</summary>
     private void SetUntilWords(bool forIf)
     {
-        ((ComboBoxItem)UntilBox.Items[0]).Content = forIf ? "Is on the screen" : "Shows up";
-        ((ComboBoxItem)UntilBox.Items[1]).Content = forIf ? "Is not on the screen" : "Is gone";
+        ((ComboBoxItem)UntilBox.Items[0]).Content = forIf ? L.T("Is on the screen") : L.T("Shows up");
+        ((ComboBoxItem)UntilBox.Items[1]).Content = forIf ? L.T("Is not on the screen") : L.T("Is gone");
     }
 
     /// <summary>Fills the block editor for a group, an If or an Else.</summary>
@@ -42,10 +42,10 @@ public partial class MacroEditorView
     {
         var kind = head.Block;
         bool group = kind == BlockKind.Group;
-        GroupTitleText.Text = kind switch { BlockKind.If => "If", BlockKind.Else => "Else", _ => "Group" };
+        GroupTitleText.Text = kind switch { BlockKind.If => L.T("If"), BlockKind.Else => L.T("Else"), _ => L.T("Group") };
         GroupIconPath.Data = (System.Windows.Media.Geometry)FindResource(kind == BlockKind.If ? "IconTarget" : "IconGroup");
-        UngroupText.Text = group ? "Ungroup" : $"Remove {GroupTitleText.Text}";
-        UngroupButton.ToolTip = group ? "Keep the steps and remove the group (Ctrl+Shift+G)" : $"Keep the steps and remove the {GroupTitleText.Text}; they then always play";
+        UngroupText.Text = group ? L.T("Ungroup") : $"Remove {GroupTitleText.Text}";
+        UngroupButton.ToolTip = group ? L.T("Keep the steps and remove the group (Ctrl+Shift+G)") : L.T($"Keep the steps and remove the {GroupTitleText.Text}; they then always play");
         GroupNameLabel.Visibility = GroupNameTextBox.Visibility = GroupTimingPanel.Visibility = group ? Visibility.Visible : Visibility.Collapsed;
         int end = StepGroups.EndOf(_steps, _groupStart);
         bool hasElse = end >= 0 && end + 1 < _steps.Count && _steps[end + 1] is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else };
@@ -79,9 +79,9 @@ public partial class MacroEditorView
         string steps = $"{inside:N0} {(inside == 1 ? "step" : "steps")}";
         return head.Block switch
         {
-            BlockKind.If when head.AsksAi => $"Plays its {steps} only when the AI answers {(head.Gone ? "no" : "yes")}. It asks each time the macro gets here.",
-            BlockKind.If => $"Plays its {steps} only when {head.Condition}" + (head.TimeoutMs > 0 ? $", looking for up to {head.TimeoutMs:N0} ms." : ", checked once."),
-            BlockKind.Else => $"Plays its {steps} when the If above does not.",
+            BlockKind.If when head.AsksAi => head.Gone ? L.T($"Plays its {steps} only when the AI answers no. It asks each time the macro gets here.") : L.T($"Plays its {steps} only when the AI answers yes. It asks each time the macro gets here."),
+            BlockKind.If => head.TimeoutMs > 0 ? L.T($"Plays its {steps} only when {head.Condition}, looking for up to {head.TimeoutMs:N0} ms.") : L.T($"Plays its {steps} only when {head.Condition}, checked once."),
+            BlockKind.Else => L.T($"Plays its {steps} when the If above does not."),
             _ => ""
         };
     }
@@ -94,14 +94,14 @@ public partial class MacroEditorView
             var copy = _steps[_groupStart].Clone();
             if (copy.AsksAi)
             {
-                copy.Question = IfQuestionTextBox.Text.Trim().Length > 0 ? IfQuestionTextBox.Text.Trim() : throw new ArgumentException("Write a yes-or-no question for the AI.");
+                copy.Question = IfQuestionTextBox.Text.Trim().Length > 0 ? IfQuestionTextBox.Text.Trim() : throw new ArgumentException(L.T("Write a yes-or-no question for the AI."));
                 copy.Gone = IfAnswerBox.SelectedIndex == 1;
             }
             else
             {
-                copy.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException("Pick what the If looks for, or take a new picture or color from the screen.");
+                copy.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException(L.T("Pick what the If looks for, or take a new picture or color from the screen."));
                 copy.Gone = UntilBox.SelectedIndex == 1;
-                copy.TimeoutMs = Number(TimeoutTextBox.Text, "Time to look");
+                copy.TimeoutMs = Number(TimeoutTextBox.Text, L.T("Time to look"));
             }
             var check = _steps.ToList(); check[_groupStart] = copy;
             StepGroups.Validate(check);
@@ -127,7 +127,7 @@ public partial class MacroEditorView
         MakeBlock(PickedBlock(), BlockKind.If);
         if (!IfPicked) return;
         var head = _steps[_groupStart].Clone();
-        head.Target = null; head.Question = "Is a shop window open?";
+        head.Target = null; head.Question = L.T("Is a shop window open?");
         _committing = true;
         try { _steps[_groupStart] = head; ActionsListBox.SelectedItem = head; }
         finally { _committing = false; }
@@ -144,7 +144,7 @@ public partial class MacroEditorView
         string question = IfQuestionTextBox.Text.Trim();
         if (question.Length == 0) return;
         if (AppSettings.Current.AiSetup is not { } setup) { AskResultText.Text = AiEyes.OffMessage; return; }
-        AskResultText.Text = $"Asking {setup.Model}...";
+        AskResultText.Text = L.T($"Asking {setup.Model}...");
         try
         {
             var answer = await OutOfTheWay(async () =>
@@ -157,7 +157,7 @@ public partial class MacroEditorView
             if (answer == null) return;
             bool? yes = AiVision.YesNo(answer);
             bool plays = yes == true != (IfAnswerBox.SelectedIndex == 1);
-            AskResultText.Text = $"The AI answered \"{answer}\", so the steps {(plays ? "would play" : "would not play")} now.";
+            AskResultText.Text = plays ? L.T($"The AI answered \"{answer}\", so the steps would play now.") : L.T($"The AI answered \"{answer}\", so the steps would not play now.");
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException) { AskResultText.Text = ex.Message; }
     }
@@ -178,6 +178,6 @@ public partial class MacroEditorView
         }
         finally { _selecting = false; }
         Select([end + 1]); AnimateSteps([end + 1, end + 2], -6); FocusStep(end + 1);
-        Say("Else added. Drag steps into it, or add steps after picking it.");
+        Say(L.T("Else added. Drag steps into it, or add steps after picking it."));
     });
 }

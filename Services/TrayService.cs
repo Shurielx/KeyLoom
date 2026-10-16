@@ -16,10 +16,10 @@ public sealed class TrayService : IDisposable
         using var original = new Icon(stream);
         _image = (Icon)original.Clone();
         _menu = new ContextMenuStrip();
-        _menu.Items.Add("Open Keyloom", null, (_, _) => open());
-        _menu.Items.Add("Stop all macros", null, (_, _) => stop());
+        _menu.Items.Add(L.T("Open Keyloom"), null, (_, _) => open());
+        _menu.Items.Add(L.T("Stop all macros"), null, (_, _) => stop());
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add("Exit", null, (_, _) => exit());
+        _menu.Items.Add(L.T("Exit"), null, (_, _) => exit());
         _icon = new() { Icon = _image, Text = "Keyloom", Visible = true, ContextMenuStrip = _menu };
         _icon.DoubleClick += (_, _) => open();
     }

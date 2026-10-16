@@ -25,6 +25,7 @@ public partial class ToastOverlayWindow : Window
     public ToastOverlayWindow()
     {
         InitializeComponent();
+        L.Apply(this);
         _hideTimer.Tick += (_, _) => { _hideTimer.Stop(); Animate(false); };
         _clockTimer.Tick += (_, _) => UpdateClock();
         Closed += (_, _) => { _hideTimer.Stop(); _clockTimer.Stop(); };
@@ -42,7 +43,7 @@ public partial class ToastOverlayWindow : Window
         bool stay = AppSettings.Current.ShowRunIndicator;
         _progress = progress;
         _elapsed.Restart();
-        SetLook(running: true, "Running", macroName);
+        SetLook(running: true, L.T("Running"), macroName);
         UpdateClock();
         Present();
         _hideTimer.Stop();
@@ -52,7 +53,7 @@ public partial class ToastOverlayWindow : Window
     public void ShowStopped(string macroName, string summary)
     {
         _clockTimer.Stop(); _elapsed.Stop();
-        SetLook(running: false, "Stopped", macroName);
+        SetLook(running: false, L.T("Stopped"), macroName);
         ToastSubtext.Text = summary;
         Present();
         _hideTimer.Stop(); _hideTimer.Start();
@@ -69,7 +70,7 @@ public partial class ToastOverlayWindow : Window
     private void UpdateClock()
     {
         string count = _progress?.Invoke() ?? "";
-        ToastSubtext.Text = $"{UsageStore.Clock(_elapsed.Elapsed)}{(count.Length > 0 ? " · " + count : "")}  ·  Ctrl + Shift + F12 stops";
+        ToastSubtext.Text = UsageStore.Clock(_elapsed.Elapsed) + (count.Length > 0 ? " · " + count : "") + "  ·  " + L.T("Ctrl + Shift + F12 stops");
     }
     private void Present()
     {

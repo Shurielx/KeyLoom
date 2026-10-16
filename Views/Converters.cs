@@ -13,51 +13,51 @@ public sealed record StepView(string Tone, Geometry? Icon, string Title, string 
 {
     public static StepView From(MacroAction a)
     {
-        string button = a.MouseButton switch { "X1" => "Back button", "X2" => "Forward button", var b => $"{b} button" };
+        string button = a.MouseButton switch { "X1" => L.T("Back button"), "X2" => L.T("Forward button"), "Left" => L.T("Left button"), "Right" => L.T("Right button"), "Middle" => L.T("Middle button"), var b => b };
         return a.ActionType switch
         {
-            MacroActionType.MouseClick => new("Pointer", Find("IconMouse"), "Click", button, false, false),
-            MacroActionType.MouseDown => new("Hold", Find("IconHold"), "Hold", button, false, false),
-            MacroActionType.MouseUp => new("Hold", Find("IconRelease"), "Release", button, false, false),
-            MacroActionType.KeyPress => new("Key", Find("IconKeyboard"), "Press", a.KeyName, false, true),
-            MacroActionType.KeyDown => new("Hold", Find("IconHold"), "Hold", a.KeyName, false, true),
-            MacroActionType.KeyUp => new("Hold", Find("IconRelease"), "Release", a.KeyName, false, true),
-            MacroActionType.Delay => new("Wait", Find("IconClock"), "Wait", $"{a.DelayMs:N0} ms", true, false),
-            MacroActionType.MouseMove => new("Move", Find("IconMove"), "Move by", $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} px", false, false),
-            MacroActionType.MousePosition => new("Move", Find("IconTarget"), a.GlideMs > 0 ? "Glide to" : "Cursor to", a.Space switch
+            MacroActionType.MouseClick => new("Pointer", Find("IconMouse"), L.T("Click"), button, false, false),
+            MacroActionType.MouseDown => new("Hold", Find("IconHold"), L.T("Hold"), button, false, false),
+            MacroActionType.MouseUp => new("Hold", Find("IconRelease"), L.T("Release"), button, false, false),
+            MacroActionType.KeyPress => new("Key", Find("IconKeyboard"), L.T("Press"), a.KeyName, false, true),
+            MacroActionType.KeyDown => new("Hold", Find("IconHold"), L.T("Hold"), a.KeyName, false, true),
+            MacroActionType.KeyUp => new("Hold", Find("IconRelease"), L.T("Release"), a.KeyName, false, true),
+            MacroActionType.Delay => new("Wait", Find("IconClock"), L.T("Wait"), $"{a.DelayMs:N0} ms", true, false),
+            MacroActionType.MouseMove => new("Move", Find("IconMove"), L.T("Move by"), $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} px", false, false),
+            MacroActionType.MousePosition => new("Move", Find("IconTarget"), a.GlideMs > 0 ? L.T("Glide to") : L.T("Cursor to"), a.Space switch
             {
-                CoordinateSpace.Window => $"{a.X}, {a.Y} · in window",
-                CoordinateSpace.Start => $"{a.X:+0;−0;0}, {a.Y:+0;−0;0} · from start",
-                _ => $"{a.X}, {a.Y} · on screen"
-            } + (a.GlideMs > 0 ? $" · {a.GlideMs:N0} ms" : ""), false, false),
-            MacroActionType.MouseScroll => new("Move", Find("IconScroll"), "Scroll",
-                $"{Math.Abs(a.ScrollAmount)} notch{(Math.Abs(a.ScrollAmount) == 1 ? "" : "es")} {(a.ScrollAmount < 0 ? "down" : "up")}", false, false),
-            MacroActionType.GroupStart when a.Block == BlockKind.If => new("Group", Find(a.AsksAi ? "IconAi" : "IconTarget"), "If",
-                a.Condition + (a.TimeoutMs > 0 ? $" · looks up to {a.TimeoutMs:N0} ms" : ""), false, false, IsGroup: true, Collapsed: a.Collapsed),
-            MacroActionType.GroupStart when a.Block == BlockKind.Else => new("Group", Find("IconGroup"), "Else", "when the If above does not play",
+                CoordinateSpace.Window => L.T($"{a.X}, {a.Y} · in window"),
+                CoordinateSpace.Start => L.T($"{a.X:+0;−0;0}, {a.Y:+0;−0;0} · from start"),
+                _ => L.T($"{a.X}, {a.Y} · on screen")
+            } + (a.GlideMs > 0 ? L.T($" · {a.GlideMs:N0} ms") : ""), false, false),
+            MacroActionType.MouseScroll => new("Move", Find("IconScroll"), L.T("Scroll"),
+                a.ScrollAmount < 0 ? L.N(Math.Abs(a.ScrollAmount), "{0} notch down", "{0} notches down") : L.N(a.ScrollAmount, "{0} notch up", "{0} notches up"), false, false),
+            MacroActionType.GroupStart when a.Block == BlockKind.If => new("Group", Find(a.AsksAi ? "IconAi" : "IconTarget"), L.T("If"),
+                a.Condition + (a.TimeoutMs > 0 ? L.T($" · looks up to {a.TimeoutMs:N0} ms") : ""), false, false, IsGroup: true, Collapsed: a.Collapsed),
+            MacroActionType.GroupStart when a.Block == BlockKind.Else => new("Group", Find("IconGroup"), L.T("Else"), L.T("when the If above does not play"),
                 false, false, IsGroup: true, Collapsed: a.Collapsed),
             MacroActionType.GroupStart => new("Group", Find("IconGroup"), a.GroupName, string.Join(" · ", new[]
             {
-                a.Runs > 1 ? $"×{a.Runs:N0}" : "", a.GapMs > 0 ? $"{a.GapMs:N0} ms between steps" : ""
+                a.Runs > 1 ? $"×{a.Runs:N0}" : "", a.GapMs > 0 ? L.T($"{a.GapMs:N0} ms between steps") : ""
             }.Where(s => s.Length > 0)), false, false, IsGroup: true, Collapsed: a.Collapsed),
-            MacroActionType.GroupEnd => new("Group", null, "", "end of group", false, false, IsGroupEnd: true),
-            MacroActionType.ClickTarget => new("Pointer", Find("IconTarget"), "Click on", string.Join(" · ", new[]
+            MacroActionType.GroupEnd => new("Group", null, "", L.T("end of group"), false, false, IsGroupEnd: true),
+            MacroActionType.ClickTarget => new("Pointer", Find("IconTarget"), L.T("Click on"), string.Join(" · ", new[]
             {
-                a.TargetName, a.MouseButton == "Left" ? "" : button, a.TimeoutMs > 0 ? $"looks {a.TimeoutMs:N0} ms" : "", a.StopIfMissing ? "stops if missing" : ""
+                a.TargetName, a.MouseButton == "Left" ? "" : button, a.TimeoutMs > 0 ? L.T($"looks {a.TimeoutMs:N0} ms") : "", a.StopIfMissing ? L.T("stops if missing") : ""
             }.Where(x => x.Length > 0)), false, false),
-            MacroActionType.ClickCell => new("Pointer", Find("IconGrid"), "Click cell", string.Join(" · ", new[]
+            MacroActionType.ClickCell => new("Pointer", Find("IconGrid"), L.T("Click cell"), string.Join(" · ", new[]
             {
-                a.PickText, a.GridName, a.MouseButton == "Left" ? "" : button, a.StopIfMissing ? "stops if none" : ""
+                a.PickText, a.GridName, a.MouseButton == "Left" ? "" : button, a.StopIfMissing ? L.T("stops if none") : ""
             }.Where(x => x.Length > 0)), false, false),
-            MacroActionType.DragPair => new("Pointer", Find("IconGrid"), "Drag pair", string.Join(" · ", new[]
+            MacroActionType.DragPair => new("Pointer", Find("IconGrid"), L.T("Drag pair"), string.Join(" · ", new[]
             {
-                $"two equal numbers in {a.GridName}", a.GlideMs > 0 ? $"{a.GlideMs:N0} ms" : "", a.StopIfMissing ? "stops if none" : ""
+                L.T($"two equal numbers in {a.GridName}"), a.GlideMs > 0 ? $"{a.GlideMs:N0} ms" : "", a.StopIfMissing ? L.T("stops if none") : ""
             }.Where(x => x.Length > 0)), false, false),
-            MacroActionType.WaitUntil => new("Wait", Find("IconClock"), "Wait until", string.Join(" · ", new[]
+            MacroActionType.WaitUntil => new("Wait", Find("IconClock"), L.T("Wait until"), string.Join(" · ", new[]
             {
-                $"{a.TargetName} {(a.Gone ? "is gone" : "shows")}", a.TimeoutMs > 0 ? $"up to {a.TimeoutMs:N0} ms" : "", a.StopIfMissing ? "stops if time is up" : ""
+                a.Gone ? L.T($"{a.TargetName} is gone") : L.T($"{a.TargetName} shows"), a.TimeoutMs > 0 ? L.T($"up to {a.TimeoutMs:N0} ms") : "", a.StopIfMissing ? L.T("stops if time is up") : ""
             }.Where(x => x.Length > 0)), false, false),
-            _ => new("Text", Find("IconText"), "Type", $"“{a.Text.Replace("\r", "").Replace("\n", " ⏎ ")}”", false, false)
+            _ => new("Text", Find("IconText"), L.T("Type"), $"“{a.Text.Replace("\r", "").Replace("\n", " ⏎ ")}”", false, false)
         };
     }
     private static Geometry? Find(string key) => Application.Current?.TryFindResource(key) as Geometry;
@@ -99,7 +99,7 @@ public sealed class StepLayoutConverter : IMultiValueConverter
             _ => step.ActionType switch
             {
                 MacroActionType.GroupStart => Children(steps, i),
-                MacroActionType.GroupEnd when StepGroups.StartOf(steps, i) is var start and >= 0 => $"end of {steps[start].GroupName}",
+                MacroActionType.GroupEnd when StepGroups.StartOf(steps, i) is var start and >= 0 => L.T($"end of {steps[start].GroupName}"),
                 _ => ""
             }
         };
@@ -124,7 +124,7 @@ public sealed class StepLayoutConverter : IMultiValueConverter
     {
         int end = StepGroups.EndOf(steps, start);
         int count = (end < 0 ? steps.Skip(start + 1) : steps.Skip(start + 1).Take(end - start - 1)).Count(a => !a.IsGroupMarker);
-        return count == 1 ? "1 step" : $"{count:N0} steps";
+        return count == 1 ? L.T("1 step") : $"{count:N0} steps";
     }
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => throw new NotSupportedException();
 }

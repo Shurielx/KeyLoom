@@ -94,7 +94,7 @@ public partial class MacroEditorView
         var buttons = picked.Where(IsMouseButtonStep).ToList();
         int steps = picked.Count(a => !a.IsGroupMarker), groups = picked.Count(a => a.ActionType == MacroActionType.GroupStart);
         BulkTitle.Text = $"{steps:N0} {(steps == 1 ? "step" : "steps")} picked" + (groups == 0 ? "" : $" in {groups:N0} {(groups == 1 ? "group" : "groups")}");
-        BulkInfo.Text = waits.Count == 0 ? "" : $"{waits.Count:N0} {(waits.Count == 1 ? "wait" : "waits")} · {waits.Sum(a => (long)a.DelayMs):N0} ms";
+        BulkInfo.Text = waits.Count == 0 ? "" : L.N(waits.Count, "{0} wait", "{0} waits") + $" · {waits.Sum(a => (long)a.DelayMs):N0} ms";
         BulkWaitPanel.Visibility = waits.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         BulkButtonPanel.Visibility = buttons.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         if (!BulkWaitTextBox.IsKeyboardFocused) BulkWaitTextBox.Text = waits.Select(a => a.DelayMs).Distinct().Count() == 1 ? waits[0].DelayMs.ToString() : "";
@@ -108,7 +108,7 @@ public partial class MacroEditorView
 
     private void EnsureRoom(int adding)
     {
-        if (_steps.Count + adding > ProfileValidator.MaxActions) throw new ArgumentException($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps.");
+        if (_steps.Count + adding > ProfileValidator.MaxActions) throw new ArgumentException(L.T($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps."));
     }
     /// <summary>Changes copies of the picked steps and swaps them in only if every one is still valid.</summary>
     private void ChangeSelection(Func<MacroAction, bool> change)
@@ -134,15 +134,15 @@ public partial class MacroEditorView
     private static Func<int, int> ReadWaitChange(string text)
     {
         text = text.Replace(" ", "");
-        if (text.Length == 0) throw new ArgumentException("Enter a wait time, like 100, +20 or x1.5.");
+        if (text.Length == 0) throw new ArgumentException(L.T("Enter a wait time, like 100, +20 or x1.5."));
         if (text[0] is 'x' or 'X' or '*' or '×')
         {
             string factorText = text[1..].Replace(',', '.');
             if (!double.TryParse(factorText, NumberStyles.Float, CultureInfo.InvariantCulture, out double factor) || factor <= 0)
-                throw new ArgumentException("Scale waits by a positive number, like x1.5.");
+                throw new ArgumentException(L.T("Scale waits by a positive number, like x1.5."));
             return ms => (int)Math.Clamp(Math.Round(ms * factor), 1, int.MaxValue);
         }
-        int value = Number(text, "Wait time");
+        int value = Number(text, L.T("Wait time"));
         return text[0] is '+' or '-' ? ms => ms + value : _ => value;
     }
     private void ApplyBulkWait()
@@ -156,7 +156,7 @@ public partial class MacroEditorView
             if (next == a.DelayMs) return false;
             a.DelayMs = next; count++; return true;
         });
-        Say(count == 0 ? "Waits already match." : $"Updated {count:N0} {(count == 1 ? "wait" : "waits")}.");
+        Say(count == 0 ? L.T("Waits already match.") : L.T($"Updated {L.N(count, "{0} wait", "{0} waits")}."));
         BulkWaitTextBox.SelectAll();
     }
     private void BulkWait_Click(object sender, RoutedEventArgs e) => Attempt(ApplyBulkWait);
@@ -214,7 +214,7 @@ public partial class MacroEditorView
         finally { _selecting = false; }
         int next = Math.Min(picked[0], _steps.Count - 1);
         Select(next >= 0 ? [next] : []); FocusStep(next);
-        if (picked.Count > 1) Say($"Deleted {steps:N0} {(steps == 1 ? "step" : "steps")}{(groups ? " and their group" : "")}. Ctrl+Z brings them back.");
+        if (picked.Count > 1) Say((groups ? L.T($"Deleted {L.N(steps, "{0} step", "{0} steps")} and their group. Ctrl+Z brings them back.") : L.T($"Deleted {L.N(steps, "{0} step", "{0} steps")}. Ctrl+Z brings them back.")));
     }
     /// <summary>Moves every picked step one place, keeping gaps between them. Stops at either end.</summary>
     private void MoveSteps(List<int> picked, int offset)
@@ -238,7 +238,7 @@ public partial class MacroEditorView
         _clipboard = picked.Select(i => _steps[i].Clone()).ToArray();
         var names = _clipboard.Select(a => a.Target).Where(n => n != null).ToHashSet(StringComparer.OrdinalIgnoreCase);
         _clipboardTargets = _targets.Where(t => names.Contains(t.Name)).Select(t => t.Clone()).ToArray();
-        Say($"Copied {picked.Count:N0} {(picked.Count == 1 ? "step" : "steps")}.");
+        Say(L.T($"Copied {L.N(picked.Count, "{0} step", "{0} steps")}."));
     }
     private void Paste()
     {
@@ -249,7 +249,7 @@ public partial class MacroEditorView
             _targets.Add(t.Clone());
         RefreshTargetBox(CurrentTarget?.Name);
         Insert(InsertionAfter(picked.Count > 0 ? picked[^1] : -1), _clipboard.Select(a => a.Clone()).ToList());
-        Say($"Pasted {_clipboard.Length:N0} {(_clipboard.Length == 1 ? "step" : "steps")}.");
+        Say(L.T($"Pasted {L.N(_clipboard.Length, "{0} step", "{0} steps")}."));
     }
 
     // ---- Undo ----

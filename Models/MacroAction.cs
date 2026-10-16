@@ -49,7 +49,9 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Question { get; set; }
     [JsonIgnore] public bool AsksAi => !string.IsNullOrWhiteSpace(Question);
     /// <summary>What an If checks, in words: "Play button is on the screen", or "AI says yes to: Is the shop open?".</summary>
-    [JsonIgnore] public string Condition => AsksAi ? $"AI says {(Gone ? "no" : "yes")} to: {Question}" : $"{TargetName} {(Gone ? "is not on the screen" : "is on the screen")}";
+    [JsonIgnore] public string Condition => AsksAi
+        ? Gone ? L.T($"AI says no to: {Question}") : L.T($"AI says yes to: {Question}")
+        : Gone ? L.T($"{TargetName} is not on the screen") : L.T($"{TargetName} is on the screen");
     // Grids: Click on a cell and Drag a matching pair.
     /// <summary>Name of the macro's <see cref="ScreenGrid"/> the step reads.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Grid { get; set; }
@@ -57,13 +59,13 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public CellPick Pick { get; set; }
     /// <summary>Click on a cell with <see cref="CellPick.Equals"/>: the number to look for.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public long CellValue { get; set; }
-    [JsonIgnore] public string GridName => string.IsNullOrWhiteSpace(Grid) ? "grid" : Grid;
+    [JsonIgnore] public string GridName => string.IsNullOrWhiteSpace(Grid) ? L.T("grid") : Grid;
     [JsonIgnore] public string PickText => Pick switch
     {
-        CellPick.Highest => "the highest number", CellPick.Lowest => "the lowest number",
-        CellPick.Equals => $"the number {CellValue}", _ => "an empty cell"
+        CellPick.Highest => L.T("the highest number"), CellPick.Lowest => L.T("the lowest number"),
+        CellPick.Equals => L.T($"the number {CellValue}"), _ => L.T("an empty cell")
     };
-    [JsonIgnore] public string TargetName => string.IsNullOrWhiteSpace(Target) ? "target" : Target;
+    [JsonIgnore] public string TargetName => string.IsNullOrWhiteSpace(Target) ? L.T("target") : Target;
     /// <summary>How long the step itself takes: a wait, or a cursor gliding to its spot.</summary>
     [JsonIgnore] public int DurationMs => ActionType switch
     {
@@ -75,35 +77,40 @@ public class MacroAction
     [JsonIgnore] public int Runs => Math.Max(1, Repeat);
     [JsonIgnore] public string GroupName => Block switch
     {
-        BlockKind.If => "If", BlockKind.Else => "Else",
-        _ => string.IsNullOrWhiteSpace(Name) ? "Group" : Name
+        BlockKind.If => L.T("If"), BlockKind.Else => L.T("Else"),
+        _ => string.IsNullOrWhiteSpace(Name) ? L.T("Group") : Name
     };
     [JsonIgnore] public string DisplayText => ActionType switch
     {
-        MacroActionType.MouseClick => $"Click {MouseButton.ToLowerInvariant()}",
-        MacroActionType.MouseDown => $"Hold {MouseButton.ToLowerInvariant()} mouse button",
-        MacroActionType.MouseUp => $"Release {MouseButton.ToLowerInvariant()} mouse button",
-        MacroActionType.KeyPress => $"Press {KeyName}",
-        MacroActionType.KeyDown => $"Hold {KeyName}",
-        MacroActionType.KeyUp => $"Release {KeyName}",
-        MacroActionType.Delay => $"Wait {DelayMs} ms",
-        MacroActionType.MouseMove => $"Move cursor by {X}, {Y} px",
-        MacroActionType.MousePosition => (GlideMs > 0 ? "Glide cursor to " : "Cursor to ") + Space switch
+        MacroActionType.MouseClick => L.T($"Click {ButtonWord}"),
+        MacroActionType.MouseDown => L.T($"Hold {ButtonWord} mouse button"),
+        MacroActionType.MouseUp => L.T($"Release {ButtonWord} mouse button"),
+        MacroActionType.KeyPress => L.T($"Press {KeyName}"),
+        MacroActionType.KeyDown => L.T($"Hold {KeyName}"),
+        MacroActionType.KeyUp => L.T($"Release {KeyName}"),
+        MacroActionType.Delay => L.T($"Wait {DelayMs} ms"),
+        MacroActionType.MouseMove => L.T($"Move cursor by {X}, {Y} px"),
+        MacroActionType.MousePosition => (GlideMs > 0 ? L.T("Glide cursor to ") : L.T("Cursor to ")) + Space switch
         {
-            CoordinateSpace.Window => $"{X}, {Y} in window",
-            CoordinateSpace.Start => $"start {X:+0;-0;+0}, {Y:+0;-0;+0}",
+            CoordinateSpace.Window => L.T($"{X}, {Y} in window"),
+            CoordinateSpace.Start => L.T($"start {X:+0;-0;+0}, {Y:+0;-0;+0}"),
             _ => $"{X}, {Y}"
-        } + (GlideMs > 0 ? $" in {GlideMs} ms" : ""),
-        MacroActionType.MouseScroll => $"Scroll {ScrollAmount} notch(es)",
-        MacroActionType.GroupStart when Block == BlockKind.If => $"If {Condition}",
-        MacroActionType.GroupStart when Block == BlockKind.Else => "Else",
-        MacroActionType.GroupStart => $"Group {GroupName}{(Runs > 1 ? $" ×{Runs}" : "")}{(GapMs > 0 ? $", {GapMs} ms between steps" : "")}",
-        MacroActionType.GroupEnd => "End of group",
-        MacroActionType.ClickTarget => $"Click {MouseButton.ToLowerInvariant()} on {TargetName}",
-        MacroActionType.WaitUntil => $"Wait until {TargetName} {(Gone ? "is gone" : "shows")}",
-        MacroActionType.ClickCell => $"Click {MouseButton.ToLowerInvariant()} on {PickText} in {GridName}",
-        MacroActionType.DragPair => $"Drag a matching pair in {GridName}",
-        _ => $"Type: {Text.Replace("\r", " ").Replace("\n", " ")}"
+        } + (GlideMs > 0 ? L.T($" in {GlideMs} ms") : ""),
+        MacroActionType.MouseScroll => L.N(ScrollAmount, "Scroll {0} notch", "Scroll {0} notches"),
+        MacroActionType.GroupStart when Block == BlockKind.If => L.T($"If {Condition}"),
+        MacroActionType.GroupStart when Block == BlockKind.Else => L.T("Else"),
+        MacroActionType.GroupStart => L.T($"Group {GroupName}") + (Runs > 1 ? $" ×{Runs}" : "") + (GapMs > 0 ? L.T($", {GapMs} ms between steps") : ""),
+        MacroActionType.GroupEnd => L.T("End of group"),
+        MacroActionType.ClickTarget => L.T($"Click {ButtonWord} on {TargetName}"),
+        MacroActionType.WaitUntil => Gone ? L.T($"Wait until {TargetName} is gone") : L.T($"Wait until {TargetName} shows"),
+        MacroActionType.ClickCell => L.T($"Click {ButtonWord} on {PickText} in {GridName}"),
+        MacroActionType.DragPair => L.T($"Drag a matching pair in {GridName}"),
+        _ => L.T($"Type: {Text.Replace("\r", " ").Replace("\n", " ")}")
+    };
+    /// <summary>The mouse button as a word in a sentence: "left", "right", "middle", "back" or "forward".</summary>
+    [JsonIgnore] public string ButtonWord => MouseButton switch
+    {
+        "Left" => L.T("left"), "Right" => L.T("right"), "Middle" => L.T("middle"), "X1" => L.T("back"), "X2" => L.T("forward"), var b => b.ToLowerInvariant()
     };
     public MacroAction Clone() => (MacroAction)MemberwiseClone();
 }

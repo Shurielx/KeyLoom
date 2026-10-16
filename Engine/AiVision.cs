@@ -14,7 +14,7 @@ public enum AiProvider { Ollama, OpenRouter }
 
 public sealed record AiSetup(AiProvider Provider, string Model, string OllamaUrl = AiVision.DefaultOllamaUrl, string ApiKey = "")
 {
-    public string Where => Provider == AiProvider.Ollama ? $"Ollama at {OllamaUrl}" : "OpenRouter";
+    public string Where => Provider == AiProvider.Ollama ? L.T($"Ollama at {OllamaUrl}") : "OpenRouter";
 }
 
 /// <summary>Looks at a picture of the screen and answers a question about it. It only answers: it never clicks or types.</summary>
@@ -51,22 +51,22 @@ public sealed partial class AiVision(AiSetup setup, HttpClient? http = null) : I
 
     public string Ask(string question, PixelImage? picture, CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(question)) throw new ArgumentException("Ask the AI a question.");
-        if (question.Length > MaxQuestion) throw new ArgumentException($"A question can be up to {MaxQuestion:N0} characters.");
-        if (string.IsNullOrWhiteSpace(setup.Model)) throw new InvalidOperationException("Pick an AI model in Settings, under AI.");
+        if (string.IsNullOrWhiteSpace(question)) throw new ArgumentException(L.T("Ask the AI a question."));
+        if (question.Length > MaxQuestion) throw new ArgumentException(L.T($"A question can be up to {MaxQuestion:N0} characters."));
+        if (string.IsNullOrWhiteSpace(setup.Model)) throw new InvalidOperationException(L.T("Pick an AI model in Settings, under AI."));
         string? png = picture is { Width: > 0, Height: > 0 } p ? TargetPicture.Encode(Shrink(p, MaxSide)) : null;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(Patience);
         try { return AskAsync(question.Trim(), png, timeout.Token).GetAwaiter().GetResult(); }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
         {
-            throw new InvalidOperationException($"The AI took longer than {Patience.TotalSeconds:N0} seconds to answer.");
+            throw new InvalidOperationException(L.T($"The AI took longer than {Patience.TotalSeconds:N0} seconds to answer."));
         }
         catch (HttpRequestException ex) when (ex.StatusCode == null)
         {
             throw new InvalidOperationException(setup.Provider == AiProvider.Ollama
-                ? $"Ollama is not answering at {setup.OllamaUrl}. Start Ollama, or check the address in Settings."
-                : "OpenRouter could not be reached. Check the internet connection.");
+                ? L.T($"Ollama is not answering at {setup.OllamaUrl}. Start Ollama, or check the address in Settings.")
+                : L.T("OpenRouter could not be reached. Check the internet connection."));
         }
     }
     private async Task<string> AskAsync(string question, string? png, CancellationToken token)
@@ -77,9 +77,9 @@ public sealed partial class AiVision(AiSetup setup, HttpClient? http = null) : I
         if (!response.IsSuccessStatusCode) throw new InvalidOperationException(Refusal(response.StatusCode, body));
         JsonNode? json;
         try { json = JsonNode.Parse(body); }
-        catch (JsonException) { throw new InvalidOperationException("The AI sent back something Keyloom could not read."); }
+        catch (JsonException) { throw new InvalidOperationException(L.T("The AI sent back something Keyloom could not read.")); }
         string? answer = Text(setup.Provider == AiProvider.Ollama ? json?["message"]?["content"] : json?["choices"]?[0]?["message"]?["content"]);
-        return Clean(answer ?? throw new InvalidOperationException("The AI sent back no answer."));
+        return Clean(answer ?? throw new InvalidOperationException(L.T("The AI sent back no answer.")));
     }
     private static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue(out string? text) ? text : null;
     private HttpRequestMessage OllamaRequest(string question, string? png)
@@ -96,7 +96,7 @@ public sealed partial class AiVision(AiSetup setup, HttpClient? http = null) : I
     }
     private HttpRequestMessage OpenRouterRequest(string question, string? png)
     {
-        if (string.IsNullOrWhiteSpace(setup.ApiKey)) throw new InvalidOperationException("Add your OpenRouter key in Settings, under AI.");
+        if (string.IsNullOrWhiteSpace(setup.ApiKey)) throw new InvalidOperationException(L.T("Add your OpenRouter key in Settings, under AI."));
         var content = new JsonArray(new JsonObject { ["type"] = "text", ["text"] = question });
         if (png != null) content.Add(new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = "data:image/png;base64," + png } });
         var body = new JsonObject
@@ -121,13 +121,13 @@ public sealed partial class AiVision(AiSetup setup, HttpClient? http = null) : I
         catch (JsonException) { }
         return (setup.Provider, status) switch
         {
-            (AiProvider.OpenRouter, HttpStatusCode.Unauthorized) => "OpenRouter did not accept the key. Check it in Settings, under AI.",
-            (AiProvider.OpenRouter, HttpStatusCode.PaymentRequired) => "OpenRouter says the account is out of credit.",
-            (AiProvider.OpenRouter, HttpStatusCode.TooManyRequests) => "OpenRouter says too many questions were asked. Ask less often, or wait a moment.",
-            (AiProvider.Ollama, HttpStatusCode.NotFound) => $"Ollama does not have the model '{setup.Model}'. Get it with: ollama pull {setup.Model}",
+            (AiProvider.OpenRouter, HttpStatusCode.Unauthorized) => L.T("OpenRouter did not accept the key. Check it in Settings, under AI."),
+            (AiProvider.OpenRouter, HttpStatusCode.PaymentRequired) => L.T("OpenRouter says the account is out of credit."),
+            (AiProvider.OpenRouter, HttpStatusCode.TooManyRequests) => L.T("OpenRouter says too many questions were asked. Ask less often, or wait a moment."),
+            (AiProvider.Ollama, HttpStatusCode.NotFound) => L.T($"Ollama does not have the model '{setup.Model}'. Get it with: ollama pull {setup.Model}"),
             _ when said.Contains("image", StringComparison.OrdinalIgnoreCase) || said.Contains("vision", StringComparison.OrdinalIgnoreCase)
-                => $"The model '{setup.Model}' cannot look at pictures. Pick one that can, in Settings.",
-            _ => $"The AI answered with an error ({(int)status}){(said.Length > 0 ? ": " + said : ".")}"
+                => L.T($"The model '{setup.Model}' cannot look at pictures. Pick one that can, in Settings."),
+            _ => said.Length > 0 ? L.T($"The AI answered with an error ({(int)status}): {said}") : L.T($"The AI answered with an error ({(int)status}).")
         };
     }
     /// <summary>Some models wrap the answer in quotes or end it with a full stop; the answer is what is inside.</summary>
@@ -146,7 +146,7 @@ public sealed partial class AiVision(AiSetup setup, HttpClient? http = null) : I
         try
         {
             using var response = await http.GetAsync(ollama ? setup.OllamaUrl.TrimEnd('/') + "/api/tags" : OpenRouterUrl + "/models", token);
-            if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"The model list could not be loaded ({(int)response.StatusCode}).");
+            if (!response.IsSuccessStatusCode) throw new InvalidOperationException(L.T($"The model list could not be loaded ({(int)response.StatusCode})."));
             var json = JsonNode.Parse(await response.Content.ReadAsStringAsync(token));
             if (ollama)
                 return [.. (json?["models"] as JsonArray ?? []).Select(m => Text(m?["name"])).OfType<string>().Order()];
@@ -154,9 +154,9 @@ public sealed partial class AiVision(AiSetup setup, HttpClient? http = null) : I
                 .Where(m => (m?["architecture"]?["input_modalities"] as JsonArray)?.Any(x => Text(x) == "image") == true)
                 .Select(m => Text(m?["id"])).OfType<string>().Order()];
         }
-        catch (HttpRequestException) when (ollama) { throw new InvalidOperationException($"Ollama is not answering at {setup.OllamaUrl}. Is it running?"); }
-        catch (HttpRequestException) { throw new InvalidOperationException("OpenRouter could not be reached. Check the internet connection."); }
-        catch (JsonException) { throw new InvalidOperationException("The model list could not be read."); }
+        catch (HttpRequestException) when (ollama) { throw new InvalidOperationException(L.T($"Ollama is not answering at {setup.OllamaUrl}. Is it running?")); }
+        catch (HttpRequestException) { throw new InvalidOperationException(L.T("OpenRouter could not be reached. Check the internet connection.")); }
+        catch (JsonException) { throw new InvalidOperationException(L.T("The model list could not be read.")); }
     }
 
     /// <summary>Yes or no in an answer, in English or Polish; null when it is neither.</summary>

@@ -42,7 +42,7 @@ internal sealed class ExecutionInput(Func<(int X, int Y)> cursor, IInputDriver d
     }
     public void Click(string button)
     {
-        if (_buttons.Contains(button)) throw new InvalidOperationException("Release the held mouse button before clicking it.");
+        if (_buttons.Contains(button)) throw new InvalidOperationException(L.T("Release the held mouse button before clicking it."));
         MouseDown(button); MouseUp(button);
     }
     public void Text(string value, CancellationToken token)
@@ -101,7 +101,7 @@ internal sealed class ExecutionInput(Func<(int X, int Y)> cursor, IInputDriver d
         foreach (ushort key in _keys.Reverse().ToArray()) Try(() => KeyUp(key));
         foreach (string button in _buttons.ToArray()) Try(() => MouseUp(button));
         Try(() => (driver as IBurstDriver)?.EndBurst());
-        if (failures.Count > 0) throw new AggregateException("Some macro inputs could not be released.", failures);
+        if (failures.Count > 0) throw new AggregateException(L.T("Some macro inputs could not be released."), failures);
         void Try(Action action) { try { action(); } catch (Exception ex) { failures.Add(ex); } }
     }
 }

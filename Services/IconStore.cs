@@ -15,7 +15,7 @@ public static partial class IconStore
     /// <summary>Scales the picture to fit a square icon and stores it. Returns the stored file name.</summary>
     public static string Import(string source)
     {
-        if (new FileInfo(source).Length > 20 * 1024 * 1024) throw new ArgumentException("Choose an image smaller than 20 MB.");
+        if (new FileInfo(source).Length > 20 * 1024 * 1024) throw new ArgumentException(L.T("Choose an image smaller than 20 MB."));
         BitmapSource image;
         try
         {
@@ -29,7 +29,7 @@ public static partial class IconStore
             image = decoded;
         }
         catch (Exception ex) when (ex is NotSupportedException or FileFormatException or IOException or UriFormatException)
-        { throw new ArgumentException("This file is not an image Keyloom can read. Use PNG, JPG, BMP, GIF or ICO."); }
+        { throw new ArgumentException(L.T("This file is not an image Keyloom can read. Use PNG, JPG, BMP, GIF or ICO.")); }
         // Crop to a centered square, then scale down.
         double side = Math.Min(image.Width, image.Height);
         var visual = new DrawingVisual();

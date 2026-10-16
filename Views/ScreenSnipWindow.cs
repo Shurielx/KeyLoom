@@ -35,7 +35,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
     private ScreenSnipWindow(bool color, PixelImage shot, Int32Rect monitor, int maxSide, string? hint)
     {
         _color = color; _shot = shot; _monitor = monitor; _maxSide = maxSide;
-        Title = "Keyloom screen capture";
+        Title = L.T("Keyloom screen capture");
         ShowActivated = true; Focusable = true; IsHitTestVisible = true; Cursor = Cursors.Cross;
         var image = new Image { Source = ToBitmap(shot), Stretch = Stretch.Fill };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
@@ -52,8 +52,8 @@ public sealed class ScreenSnipWindow : OverlayWindow
             Background = Brushes.Black,
             Children = { image, new Border { Background = Frozen(Color.FromArgb(color ? (byte)0 : (byte)0x40, 0, 0, 0)), IsHitTestVisible = false }, _canvas }
         };
-        ShowLabel(new Point(24, 24), color ? "Click the color to find" : hint ?? "Drag around what to find",
-            color ? "Esc cancels" : "Keep it small and distinctive, like a button or an icon · Esc cancels");
+        ShowLabel(new Point(24, 24), color ? L.T("Click the color to find") : hint ?? L.T("Drag around what to find"),
+            color ? L.T("Esc cancels") : L.T("Keep it small and distinctive, like a button or an icon · Esc cancels"));
         Loaded += (_, _) => { Place(_monitor.X, _monitor.Y, _monitor.Width, _monitor.Height); Activate(); Focus(); };
         // Moving onto a monitor with another scale makes Windows resize the window; put it back over the monitor.
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(() => Place(_monitor.X, _monitor.Y, _monitor.Width, _monitor.Height));
@@ -99,7 +99,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
             var (x, y) = Pixel(at);
             uint c = _shot[x, y];
             _swatch.Background = Frozen(Color.FromRgb((byte)(c >> 16), (byte)(c >> 8), (byte)c));
-            ShowLabel(at, TargetPicture.ColorText(c), "Click to use this color · Esc cancels");
+            ShowLabel(at, TargetPicture.ColorText(c), L.T("Click to use this color · Esc cancels"));
         }
         else if (_from != null) Update(at);
     }
@@ -111,7 +111,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
         var (x2, y2) = Pixel(e.GetPosition(_canvas));
         int left = Math.Min(x1, x2), top = Math.Min(y1, y2), width = Math.Abs(x2 - x1) + 1, height = Math.Abs(y2 - y1) + 1;
         _from = null;
-        if (width < 4 || height < 4) { _selection.Visibility = Visibility.Collapsed; ShowLabel(e.GetPosition(_canvas), "Drag a bigger box", "At least 4 by 4 pixels · Esc cancels"); return; }
+        if (width < 4 || height < 4) { _selection.Visibility = Visibility.Collapsed; ShowLabel(e.GetPosition(_canvas), L.T("Drag a bigger box"), L.T("At least 4 by 4 pixels · Esc cancels")); return; }
         width = Math.Min(width, _maxSide); height = Math.Min(height, _maxSide);
         var pixels = new uint[width * height];
         for (int row = 0; row < height; row++) Array.Copy(_shot.Pixels, (top + row) * _shot.Width + left, pixels, row * width, width);
@@ -125,7 +125,7 @@ public sealed class ScreenSnipWindow : OverlayWindow
         Canvas.SetLeft(_selection, left); Canvas.SetTop(_selection, top);
         _selection.Width = Math.Abs(at.X - from.X); _selection.Height = Math.Abs(at.Y - from.Y);
         var (x1, y1) = Pixel(from); var (x2, y2) = Pixel(at);
-        ShowLabel(at, $"{Math.Abs(x2 - x1) + 1} × {Math.Abs(y2 - y1) + 1} px", "Let go to use this picture");
+        ShowLabel(at, L.T($"{Math.Abs(x2 - x1) + 1} × {Math.Abs(y2 - y1) + 1} px"), L.T("Let go to use this picture"));
     }
     private (int X, int Y) Pixel(Point local)
     {

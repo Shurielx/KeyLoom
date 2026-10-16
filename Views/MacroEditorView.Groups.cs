@@ -106,7 +106,7 @@ public partial class MacroEditorView
             // An Else left without its If keeps its steps as a plain group.
             if (_steps[start].Block == BlockKind.If && end >= 0 && end + 1 < _steps.Count && _steps[end + 1] is { ActionType: MacroActionType.GroupStart, Block: BlockKind.Else } orphan)
             {
-                var kept = orphan.Clone(); kept.Block = BlockKind.Group; kept.Name = "Else";
+                var kept = orphan.Clone(); kept.Block = BlockKind.Group; kept.Name = L.T("Else");
                 _steps[end + 1] = kept;
             }
             if (end >= 0) _steps.RemoveAt(end);
@@ -175,9 +175,9 @@ public partial class MacroEditorView
         int inside = group.Count(a => !a.IsGroupMarker);
         var played = StepGroups.Expand(group).ToList();
         double seconds = MacroTimeline.Build(played).Duration / 1000;
-        GroupHintText.Text = inside == 0 ? (group[0].Block == BlockKind.Group ? "Empty group. Drag steps into it, or pick steps and press Ctrl+G."
-                : $"Empty {group[0].GroupName}. Drag steps into it, or add a step while it is picked.")
-            : $"{inside:N0} {(inside == 1 ? "step" : "steps")} inside · plays {played.Count:N0} steps in {seconds:0.0} s";
+        GroupHintText.Text = inside == 0 ? (group[0].Block == BlockKind.Group ? L.T("Empty group. Drag steps into it, or pick steps and press Ctrl+G.")
+                : L.T($"Empty {group[0].GroupName}. Drag steps into it, or add a step while it is picked."))
+            : L.T($"{L.N(inside, "{0} step", "{0} steps")} inside · plays {L.N(played.Count, "{0} step", "{0} steps")} in {seconds:0.0} s");
         ShowGroupInfo(group, inside, played.Count);
     }
     /// <summary>Spells out what the group does, when it starts, how long a pass takes and which steps it holds.</summary>
@@ -191,9 +191,9 @@ public partial class MacroEditorView
         var once = group.Select(a => a.Clone()).ToList();
         once[0].Repeat = 0;
         double pass = MacroTimeline.Build(StepGroups.Expand(once).ToList()).Duration, total = MacroTimeline.Build(StepGroups.Expand(group).ToList()).Duration;
-        GroupSummaryText.Text = $"Plays its {inside:N0} {(inside == 1 ? "step" : "steps")} {(head.Runs == 1 ? "once" : $"{head.Runs:N0} times")}"
-            + (head.GapMs > 0 ? $", waiting {head.GapMs:N0} ms between steps{(head.Runs > 1 ? " and between passes" : "")}." : ".")
-            + (playedCount > inside ? $" That is {playedCount:N0} steps in a run." : "");
+        GroupSummaryText.Text = (head.Runs == 1 ? L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} once") : L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} {L.N(head.Runs, "{0} time", "{0} times")}"))
+            + (head.GapMs == 0 ? "." : head.Runs > 1 ? L.T($", waiting {head.GapMs:N0} ms between steps and between passes.") : L.T($", waiting {head.GapMs:N0} ms between steps."))
+            + (playedCount > inside ? " " + L.T($"That is {L.N(playedCount, "{0} step", "{0} steps")} in a run.") : "");
         if (head.Block != BlockKind.Group) GroupSummaryText.Text = BlockSummary(head, inside);
         GroupStartText.Text = (string)new StepLayoutConverter().Convert([head, _steps, StepsRevision], typeof(string), "Time", System.Globalization.CultureInfo.CurrentCulture);
         GroupPassText.Text = StepLayoutConverter.FormatTime(pass);
@@ -208,7 +208,7 @@ public partial class MacroEditorView
             if (a.ActionType == MacroActionType.GroupStart) depth++;
         }
         const int Shown = 8;
-        if (lines.Count > Shown) lines = [.. lines.Take(Shown - 1), $"and {lines.Count - Shown + 1:N0} more"];
+        if (lines.Count > Shown) lines = [.. lines.Take(Shown - 1), L.T($"and {lines.Count - Shown + 1:N0} more")];
         GroupStepsList.ItemsSource = lines;
     }
     private void GroupField_Changed(object sender, TextChangedEventArgs e)
@@ -218,10 +218,10 @@ public partial class MacroEditorView
         {
             var copy = _steps[_groupStart].Clone();
             copy.Name = GroupNameTextBox.Text.Trim() is { Length: > 0 } name ? name : null;
-            int runs = Number(GroupRunsTextBox.Text, "Times");
-            if (runs is < 1 or > StepGroups.MaxRepeat) throw new ArgumentException($"A group can play 1 to {StepGroups.MaxRepeat:N0} times.");
+            int runs = Number(GroupRunsTextBox.Text, L.T("Times"));
+            if (runs is < 1 or > StepGroups.MaxRepeat) throw new ArgumentException(L.T($"A group can play 1 to {StepGroups.MaxRepeat:N0} times."));
             copy.Repeat = runs == 1 ? 0 : runs;
-            copy.GapMs = Number(GroupGapTextBox.Text, "Wait between steps");
+            copy.GapMs = Number(GroupGapTextBox.Text, L.T("Wait between steps"));
             var check = _steps.ToList(); check[_groupStart] = copy;
             StepGroups.Validate(check);
             if (!_editRemembered) { Remember(); _editRemembered = true; }

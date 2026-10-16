@@ -34,21 +34,21 @@ public partial class MacroEditorView
         if (WindowPanel == null || RunModePanel == null || PreviewCard == null || TimingPanel == null) return;
         bool sequence = Mode == 2, mouse = !KeyboardTarget;
         PointRow.Visibility = !sequence && mouse ? Visibility.Visible : Visibility.Collapsed;
-        UsePointBox.Content = Mode == 1 ? "Hold at a chosen point" : "Click at a chosen point";
+        UsePointBox.Content = Mode == 1 ? L.T("Hold at a chosen point") : L.T("Click at a chosen point");
         UsePointBox.IsEnabled = _window != null;
-        PointText.Text = _window == null ? "Pick a point first" : UsePointBox.IsChecked == true ? $"{_pointX}, {_pointY} in {_window.Label}" : _window.Label;
-        WindowText.Text = _window == null ? "None · positions use screen coordinates" : _window.Label;
-        WindowText.ToolTip = _window == null ? null : $"{_window.Label}\nClass: {_window.ClassName}\nClient size when picked: {_window.ClientWidth} × {_window.ClientHeight}";
+        PointText.Text = _window == null ? L.T("Pick a point first") : UsePointBox.IsChecked == true ? L.T($"{_pointX}, {_pointY} in {_window.Label}") : _window.Label;
+        WindowText.Text = _window == null ? L.T("None · positions use screen coordinates") : _window.Label;
+        WindowText.ToolTip = _window == null ? null : L.T($"{_window.Label}\nClass: {_window.ClassName}\nClient size when picked: {_window.ClientWidth} × {_window.ClientHeight}");
         ClearWindowButton.IsEnabled = ScaleBox.IsEnabled = _window != null;
         RunModePanel.Visibility = ShowRunMode ? Visibility.Visible : Visibility.Collapsed;
-        MoreSummary.Text = "Start delay" + (SettlePanel.Visibility == Visibility.Visible ? ", click delay" : "") + ", target window" + (ShowRunMode ? ", run mode" : "");
+        MoreSummary.Text = string.Join(", ", new[] { L.T("Start delay"), SettlePanel.Visibility == Visibility.Visible ? L.T("click delay") : "", L.T("target window"), ShowRunMode ? L.T("run mode") : "" }.Where(x => x.Length > 0));
         TestButton.Visibility = RunMode != ExecutionMode.Standard ? Visibility.Visible : Visibility.Collapsed;
         RestoreCursorBox.Visibility = RunMode == ExecutionMode.QuickSwitch ? Visibility.Visible : Visibility.Collapsed;
         RunModeHint.Text = RunMode switch
         {
-            ExecutionMode.Background => "Sends input to the target window only, so your mouse stays free. Many games, Roblox included, ignore it. Test it first.",
-            ExecutionMode.QuickSwitch => "For games that ignore Background, like Roblox. Each input brings the window to the front for a moment, then gives your window and pointer back. Best for inputs a second or more apart. Keep the game open, it can sit behind other windows.",
-            _ => "Uses the real pointer and keyboard. Moves can collide with yours."
+            ExecutionMode.Background => L.T("Sends input to the target window only, so your mouse stays free. Many games, Roblox included, ignore it. Test it first."),
+            ExecutionMode.QuickSwitch => L.T("For games that ignore Background, like Roblox. Each input brings the window to the front for a moment, then gives your window and pointer back. Best for inputs a second or more apart. Keep the game open, it can sit behind other windows."),
+            _ => L.T("Uses the real pointer and keyboard. Moves can collide with yours.")
         };
     }
     private void RunMode_Changed(object sender, RoutedEventArgs e) => UpdateTargetUi();
@@ -58,7 +58,7 @@ public partial class MacroEditorView
         bool changed = _window != null && (_window.ProcessName != target.ProcessName || _window.Title != target.Title);
         _window = target;
         if (changed && _steps.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window))
-            Say($"Target changed to {target.Label}. Existing window positions now refer to it.");
+            Say(L.T($"Target changed to {target.Label}. Existing window positions now refer to it."));
         UpdateTargetUi();
     }
     private void ClearWindow_Click(object sender, RoutedEventArgs e)
@@ -99,7 +99,7 @@ public partial class MacroEditorView
                 InsertStep(new() { ActionType = MacroActionType.MousePosition, Space = CoordinateSpace.Window, X = picked.X, Y = picked.Y });
                 if (click) InsertStep(new() { ActionType = MacroActionType.MouseClick, MouseButton = "Left" });
             });
-            if (ErrorText.Text.Length == 0) Say($"Added {(click ? "a click" : "a move")} at {picked.X}, {picked.Y} in {picked.Target.Label}.");
+            if (ErrorText.Text.Length == 0) Say((click ? L.T($"Added a click at {picked.X}, {picked.Y} in {picked.Target.Label}.") : L.T($"Added a move to {picked.X}, {picked.Y} in {picked.Target.Label}.")));
         }
         else
         {
@@ -124,7 +124,7 @@ public partial class MacroEditorView
         try { _steps[i] = moved; }
         finally { _selecting = false; }
         Select([i]); FocusStep(i);
-        Say($"Step {StepNumber(i)} now moves to {moved.X}, {moved.Y}{(moved.Space == CoordinateSpace.Screen ? " on screen" : $" in {picked.Target.Label}")}.");
+        Say((moved.Space == CoordinateSpace.Screen ? L.T($"Step {StepNumber(i)} now moves to {moved.X}, {moved.Y} on screen.") : L.T($"Step {StepNumber(i)} now moves to {moved.X}, {moved.Y} in {picked.Target.Label}.")));
     }
     private bool HasClickAfter(int i) => i >= 0 && i + 1 < _steps.Count && _steps[i + 1].ActionType == MacroActionType.MouseClick;
     /// <summary>Adds a left click right after the picked move, or takes it away.</summary>
@@ -165,7 +165,7 @@ public partial class MacroEditorView
         catch (ArgumentException ex) { Say(ex.Message, true); return; }
         test.RepeatCount = 1;
         if (Mode == 3) ClearOutput_Click(this, new RoutedEventArgs());
-        try { await TestRun(test); if (IsLoaded) Say("Test run finished. Nothing was saved."); }
+        try { await TestRun(test); if (IsLoaded) Say(L.T("Test run finished. Nothing was saved.")); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { Say(ex.Message, true); }
     }
     /// <summary>Copies target settings from the form into a profile.</summary>
@@ -180,9 +180,9 @@ public partial class MacroEditorView
     }
     private void TestBackground_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
-        if (_window == null) throw new ArgumentException("Pick a point in the target window first.");
+        if (_window == null) throw new ArgumentException(L.T("Pick a point in the target window first."));
         IntPtr window = WindowSystem.Instance.Find(_window);
-        if (window == IntPtr.Zero) throw new ArgumentException($"{_window.Label} is not open.");
+        if (window == IntPtr.Zero) throw new ArgumentException(L.T($"{_window.Label} is not open."));
         var probe = new MacroProfile { Window = _window, ScaleWithWindow = ScaleBox.IsChecked == true };
         var resolver = new PointerResolver(WindowSystem.Instance, window, probe);
         bool quick = RunMode == ExecutionMode.QuickSwitch;
@@ -203,17 +203,17 @@ public partial class MacroEditorView
             string button = Mode == 2 ? "Left" : SelectedButton;
             var (sx, sy) = resolver.Resolve(CoordinateSpace.Window, x, y);
             driver.Position(sx, sy); driver.Mouse(button, true); driver.Mouse(button, false);
-            sent = $"Sent a {button.ToLowerInvariant()} click at {x}, {y}";
+            sent = L.T($"Sent a {button.ToLowerInvariant()} click at {x}, {y}");
         }
         (driver as IBurstDriver)?.EndBurst();
-        Say(quick ? $"{sent} to {_window.Label} with a quick switch. If nothing happened there, try Standard mode."
-            : $"{sent} to {_window.Label} without moving your pointer. If nothing happened there, this app ignores background input. Try Quick switch.");
+        Say(quick ? L.T($"{sent} to {_window.Label} with a quick switch. If nothing happened there, try Standard mode.")
+            : L.T($"{sent} to {_window.Label} without moving your pointer. If nothing happened there, this app ignores background input. Try Quick switch."));
     });
     private async void Preview_Click(object sender, RoutedEventArgs e)
     {
         if (SheetLayer.For(this) is { IsOpen: true }) return;
         Say("");
-        var p = new MacroProfile { Name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : "Macro", Actions = new(_steps.Select(a => a.Clone())) };
+        var p = new MacroProfile { Name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : L.T("Macro"), Actions = new(_steps.Select(a => a.Clone())) };
         ApplyTarget(p);
         if (SheetLayer.For(this) is { } sheets) await sheets.ShowAsync(new PreviewView(p, null, TestRun == null ? null : RunTestAsync), 680);
     }
@@ -263,7 +263,7 @@ public partial class MacroEditorView
         StripEnd.Text = StepLayoutConverter.FormatTime(timeline.Duration);
         int count = _steps.Count(a => !a.IsGroupMarker);
         StripPanel.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        StepCountText.Text = count == 0 ? "" : $"{count:N0} {(count == 1 ? "step" : "steps")} · {StepLayoutConverter.FormatTime(timeline.Duration)} per run";
+        StepCountText.Text = count == 0 ? "" : L.T($"{L.N(count, "{0} step", "{0} steps")} · {StepLayoutConverter.FormatTime(timeline.Duration)} per run");
         NoStepsText.Visibility = _steps.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (_steps.Count == 0) StepEditor.Visibility = BulkEditor.Visibility = GroupEditor.Visibility = Visibility.Collapsed;
     }

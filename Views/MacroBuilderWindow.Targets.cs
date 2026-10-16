@@ -39,7 +39,7 @@ public sealed partial class MacroBuilderWindow
     {
         var tag = new Border
         {
-            Child = new TextBlock { Text = $"Editing point {Current + 1}", FontSize = 11.5, FontWeight = FontWeights.SemiBold, Foreground = MoveFill },
+            Child = new TextBlock { Text = L.T($"Editing point {Current + 1}"), FontSize = 11.5, FontWeight = FontWeights.SemiBold, Foreground = MoveFill },
             Background = EditingFill, CornerRadius = new(9), Padding = new(8, 2, 8, 3), IsHitTestVisible = false
         };
         tag.Loaded += (_, _) => { Canvas.SetLeft(tag, at.X - tag.ActualWidth / 2); Canvas.SetTop(tag, at.Y - 26 - tag.ActualHeight); };
@@ -109,7 +109,7 @@ public sealed partial class MacroBuilderWindow
             {
                 Width = width + 8, Height = height + 8, RadiusX = 5, RadiusY = 5, Fill = TargetFill, Cursor = Cursors.Hand,
                 Stroke = picked ? Brushes.White : TargetStroke, StrokeThickness = picked ? 3 : 2, StrokeDashArray = picked ? null : [4, 2],
-                Opacity = faded ? FadedOpacity : 1, ToolTip = $"{t.Name}: found here. Click to see and change it."
+                Opacity = faded ? FadedOpacity : 1, ToolTip = L.T($"{t.Name}: found here. Click to see and change it.")
             };
             string name = t.Name;
             box.MouseLeftButtonDown += (_, e) => { e.Handled = true; PickTarget(name); };
@@ -118,7 +118,7 @@ public sealed partial class MacroBuilderWindow
             var verbs = Uses(t.Name).Select(u => u.Verb).Distinct().ToList();
             var label = new Border
             {
-                Child = new TextBlock { Text = t.Name + (verbs.Count > 0 ? " · " + string.Join(", ", verbs) : " · not used yet"), FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White },
+                Child = new TextBlock { Text = t.Name + (verbs.Count > 0 ? " · " + string.Join(", ", verbs) : L.T(" · not used yet")), FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White },
                 Background = picked ? MoveFill : TargetStroke, CornerRadius = new(6), Padding = new(6, 1, 6, 2), Opacity = faded ? FadedOpacity : 1, Cursor = Cursors.Hand
             };
             label.MouseLeftButtonDown += (_, e) => { e.Handled = true; PickTarget(name); };
@@ -139,10 +139,10 @@ public sealed partial class MacroBuilderWindow
 
     private void TargetsSummary(StackPanel body)
     {
-        body.Children.Add(Label("Targets"));
+        body.Children.Add(Label(L.T("Targets")));
         if (_targets.Count == 0)
         {
-            body.Children.Add(Muted("None yet. Right click and choose New picture to find, to click a button wherever it is, or wait for it.", new(0, 0, 0, 12)));
+            body.Children.Add(Muted(L.T("None yet. Right click and choose New picture to find, to click a button wherever it is, or wait for it."), new(0, 0, 0, 12)));
             return;
         }
         foreach (var t in _targets)
@@ -150,15 +150,15 @@ public sealed partial class MacroBuilderWindow
             var row = RowGrid(-1);
             bool here = _found.TryGetValue(t.Name, out var m) && m != null;
             AddCell(row, 1, Glyph(t.Kind == ScreenTargetKind.Color ? "IconTarget" : "IconImage", 12));
-            var text = new TextBlock { Text = t.Name, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Cursor = Cursors.Hand, ToolTip = "See and change it" };
+            var text = new TextBlock { Text = t.Name, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Cursor = Cursors.Hand, ToolTip = L.T("See and change it") };
             Grid.SetColumnSpan(text, 2);
             AddCell(row, 2, text);
-            AddCell(row, 4, Muted(here ? "on screen" : "not on screen", new(6, 0, 0, 0)));
+            AddCell(row, 4, Muted(here ? L.T("on screen") : L.T("not on screen"), new(6, 0, 0, 0)));
             string name = t.Name;
             row.MouseLeftButtonUp += (_, _) => PickTarget(name);
             body.Children.Add(row);
         }
-        var again = new Button { Content = "Look again", Padding = new(10, 3, 10, 3), Margin = new(0, 2, 0, 12), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Find the targets on the screen as it is now" };
+        var again = new Button { Content = L.T("Look again"), Padding = new(10, 3, 10, 3), Margin = new(0, 2, 0, 12), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = L.T("Find the targets on the screen as it is now") };
         again.Click += (_, _) => _ = LocateAsync();
         body.Children.Add(again);
     }
@@ -166,11 +166,11 @@ public sealed partial class MacroBuilderWindow
     {
         var head = new DockPanel { Margin = new(0, 0, 0, 10) };
         var uses = Uses(t.Name);
-        var delete = IconButton("IconTrash", uses.Count == 0 ? "Delete this target" : "Steps still look for it; remove them first", () => Attempt(() => DeleteTarget(t)), uses.Count == 0);
+        var delete = IconButton("IconTrash", uses.Count == 0 ? L.T("Delete this target") : L.T("Steps still look for it; remove them first"), () => Attempt(() => DeleteTarget(t)), uses.Count == 0);
         DockPanel.SetDock(delete, Dock.Right); head.Children.Add(delete);
         bool here = _found.TryGetValue(t.Name, out var found) && found != null;
-        string where = found is { } m ? $"on the screen at {m.Center.X}, {m.Center.Y}" : "not on the screen right now";
-        head.Children.Add(new StackPanel { Children = { Heading($"Target · {t.Name}"), Muted((t.Kind == ScreenTargetKind.Color ? $"Color {t.Color}, " : "Picture, ") + where, new()) } });
+        string where = found is { } m ? L.T($"on the screen at {m.Center.X}, {m.Center.Y}") : L.T("not on the screen right now");
+        head.Children.Add(new StackPanel { Children = { Heading(L.T($"Target · {t.Name}")), Muted((t.Kind == ScreenTargetKind.Color ? L.T($"Color {t.Color}, ") : "Picture, ") + where, new()) } });
         body.Children.Add(head);
         var preview = new Border { Width = 120, Height = 72, CornerRadius = new(6), BorderThickness = new(1), HorizontalAlignment = HorizontalAlignment.Left, Margin = new(0, 0, 0, 12), ClipToBounds = true };
         preview.SetResourceReference(Border.BorderBrushProperty, "HairlineBrush");
@@ -192,38 +192,38 @@ public sealed partial class MacroBuilderWindow
             catch (ArgumentException ex) { preview.Child = Muted(ex.Message, new(6)); }
         }
         body.Children.Add(preview);
-        body.Children.Add(Field("Name", Box(t.Name, 180, "Steps that look for it follow the new name", text => RenameTarget(t, text))));
-        body.Children.Add(Field("Tolerance", Box(t.Tolerance.ToString(), 52, "0 needs it exact; 10 is normal; higher lets the screen look more different", text =>
+        body.Children.Add(Field(L.T("Name"), Box(t.Name, 180, L.T("Steps that look for it follow the new name"), text => RenameTarget(t, text))));
+        body.Children.Add(Field(L.T("Tolerance"), Box(t.Tolerance.ToString(), 52, L.T("0 needs it exact; 10 is normal; higher lets the screen look more different"), text =>
         {
-            int value = Whole(text, "Tolerance");
-            if (value > 100) throw new ArgumentException("Tolerance goes from 0 to 100.");
+            int value = Whole(text, L.T("Tolerance"));
+            if (value > 100) throw new ArgumentException(L.T("Tolerance goes from 0 to 100."));
             t.Tolerance = value;
-        }), "0 to 100"));
+        }), L.T("0 to 100")));
 
-        body.Children.Add(Label("Steps that use it"));
-        if (uses.Count == 0) body.Children.Add(Muted("None yet.", new(0, 0, 0, 4)));
+        body.Children.Add(Label(L.T("Steps that use it")));
+        if (uses.Count == 0) body.Children.Add(Muted(L.T("None yet."), new(0, 0, 0, 4)));
         foreach (var (index, _) in uses)
         {
             int number = _steps.Take(index).Count(a => !a.IsGroupMarker) + 1;
-            string text = _steps[index].ActionType == MacroActionType.GroupStart ? _steps[index].DisplayText : $"Step {number}: {_steps[index].DisplayText}";
+            string text = _steps[index].ActionType == MacroActionType.GroupStart ? _steps[index].DisplayText : L.T($"Step {number}: {_steps[index].DisplayText}");
             body.Children.Add(Muted(text, new(0, 0, 0, 2)));
         }
         string name = t.Name;
-        var click = new Button { Content = "Click it", Padding = new(10, 4, 10, 4), Margin = new(0, 10, 6, 0), ToolTip = "Adds a Click on this target at the end" };
+        var click = new Button { Content = L.T("Click it"), Padding = new(10, 4, 10, 4), Margin = new(0, 10, 6, 0), ToolTip = L.T("Adds a Click on this target at the end") };
         click.Click += (_, _) => Attempt(() => AddTargetStep(new() { ActionType = MacroActionType.ClickTarget, Target = name, MouseButton = _lastButton, TimeoutMs = 1000 }));
-        var wait = new Button { Content = "Wait for it", Padding = new(10, 4, 10, 4), Margin = new(0, 10, 6, 0), ToolTip = "Adds a Wait until it shows, at the end" };
+        var wait = new Button { Content = L.T("Wait for it"), Padding = new(10, 4, 10, 4), Margin = new(0, 10, 6, 0), ToolTip = L.T("Adds a Wait until it shows, at the end") };
         wait.Click += (_, _) => Attempt(() => AddTargetStep(new() { ActionType = MacroActionType.WaitUntil, Target = name }));
-        var again = new Button { Content = "Look again", Padding = new(10, 4, 10, 4), Margin = new(0, 10, 0, 0), ToolTip = "Find it on the screen as it is now" };
+        var again = new Button { Content = L.T("Look again"), Padding = new(10, 4, 10, 4), Margin = new(0, 10, 0, 0), ToolTip = L.T("Find it on the screen as it is now") };
         again.Click += (_, _) => _ = LocateAsync();
         body.Children.Add(new WrapPanel { Children = { click, wait, again } });
-        if (!here) body.Children.Add(Muted("Not found now. Open what it belongs to, then Look again, or raise the tolerance.", new(0, 8, 0, 0)));
+        if (!here) body.Children.Add(Muted(L.T("Not found now. Open what it belongs to, then Look again, or raise the tolerance."), new(0, 8, 0, 0)));
     }
     private void RenameTarget(ScreenTarget t, string text)
     {
         string name = text.Trim(), old = t.Name;
         if (name == old) return;
-        if (name.Length is 0 or > 60) throw new ArgumentException("Give the target a name of 1 to 60 characters.");
-        if (_targets.Any(x => x != t && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException($"Another target is already called '{name}'.");
+        if (name.Length is 0 or > 60) throw new ArgumentException(L.T("Give the target a name of 1 to 60 characters."));
+        if (_targets.Any(x => x != t && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(L.T($"Another target is already called '{name}'."));
         foreach (var (index, _) in Uses(old)) RouteBuilder.Change(_steps, index, a => a.Target = name);
         t.Name = name;
         if (_found.Remove(old, out var found)) _found[name] = found;
@@ -231,7 +231,7 @@ public sealed partial class MacroBuilderWindow
     }
     private void DeleteTarget(ScreenTarget t)
     {
-        if (Uses(t.Name).Count > 0) throw new ArgumentException("Steps still look for this target. Remove them first.");
+        if (Uses(t.Name).Count > 0) throw new ArgumentException(L.T("Steps still look for this target. Remove them first."));
         _targets.Remove(t); _found.Remove(t.Name);
         _pickedTarget = null;
         Refresh();
@@ -241,7 +241,7 @@ public sealed partial class MacroBuilderWindow
     {
         int at = Current >= 0 ? AtPoint(Current)() : _steps.Count;
         Change(() => RouteBuilder.Insert(_steps, at, [step]));
-        Say($"Added: {step.DisplayText}.");
+        Say(L.T($"Added: {step.DisplayText}."));
     }
     /// <summary>A menu item per target, plus taking a new one from the screen.</summary>
     private MenuItem TargetItems(string header, string icon, Action<string> add)
@@ -253,8 +253,8 @@ public sealed partial class MacroBuilderWindow
             menu.Items.Add(Item(name, t.Kind == ScreenTargetKind.Color ? "IconTarget" : "IconImage", () => add(name)));
         }
         if (_targets.Count > 0) menu.Items.Add(new Separator());
-        menu.Items.Add(Item("New picture...", "IconImage", () => StartSnip(false, add)));
-        menu.Items.Add(Item("New color...", "IconTarget", () => StartSnip(true, add)));
+        menu.Items.Add(Item(L.T("New picture..."), "IconImage", () => StartSnip(false, add)));
+        menu.Items.Add(Item(L.T("New color..."), "IconTarget", () => StartSnip(true, add)));
         return menu;
     }
     /// <summary>The target a Click on or Wait until step looks for, picked from the macro's targets.</summary>
@@ -279,18 +279,18 @@ public sealed partial class MacroBuilderWindow
         var stack = new StackPanel();
         if (g.Block == BlockKind.Else)
         {
-            stack.Children.Add(new TextBlock { Text = "Inside an Else", FontWeight = FontWeights.SemiBold });
-            stack.Children.Add(Muted("This point plays only when the If before it does not.", new(0, 2, 0, 0)));
+            stack.Children.Add(new TextBlock { Text = L.T("Inside an Else"), FontWeight = FontWeights.SemiBold });
+            stack.Children.Add(Muted(L.T("This point plays only when the If before it does not."), new(0, 2, 0, 0)));
         }
         else
         {
-            stack.Children.Add(new TextBlock { Text = "Inside an If", FontWeight = FontWeights.SemiBold, Margin = new(0, 0, 0, 6) });
+            stack.Children.Add(new TextBlock { Text = L.T("Inside an If"), FontWeight = FontWeights.SemiBold, Margin = new(0, 0, 0, 6) });
             var names = _targets.Select(t => t.Name).ToArray();
             var target = new ComboBox { Width = 150, ItemsSource = names, SelectedItem = names.FirstOrDefault(n => string.Equals(n, g.Target, StringComparison.OrdinalIgnoreCase)) };
             target.SelectionChanged += (_, _) => { if (!_rebuilding && target.SelectedItem is string name) Attempt(() => Change(() => RouteBuilder.Change(_steps, start, s => s.Target = name))); };
-            var condition = new ComboBox { Width = 160, ItemsSource = new[] { "is on the screen", "is not on the screen" }, SelectedIndex = g.Gone ? 1 : 0, Margin = new(0, 6, 0, 0) };
+            var condition = new ComboBox { Width = 160, ItemsSource = new[] { L.T("is on the screen"), L.T("is not on the screen") }, SelectedIndex = g.Gone ? 1 : 0, Margin = new(0, 6, 0, 0) };
             condition.SelectionChanged += (_, _) => { if (!_rebuilding) Attempt(() => Change(() => RouteBuilder.Change(_steps, start, s => s.Gone = condition.SelectedIndex == 1))); };
-            stack.Children.Add(new WrapPanel { Children = { new TextBlock { Text = "Plays when", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 0) }, target } });
+            stack.Children.Add(new WrapPanel { Children = { new TextBlock { Text = L.T("Plays when"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 0) }, target } });
             stack.Children.Add(condition);
         }
         box.Child = stack;
@@ -306,7 +306,7 @@ public sealed partial class MacroBuilderWindow
         _snip = color ? SnipMode.Color : SnipMode.Picture;
         _snipThen = then;
         Cursor = Cursors.Cross;
-        Say(color ? "Click the color to find. Esc cancels." : "Drag around what to find, like a button or an icon. Esc cancels.");
+        Say(color ? L.T("Click the color to find. Esc cancels.") : L.T("Drag around what to find, like a button or an icon. Esc cancels."));
     }
     private void EndSnip()
     {
@@ -349,7 +349,7 @@ public sealed partial class MacroBuilderWindow
         _snipFrom = null;
         _overlay.Children.Remove(_snipBox);
         if (IsMouseCaptured) ReleaseMouseCapture();
-        if (x2 - x1 < 4 || y2 - y1 < 4) { Say("Drag a bigger box, at least 4 by 4 pixels. Esc cancels.", true); return; }
+        if (x2 - x1 < 4 || y2 - y1 < 4) { Say(L.T("Drag a bigger box, at least 4 by 4 pixels. Esc cancels."), true); return; }
         _ = FinishSnip(new Int32Rect(x1, y1, Math.Min(x2 - x1, ScreenTarget.MaxPictureSide), Math.Min(y2 - y1, ScreenTarget.MaxPictureSide)));
     }
     /// <summary>Reads the rectangle from the screen under the builder and makes it a target.</summary>
@@ -360,8 +360,8 @@ public sealed partial class MacroBuilderWindow
         EndSnip();
         PixelImage? shot = null;
         await Hidden(() => shot = _screen.Capture(rect.X, rect.Y, rect.Width, rect.Height));
-        if (shot == null || shot.Width == 0) { Say("The screen could not be read there.", true); return; }
-        string stem = color ? "Color" : "Picture";
+        if (shot == null || shot.Width == 0) { Say(L.T("The screen could not be read there."), true); return; }
+        string stem = color ? L.T("Color") : L.T("Picture");
         int n = 1;
         while (TargetNamed($"{stem} {n}") != null) n++;
         var target = new ScreenTarget
@@ -377,7 +377,7 @@ public sealed partial class MacroBuilderWindow
             else AddTargetStep(new() { ActionType = MacroActionType.ClickTarget, Target = target.Name, MouseButton = _lastButton, TimeoutMs = 1000 });
         });
         PickTarget(target.Name);
-        Say($"Added {target.Name}. Give it a name that says what it is.");
+        Say(L.T($"Added {target.Name}. Give it a name that says what it is."));
         FocusTargetName();
     }
     private void FocusTargetName() => Dispatcher.BeginInvoke(() =>

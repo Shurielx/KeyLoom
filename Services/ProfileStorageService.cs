@@ -35,7 +35,7 @@ public sealed class ProfileStorageService
         try { SaveProfiles(result.Profiles); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            return result with { Warning = "Your macros were loaded but could not be saved in the new format yet: " + ex.Message };
+            return result with { Warning = L.T($"Your macros were loaded but could not be saved in the new format yet: {ex.Message}") };
         }
         return result;
     }
@@ -44,26 +44,26 @@ public sealed class ProfileStorageService
         try { return (new(read(path), ""), false); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
         {
-            try { return (new(read(path + ".bak"), $"Macros recovered from the backup. The last save could not be read: {ex.Message}"), false); }
+            try { return (new(read(path + ".bak"), L.T($"Macros recovered from the backup. The last save could not be read: {ex.Message}")), false); }
             catch (Exception backupError) when (backupError is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
             {
-                return (new(new() { CreateDefault() }, $"Macros could not be loaded: {ex.Message} Your file is kept until you save."), true);
+                return (new(new() { CreateDefault() }, L.T($"Macros could not be loaded: {ex.Message} Your file is kept until you save.")), true);
             }
         }
     }
     private static ObservableCollection<MacroProfile> Read(string path)
     {
-        if (new FileInfo(path).Length > MaxBytes) throw new JsonException("The macro file is larger than 8 MB.");
+        if (new FileInfo(path).Length > MaxBytes) throw new JsonException(L.T("The macro file is larger than 8 MB."));
         return new(MacroFile.Read(File.ReadAllText(path)));
     }
     private static ObservableCollection<MacroProfile> ReadLegacy(string path)
     {
-        if (new FileInfo(path).Length > MaxBytes) throw new JsonException("The macro file is larger than 8 MB.");
-        var profiles = JsonSerializer.Deserialize<ObservableCollection<MacroProfile>>(File.ReadAllText(path), LegacyOptions) ?? throw new JsonException("Missing profiles.");
+        if (new FileInfo(path).Length > MaxBytes) throw new JsonException(L.T("The macro file is larger than 8 MB."));
+        var profiles = JsonSerializer.Deserialize<ObservableCollection<MacroProfile>>(File.ReadAllText(path), LegacyOptions) ?? throw new JsonException(L.T("Missing profiles."));
         var ids = new HashSet<string>();
         foreach (var p in profiles)
         {
-            if (p == null) throw new JsonException("Missing profile.");
+            if (p == null) throw new JsonException(L.T("Missing profile."));
             if (string.IsNullOrWhiteSpace(p.Id) || !ids.Add(p.Id)) { p.Id = Guid.NewGuid().ToString("N"); ids.Add(p.Id); }
             p.SpamIntervalMs = Math.Max(1, p.SpamIntervalMs);
             if (p.FallbackVk != 0 && p.PrimaryVk == 0) { p.PrimaryVk = p.FallbackVk; p.PrimaryModifiers = p.FallbackModifiers; }
@@ -85,7 +85,7 @@ public sealed class ProfileStorageService
             {
                 writer.Write(MacroFile.Write(snapshot));
                 writer.Flush();
-                if (stream.Length > MaxBytes) throw new IOException("Macros exceed the 8 MB storage limit. Shorten large recordings or text steps.");
+                if (stream.Length > MaxBytes) throw new IOException(L.T("Macros exceed the 8 MB storage limit. Shorten large recordings or text steps."));
                 stream.Flush(true);
             }
             if (File.Exists(FilePath)) File.Replace(temporary, FilePath, FilePath + ".bak");
@@ -93,5 +93,5 @@ public sealed class ProfileStorageService
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
-    public static MacroProfile CreateDefault() => new() { Name = "Autoclicker", PrimaryVk = 0x77, PrimaryModifiers = Shortcut.Control | Shortcut.Shift };
+    public static MacroProfile CreateDefault() => new() { Name = L.T("Autoclicker"), PrimaryVk = 0x77, PrimaryModifiers = Shortcut.Control | Shortcut.Shift };
 }

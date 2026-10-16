@@ -8,7 +8,7 @@ namespace Keyloom.Engine;
 /// </summary>
 public sealed class AiEyes(Func<IAiVision?> ai, IScreen screen, IWindowSystem windows, IntPtr window)
 {
-    public const string OffMessage = "AI is off. Turn it on in Settings, under Features, and pick a model.";
+    public static string OffMessage => L.T("AI is off. Turn it on in Settings, under Features, and pick a model.");
     private IAiVision? _vision;
     private IAiVision Vision => _vision ??= ai() ?? throw new InvalidOperationException(OffMessage);
 
@@ -19,7 +19,7 @@ public sealed class AiEyes(Func<IAiVision?> ai, IScreen screen, IWindowSystem wi
         {
             if (window == IntPtr.Zero) return screen.Bounds;
             var (width, height) = windows.ClientSize(window);
-            return ScreenAreas.Resolve(screen, windows, window, new ScreenArea(0, 0, width, height, CoordinateSpace.Window), "The target window");
+            return ScreenAreas.Resolve(screen, windows, window, new ScreenArea(0, 0, width, height, CoordinateSpace.Window), L.T("The target window"));
         }
     }
     /// <param name="area">What the AI looks at, in screen pixels; null for <see cref="Everything"/>.</param>
@@ -31,7 +31,7 @@ public sealed class AiEyes(Func<IAiVision?> ai, IScreen screen, IWindowSystem wi
         if (look)
         {
             var (x, y, w, h) = area ?? Everything;
-            if (w <= 0 || h <= 0) throw new InvalidOperationException("The part of the screen the AI should look at is not on any screen.");
+            if (w <= 0 || h <= 0) throw new InvalidOperationException(L.T("The part of the screen the AI should look at is not on any screen."));
             picture = screen.Capture(x, y, w, h);
         }
         token.ThrowIfCancellationRequested();

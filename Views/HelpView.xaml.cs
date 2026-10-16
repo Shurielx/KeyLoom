@@ -4,5 +4,9 @@ namespace Keyloom.Views;
 
 public partial class HelpView : UserControl
 {
-    public HelpView() => InitializeComponent();
+    public HelpView()
+    {
+        InitializeComponent();
+        L.Apply(this);
+    }
 }

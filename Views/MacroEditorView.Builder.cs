@@ -26,14 +26,14 @@ public partial class MacroEditorView
         if (!WindowSystem.Unminimize(window))
         {
             window = IntPtr.Zero;
-            note = $"{_window!.Label} stays minimized, so its points are drawn from the top-left of the screen. Restore it to see them in place.";
+            note = L.T($"{_window!.Label} stays minimized, so its points are drawn from the top-left of the screen. Restore it to see them in place.");
         }
         else if (_window != null && window == IntPtr.Zero && _steps.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window))
-            note = $"{_window.Label} is not open, so its points are drawn from the top-left of the screen. Open it to see them in place.";
+            note = L.T($"{_window.Label} is not open, so its points are drawn from the top-left of the screen. Open it to see them in place.");
         // The builder covers the monitor the target window is on, or the one Keyloom is on.
         IntPtr place = window != IntPtr.Zero ? window : Window.GetWindow(this) is { } own ? new WindowInteropHelper(own).Handle : IntPtr.Zero;
         var screen = (place != IntPtr.Zero ? System.Windows.Forms.Screen.FromHandle(place) : System.Windows.Forms.Screen.PrimaryScreen!).Bounds;
-        string name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : "Macro";
+        string name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : L.T("Macro");
         int settle = int.TryParse(SettleTextBox.Text.Trim(), out int ms) ? ms : Profile.PointerSettleMs;
         var builder = new MacroBuilderWindow(name, _steps, new RouteSpace(WindowSystem.Instance, window, p), new Int32Rect(screen.X, screen.Y, screen.Width, screen.Height), settle, _targets);
         // Keyloom steps out of the way while you build, and comes back when you're done.
@@ -61,10 +61,10 @@ public partial class MacroEditorView
         SettleTextBox.Text = result.ClickDelayMs.ToString();
         if (steps.Count == _steps.Count && steps.Zip(_steps).All(pair => Same(pair.First, pair.Second)))
         {
-            Say(delayChanged ? $"Click delay after moving is now {result.ClickDelayMs} ms. Save to keep it." : targetsChanged ? "Targets changed in the builder. Save to keep them." : "Nothing changed in the builder.");
+            Say(delayChanged ? L.T($"Click delay after moving is now {result.ClickDelayMs} ms. Save to keep it.") : targetsChanged ? L.T("Targets changed in the builder. Save to keep them.") : L.T("Nothing changed in the builder."));
             return;
         }
-        if (steps.Count > ProfileValidator.MaxActions) throw new ArgumentException($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps.");
+        if (steps.Count > ProfileValidator.MaxActions) throw new ArgumentException(L.T($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps."));
         foreach (var step in steps) ProfileValidator.ValidateAction(step);
         Remember();
         _selecting = true;
@@ -72,7 +72,7 @@ public partial class MacroEditorView
         finally { _selecting = false; }
         Select([]);
         int points = RouteBuilder.Points(steps).Count;
-        Say($"Built on screen: {points:N0} {(points == 1 ? "point" : "points")}. Save to keep it; Ctrl+Z brings back the steps from before.");
+        Say(L.T($"Built on screen: {L.N(points, "{0} point", "{0} points")}. Save to keep it; Ctrl+Z brings back the steps from before."));
     }
     private static bool Same(MacroAction a, MacroAction b) =>
         a.ActionType == b.ActionType && a.MouseButton == b.MouseButton && a.KeyName == b.KeyName && a.DelayMs == b.DelayMs && a.X == b.X && a.Y == b.Y

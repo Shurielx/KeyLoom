@@ -55,7 +55,7 @@ public sealed class InputSimulator : IInputDriver
         {
             "Left" => down ? 2u : 4u, "Right" => down ? 8u : 16u,
             "Middle" => down ? 32u : 64u, "X1" or "X2" => down ? 128u : 256u,
-            _ => throw new ArgumentException("Unknown mouse button.")
+            _ => throw new ArgumentException(L.T("Unknown mouse button."))
         };
         SendMouse(flags, button == "X1" ? 1u : button == "X2" ? 2u : 0u);
     }
@@ -77,6 +77,6 @@ public sealed class InputSimulator : IInputDriver
     {
         _buffer[0] = input;
         if (SendInput(1, _buffer, InputSize) != 1)
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows rejected macro input. Check the target window and its permissions.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("Windows rejected macro input. Check the target window and its permissions."));
     }
 }

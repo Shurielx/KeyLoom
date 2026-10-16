@@ -23,6 +23,7 @@ internal static partial class Program
     {
         try
         {
+            if (args.Length >= 2 && args[0] == "--dump-strings") { DumpStrings(args[1], args.Length > 2 ? args[2] : null); return 0; }
             if (args.Contains("--only-scripts"))
             {
                 var only = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -54,6 +55,7 @@ internal static partial class Program
             GridEngineTests().GetAwaiter().GetResult();
             ScriptEngineTests().GetAwaiter().GetResult();
             AiEngineTests().GetAwaiter().GetResult();
+            LanguageEngineTests();
             StorageTests();
             FormatTests();
             PolishEngineTests();
@@ -77,6 +79,7 @@ internal static partial class Program
             GridUiTests();
             ScriptUiTests();
             AiUiTests();
+            LanguageUiTests();
             BuilderTargetTests();
             UpdateTests();
             BackgroundInputTests();

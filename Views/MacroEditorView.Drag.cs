@@ -77,7 +77,7 @@ public partial class MacroEditorView
         _dragging = true; _dropAt = -1;
         ActionsListBox.Cursor = Cursors.SizeAll;
         DimDragged(DimmedOpacity);
-        DragBadgeText.Text = _dragged.Count == 1 ? "Move 1 step" : $"Move {_dragged.Count:N0} steps";
+        DragBadgeText.Text = L.N(_dragged.Count, "Move {0} step", "Move {0} steps");
         DragBadge.Visibility = Visibility.Visible;
         _dragScroll = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Input, (_, _) => AutoScroll(), Dispatcher);
         _dragScroll.Start();

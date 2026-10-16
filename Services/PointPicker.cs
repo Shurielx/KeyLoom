@@ -38,7 +38,7 @@ public sealed class PointPicker : IDisposable
     }
     public Task<PickedPoint?> PickAsync()
     {
-        if (_result != null) throw new InvalidOperationException("Already picking.");
+        if (_result != null) throw new InvalidOperationException(L.T("Already picking."));
         _result = new(); _picked = null; _swallowUp = 0;
         var module = GetModuleHandle(null);
         _mouseHook = SetWindowsHookEx(14, _mouseCallback, module, 0);
@@ -47,7 +47,7 @@ public sealed class PointPicker : IDisposable
         {
             int error = Marshal.GetLastWin32Error();
             Finish(null);
-            throw new Win32Exception(error, "Windows could not start point picking.");
+            throw new Win32Exception(error, L.T("Windows could not start point picking."));
         }
         _overlay.Show(); Refresh(); _timer.Start();
         return _result.Task;
@@ -56,13 +56,13 @@ public sealed class PointPicker : IDisposable
     {
         var (x, y) = WindowSystem.Instance.Cursor();
         var root = WindowSystem.RootAt(x, y);
-        if (root == IntPtr.Zero || WindowSystem.IsOwn(root)) { _overlay.ShowHint(x, y, "Choose a window outside Keyloom", "Esc or right-click cancels"); return; }
+        if (root == IntPtr.Zero || WindowSystem.IsOwn(root)) { _overlay.ShowHint(x, y, L.T("Choose a window outside Keyloom"), L.T("Esc or right-click cancels")); return; }
         var (cx, cy) = WindowSystem.ScreenToClient(root, x, y);
         var (width, height) = WindowSystem.Instance.ClientSize(root);
         var origin = WindowSystem.Instance.ClientToScreen(root, 0, 0);
         bool inside = cx >= 0 && cy >= 0 && cx < width && cy < height;
         _overlay.ShowTarget(new(origin.X, origin.Y, width, height), x, y, Title(root),
-            inside ? $"{cx}, {cy}   ·   Click to choose" : "Choose a point inside the window content");
+            inside ? L.T($"{cx}, {cy}   ·   Click to choose") : L.T("Choose a point inside the window content"));
     }
     private static string Title(IntPtr window)
     {

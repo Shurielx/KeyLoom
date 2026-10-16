@@ -44,9 +44,9 @@ public partial class MacroEditorView
         if (!looks) return;
         bool wait = StepType == MacroActionType.WaitUntil;
         UntilPanel.Visibility = wait ? Visibility.Visible : Visibility.Collapsed;
-        TimeoutLabel.Text = wait ? "Give up after" : "Keep looking for";
-        TimeoutUnit.Text = wait ? "ms · 0 waits as long as it takes" : "ms · 0 looks once";
-        StopIfMissingBox.Content = wait ? "Stop the macro when time is up" : "Stop the macro if it isn't found";
+        TimeoutLabel.Text = wait ? L.T("Give up after") : L.T("Keep looking for");
+        TimeoutUnit.Text = wait ? L.T("ms · 0 waits as long as it takes") : L.T("ms · 0 looks once");
+        StopIfMissingBox.Content = wait ? L.T("Stop the macro when time is up") : L.T("Stop the macro if it isn't found");
     }
     /// <summary>A step just turned into one that looks for a target: start from the first target and sensible times.</summary>
     private void PrepareTargetStep()
@@ -69,9 +69,9 @@ public partial class MacroEditorView
     }
     private void ReadTargetStep(MacroAction a)
     {
-        a.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException("Pick what to look for, or take a new picture or color from the screen.");
+        a.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException(L.T("Pick what to look for, or take a new picture or color from the screen."));
         a.Gone = UntilBox.SelectedIndex == 1;
-        a.TimeoutMs = Number(TimeoutTextBox.Text, "Time to look");
+        a.TimeoutMs = Number(TimeoutTextBox.Text, L.T("Time to look"));
         a.StopIfMissing = StopIfMissingBox.IsChecked == true;
     }
     /// <summary>Keeps the targets that steps use; one captured and then left unused goes away on save.</summary>
@@ -105,7 +105,7 @@ public partial class MacroEditorView
             {
                 if (!_thumbnails.TryGetValue(t.Picture, out var bitmap)) _thumbnails[t.Picture] = bitmap = ScreenSnipWindow.ToBitmap(TargetPicture.Decode(t.Picture));
                 TargetImage.Source = bitmap;
-                TargetInfoText.Text = $"Picture · {bitmap.PixelWidth} × {bitmap.PixelHeight} px";
+                TargetInfoText.Text = L.T($"Picture · {bitmap.PixelWidth} × {bitmap.PixelHeight} px");
             }
             catch (ArgumentException ex) { TargetImage.Source = null; TargetInfoText.Text = ex.Message; }
         }
@@ -117,7 +117,7 @@ public partial class MacroEditorView
     }
     private static string ToleranceWords(int tolerance) => tolerance switch
     {
-        0 => "0 · exact", <= 6 => $"{tolerance} · strict", <= 18 => $"{tolerance} · normal", <= 35 => $"{tolerance} · loose", _ => $"{tolerance} · very loose"
+        0 => L.T("0 · exact"), <= 6 => L.T($"{tolerance} · strict"), <= 18 => L.T($"{tolerance} · normal"), <= 35 => L.T($"{tolerance} · loose"), _ => L.T($"{tolerance} · very loose")
     };
 
     private void TargetBox_Changed(object sender, SelectionChangedEventArgs e)
@@ -158,7 +158,7 @@ public partial class MacroEditorView
         if (name == old) return;
         if (name.Length == 0 || _targets.Any(x => x != t && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            Say(name.Length == 0 ? "A target needs a name." : $"Another target is already called '{name}'.", true);
+            Say(name.Length == 0 ? L.T("A target needs a name.") : L.T($"Another target is already called '{name}'."), true);
             TargetNameTextBox.Text = old; return;
         }
         var picked = SelectedIndices();
@@ -187,7 +187,7 @@ public partial class MacroEditorView
     {
         var snip = await OutOfTheWay(() => ScreenSnipWindow.TakeAsync(color));
         if (snip == null) return;
-        string stem = color ? "Color" : "Picture";
+        string stem = color ? L.T("Color") : L.T("Picture");
         int n = 1;
         while (_targets.Any(t => string.Equals(t.Name, $"{stem} {n}", StringComparison.OrdinalIgnoreCase))) n++;
         var target = new ScreenTarget
@@ -204,7 +204,7 @@ public partial class MacroEditorView
             CommitLooking();
         }
         else RefreshTargetBox(CurrentTarget?.Name);
-        Say($"Added {target.Name}. Rename it so the steps read well, like \"Play button\".");
+        Say(L.T($"Added {target.Name}. Rename it so the steps read well, like \"Play button\"."));
         TargetNameTextBox.Focus(); TargetNameTextBox.SelectAll();
     }
     private async void FindNow_Click(object sender, RoutedEventArgs e)
@@ -227,12 +227,12 @@ public partial class MacroEditorView
                 _seenAt[t] = new(m.X, m.Y, m.Width, m.Height);
                 NearBox.IsEnabled = true;
                 var (x, y) = m.Center;
-                FindResultText.Text = $"Found at {x}, {y} on the screen, in {clock.ElapsedMilliseconds} ms.";
+                FindResultText.Text = L.T($"Found at {x}, {y} on the screen, in {clock.ElapsedMilliseconds} ms.");
                 FindResultText.SetResourceReference(TextBlock.ForegroundProperty, "SuccessTextBrush");
             }
             else
             {
-                FindResultText.Text = "Not on the screen right now. Open what it belongs to and try again, raise the tolerance, or take a new picture.";
+                FindResultText.Text = L.T("Not on the screen right now. Open what it belongs to and try again, raise the tolerance, or take a new picture.");
                 FindResultText.SetResourceReference(TextBlock.ForegroundProperty, "DangerTextBrush");
             }
         }

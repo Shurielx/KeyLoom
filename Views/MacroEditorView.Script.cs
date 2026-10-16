@@ -75,7 +75,7 @@ public partial class MacroEditorView
     {
         _scriptProblem = MacroScript.Check(ScriptText);
         int lines = ScriptBox.Document.LineCount;
-        ScriptStatus.Text = _scriptProblem is { } p ? $"{p}  ·  click to go there" : $"Reads fine · {lines:N0} line{(lines == 1 ? "" : "s")}";
+        ScriptStatus.Text = _scriptProblem is { } p ? L.T($"{p}  ·  click to go there") : L.T($"Reads fine · {L.N(lines, "{0} line", "{0} lines")}");
         ScriptStatus.Cursor = _scriptProblem is { Line: > 0 } ? Cursors.Hand : null;
         ScriptStatus.SetResourceReference(TextBlock.ForegroundProperty, _scriptProblem != null ? "DangerTextBrush" : "MutedBrush");
     }
@@ -97,7 +97,7 @@ public partial class MacroEditorView
     {
         string mine = ScriptText.Trim();
         if (mine.Length > 0 && mine != StarterScript.Trim() && SheetLayer.For(this) is { } sheets
-            && !await sheets.ConfirmAsync("Replace your script?", "The example takes the place of what is in the script now. Ctrl+Z in the script brings yours back.", "Replace"))
+            && !await sheets.ConfirmAsync(L.T("Replace your script?"), L.T("The example takes the place of what is in the script now. Ctrl+Z in the script brings yours back."), L.T("Replace")))
             return;
         ScriptBox.Document.Text = code.Replace("\r\n", "\n") + "\n";
         ScriptBox.TextArea.Focus();
@@ -160,8 +160,8 @@ public partial class MacroEditorView
             int quote = before.LastIndexOf('"');
             start = line.Offset + quote + 1;
             word = document.GetText(start, caret - start);
-            items = [.. _targets.Select(t => (ICompletionData)new Suggestion(t.Name, t.Name, $"Target · {(t.Kind == ScreenTargetKind.Color ? t.Color : "picture")}")),
-                     .. _grids.Select(g => (ICompletionData)new Suggestion(g.Name, g.Name, $"Grid · {g.Rows} × {g.Columns}"))];
+            items = [.. _targets.Select(t => (ICompletionData)new Suggestion(t.Name, t.Name, t.Kind == ScreenTargetKind.Color ? L.T($"Target · {t.Color}") : L.T("Target · picture"))),
+                     .. _grids.Select(g => (ICompletionData)new Suggestion(g.Name, g.Name, L.T($"Grid · {g.Rows} × {g.Columns}")))];
         }
         else
         {
@@ -236,11 +236,11 @@ public partial class MacroEditorView
     {
         if (ScriptAssetList == null || Mode != 3) return;
         ScriptAssetList.Children.Clear();
-        foreach (var t in _targets) ScriptAssetList.Children.Add(AssetRow(t.Name, t.Kind == ScreenTargetKind.Color ? $"Color {t.Color}" : "Picture",
+        foreach (var t in _targets) ScriptAssetList.Children.Add(AssetRow(t.Name, t.Kind == ScreenTargetKind.Color ? L.T($"Color {t.Color}") : L.T("Picture"),
             t.Kind == ScreenTargetKind.Color ? "IconTarget" : "IconImage", name => RenameAsset(t.Name, name, n => t.Name = n), () => { _targets.Remove(t); RefreshTargetBox(null); }, null));
-        foreach (var g in _grids) ScriptAssetList.Children.Add(AssetRow(g.Name, "Grid", "IconGrid", name => RenameAsset(g.Name, name, n => g.Name = n), () => { _grids.Remove(g); RefreshGridBox(null); }, g));
+        foreach (var g in _grids) ScriptAssetList.Children.Add(AssetRow(g.Name, L.T("Grid"), "IconGrid", name => RenameAsset(g.Name, name, n => g.Name = n), () => { _grids.Remove(g); RefreshGridBox(null); }, g));
         if (_targets.Count + _grids.Count == 0)
-            ScriptAssetList.Children.Add(new TextBlock { Text = "None yet.", Style = (Style)FindResource("Muted"), FontSize = 12 });
+            ScriptAssetList.Children.Add(new TextBlock { Text = L.T("None yet."), Style = (Style)FindResource("Muted"), FontSize = 12 });
     }
     private FrameworkElement AssetRow(string name, string kind, string icon, Func<string, bool> rename, Action remove, ScreenGrid? grid)
     {
@@ -249,9 +249,9 @@ public partial class MacroEditorView
         row.ColumnDefinitions.Add(new ColumnDefinition());
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var use = new Button { Style = (Style)FindResource("IconButton"), Width = 28, Height = 28, MinHeight = 0, ToolTip = $"Put \"{name}\" in the script", Margin = new Thickness(0, 0, 6, 0) };
+        var use = new Button { Style = (Style)FindResource("IconButton"), Width = 28, Height = 28, MinHeight = 0, ToolTip = L.T($"Put \"{name}\" in the script"), Margin = new Thickness(0, 0, 6, 0) };
         use.Content = new System.Windows.Shapes.Path { Data = (Geometry)FindResource(icon), Style = (Style)FindResource("AccentIcon"), Width = 12, Height = 12 };
-        AutomationName(use, $"Put {name} in the script");
+        AutomationName(use, L.T($"Put {name} in the script"));
         var box = new TextBox { Text = name, MaxLength = 60, ToolTip = kind };
         AutomationName(box, $"{kind} name");
         void Commit()
@@ -267,15 +267,15 @@ public partial class MacroEditorView
         if (grid != null)
         {
             var size = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 0, 0, 0) };
-            var rows = new TextBox { Text = grid.Rows.ToString(), Width = 40, ToolTip = "Rows" };
-            var columns = new TextBox { Text = grid.Columns.ToString(), Width = 40, ToolTip = "Columns" };
-            AutomationName(rows, "Rows"); AutomationName(columns, "Columns");
+            var rows = new TextBox { Text = grid.Rows.ToString(), Width = 40, ToolTip = L.T("Rows") };
+            var columns = new TextBox { Text = grid.Columns.ToString(), Width = 40, ToolTip = L.T("Columns") };
+            AutomationName(rows, L.T("Rows")); AutomationName(columns, L.T("Columns"));
             void Resize()
             {
                 try
                 {
                     var copy = grid.Clone();
-                    copy.Rows = Number(rows.Text, "Rows"); copy.Columns = Number(columns.Text, "Columns");
+                    copy.Rows = Number(rows.Text, L.T("Rows")); copy.Columns = Number(columns.Text, L.T("Columns"));
                     ProfileValidator.ValidateGrid(copy);
                     grid.Rows = copy.Rows; grid.Columns = copy.Columns;
                     Say("");
@@ -305,7 +305,7 @@ public partial class MacroEditorView
         if (name.Length == 0 || _targets.Any(t => t.Name != old && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
             || _grids.Any(g => g.Name != old && string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            Say(name.Length == 0 ? "A name cannot be empty." : $"Something is already called '{name}'.", true);
+            Say(name.Length == 0 ? L.T("A name cannot be empty.") : L.T($"Something is already called '{name}'."), true);
             return false;
         }
         set(name);
@@ -322,7 +322,7 @@ public partial class MacroEditorView
     {
         if (ScriptOutput == null) return;
         if (_output.Count == 0) ScriptOutput.Text = "";
-        _output.Add(problem ? "Stopped: " + line : line);
+        _output.Add(problem ? L.T($"Stopped: {line}") : line);
         if (_output.Count > MaxOutputLines) _output.RemoveRange(0, _output.Count - MaxOutputLines);
         ScriptOutput.Text = string.Join("\n", _output);
         if (problem && Regex.Match(line, @"Line (\d+)") is { Success: true } at) GoToLine(int.Parse(at.Groups[1].Value));

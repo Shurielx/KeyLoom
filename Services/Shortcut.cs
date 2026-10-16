@@ -10,7 +10,7 @@ public static class Shortcut
     public static bool IsReserved(uint modifiers, uint key) => modifiers == AppModifiers && key == StopKey;
     public static string Format(uint modifiers, uint key)
     {
-        if (key == 0) return "No shortcut";
+        if (key == 0) return L.T("No shortcut");
         var parts = new List<string>();
         if ((modifiers & Control) != 0) parts.Add("Ctrl");
         if ((modifiers & Alt) != 0) parts.Add("Alt");
@@ -30,7 +30,7 @@ public static class Shortcut
         uint modifiers = 0, key = 0;
         foreach (string part in text.Split('+', StringSplitOptions.TrimEntries))
         {
-            if (key != 0) throw new ArgumentException($"The shortcut \"{text}\" has more than one key. Use modifiers and one key, such as Ctrl+Shift+F9.");
+            if (key != 0) throw new ArgumentException(L.T($"The shortcut \"{text}\" has more than one key. Use modifiers and one key, such as Ctrl+Shift+F9."));
             switch (part.ToLowerInvariant())
             {
                 case "ctrl" or "control": modifiers |= Control; continue;
@@ -40,19 +40,19 @@ public static class Shortcut
             }
             string name = part.Length == 1 && char.IsAsciiDigit(part[0]) ? "D" + part : part;
             if (!Enum.TryParse<Key>(name, true, out var k) || !Enum.IsDefined(k) || k == Key.None || IsModifier(k) || KeyInterop.VirtualKeyFromKey(k) is <= 0 or > 254)
-                throw new ArgumentException($"Unknown key \"{part}\" in the shortcut \"{text}\". Use a key name such as F9, A or 1.");
+                throw new ArgumentException(L.T($"Unknown key \"{part}\" in the shortcut \"{text}\". Use a key name such as F9, A or 1."));
             key = (uint)KeyInterop.VirtualKeyFromKey(k);
         }
-        if (key == 0) throw new ArgumentException($"The shortcut \"{text}\" has no key. Add one, such as Ctrl+Shift+F9.");
+        if (key == 0) throw new ArgumentException(L.T($"The shortcut \"{text}\" has no key. Add one, such as Ctrl+Shift+F9."));
         return (modifiers, key);
     }
     public static bool IsModifier(Key key) => key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin;
     /// <summary>Why a key can't be a macro shortcut, or null when it can: F1–F24 work alone, other keys need Ctrl, Alt or Win.</summary>
     public static string? Problem(uint modifiers, uint key)
     {
-        if (IsReserved(modifiers, key)) return "This shortcut is reserved for Keyloom.";
+        if (IsReserved(modifiers, key)) return L.T("This shortcut is reserved for Keyloom.");
         bool functionKey = key is >= 0x70 and <= 0x87;
-        if (!functionKey && (modifiers & (Control | Alt | Win)) == 0) return "Use Ctrl, Alt, or Win with a key, or choose an F1–F24 key.";
+        if (!functionKey && (modifiers & (Control | Alt | Win)) == 0) return L.T("Use Ctrl, Alt, or Win with a key, or choose an F1–F24 key.");
         return null;
     }
     public static uint CurrentModifiers()

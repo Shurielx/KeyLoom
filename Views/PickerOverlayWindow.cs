@@ -19,7 +19,7 @@ public sealed class PickerOverlayWindow : OverlayWindow
     private readonly TextBlock _detail = new() { FontSize = 11, Foreground = Frozen(Color.FromRgb(90, 113, 132)), Margin = new(0, 2, 0, 0) };
     public PickerOverlayWindow()
     {
-        Title = "Keyloom point picker";
+        Title = L.T("Keyloom point picker");
         _label = new()
         {
             Background = Frozen(Color.FromArgb(0xF2, 0xFB, 0xFD, 0xFF)), BorderBrush = Frozen(Color.FromArgb(0x33, 15, 53, 80)), BorderThickness = new(1),

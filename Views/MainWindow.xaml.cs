@@ -18,7 +18,8 @@ namespace Keyloom.Views;
 /// <summary>The one Keyloom window: the macro list, plus the editor, settings and help as pages inside it.</summary>
 public partial class MainWindow : Window
 {
-    private const string ListTitle = "Macros", ListSubtitle = "Shortcuts work everywhere, even while Keyloom sits in the tray.";
+    private static string ListTitle => L.T("Macros");
+    private static string ListSubtitle => L.T("Shortcuts work everywhere, even while Keyloom sits in the tray.");
     /// <summary>Test runs from the editor use ids with this prefix, so they never count in the statistics.</summary>
     private const string TestPrefix = "test-";
     private readonly MacroExecutor _executor = new();
@@ -36,6 +37,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        L.Apply(this);
         Backdrop.Attach(this);
         VersionButton.Content = AppVersion.Display;
         var loaded = _storage.LoadProfiles();
@@ -98,7 +100,7 @@ public partial class MainWindow : Window
             if (!test) { _usage.Started(p.Id); ShowUsage(p); }
             ShowRun(p);
             _runClock.Start();
-            if (!_exiting) _toast.ShowRunning(test ? $"Test · {p.Name}" : p.Name, () => Count(p));
+            if (!_exiting) _toast.ShowRunning(test ? L.T($"Test · {p.Name}") : p.Name, () => Count(p));
             return;
         }
         // Already counted when Keyloom exits with the macro still running.
@@ -106,19 +108,19 @@ public partial class MainWindow : Window
         var ran = clock.Elapsed;
         if (_running.Count == 0) _runClock.Stop();
         if (!test) { _usage.Stopped(p.Id, ran, p.ExecutionCount); ShowUsage(p); }
-        if (!_exiting) _toast.ShowStopped(test ? $"Test · {p.Name}" : p.Name, $"Ran {UsageStore.Clock(ran)} · {Count(p)}");
+        if (!_exiting) _toast.ShowStopped(test ? L.T($"Test · {p.Name}") : p.Name, L.T($"Ran {UsageStore.Clock(ran)} · {Count(p)}"));
         if (test) _testDone?.TrySetResult();
     }
     private static string Count(MacroProfile p) => p.Behavior == MacroBehaviorType.PressAndHold ? "held"
         : $"{p.ExecutionCount:N0} {p.CycleNoun}{(p.ExecutionCount == 1 ? "" : "s")}";
     private void ShowRun(MacroProfile p)
     {
-        if (_running.TryGetValue(p, out var clock)) p.RunText = $"Running · {UsageStore.Clock(clock.Elapsed)} · {Count(p)}";
+        if (_running.TryGetValue(p, out var clock)) p.RunText = L.T($"Running · {UsageStore.Clock(clock.Elapsed)} · {Count(p)}");
     }
     private void ShowUsage(MacroProfile p)
     {
         var u = _usage.For(p.Id);
-        p.UsageText = u.Starts == 0 ? "Not used yet" : $"Used {u.Starts:N0}× · {UsageStore.Duration(u.RunMs)}";
+        p.UsageText = u.Starts == 0 ? L.T("Not used yet") : L.T($"Used {u.Starts:N0}× · {UsageStore.Duration(u.RunMs)}");
     }
     /// <summary>Plays a macro once from the editor with real input. The window gets out of the way and comes back afterwards.</summary>
     private async Task TestRunAsync(MacroProfile p)
@@ -171,9 +173,9 @@ public partial class MainWindow : Window
         if (_activeEditor != null) _activeEditor.Cancel();
         else ShowPage(null, ListTitle, ListSubtitle);
     }
-    private void Settings_Click(object sender, RoutedEventArgs e) => ShowPage(new SettingsView(null, _profiles, _usage), "Settings", "Appearance, usage and where your macros live.");
-    private void Help_Click(object sender, RoutedEventArgs e) => ShowPage(new HelpView(), "Help", "How Keyloom works, in a minute.");
-    private void About_Click(object sender, RoutedEventArgs e) => ShowPage(new AboutView(), "About Keyloom", "What's new, and whether a newer version is out.");
+    private void Settings_Click(object sender, RoutedEventArgs e) => ShowPage(new SettingsView(null, _profiles, _usage), L.T("Settings"), L.T("Appearance, usage and where your macros live."));
+    private void Help_Click(object sender, RoutedEventArgs e) => ShowPage(new HelpView(), L.T("Help"), L.T("How Keyloom works, in a minute."));
+    private void About_Click(object sender, RoutedEventArgs e) => ShowPage(new AboutView(), L.T("About Keyloom"), L.T("What's new, and whether a newer version is out."));
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key == Key.Escape && !e.Handled)
@@ -207,7 +209,7 @@ public partial class MainWindow : Window
             OpenEditor(copy, false, () =>
             {
                 int index = _profiles.IndexOf(p);
-                if (index < 0) throw new InvalidOperationException("This macro was removed while you edited it.");
+                if (index < 0) throw new InvalidOperationException(L.T("This macro was removed while you edited it."));
                 var next = _profiles.ToArray(); next[index] = copy;
                 _storage.SaveProfiles(next);
                 _profiles[index] = copy;
@@ -224,7 +226,7 @@ public partial class MainWindow : Window
         {
             try { commit(); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
-            { editor.Say("The macro could not be saved: " + ex.Message, true); return; }
+            { editor.Say(L.T($"The macro could not be saved: {ex.Message}"), true); return; }
             IconStore.Prune(_profiles.Select(x => x.IconImage).Where(x => x.Length > 0));
             CloseEditor();
         };
@@ -233,7 +235,7 @@ public partial class MainWindow : Window
         // The editor needs more room than the list; grow a small window once.
         if (WindowState == WindowState.Normal && ActualHeight > 0 && ActualHeight < 640)
             Height = Math.Min(700, SystemParameters.WorkArea.Height - 40);
-        ShowPage(editor, isNew ? "New macro" : "Edit macro", isNew ? "Choose what it does, set a shortcut, then save." : p.Name);
+        ShowPage(editor, isNew ? L.T("New macro") : L.T("Edit macro"), isNew ? L.T("Choose what it does, set a shortcut, then save.") : p.Name);
     }
     private void CloseEditor()
     {
@@ -248,7 +250,7 @@ public partial class MainWindow : Window
         Run(async () =>
         {
             await _executor.StopAsync();
-            if (!await Sheets.ConfirmAsync("Delete this macro?", $"'{p.Name}' and its shortcut will be removed. This can't be undone.", "Delete", danger: true)) return;
+            if (!await Sheets.ConfirmAsync(L.T("Delete this macro?"), L.T($"'{p.Name}' and its shortcut will be removed. This can't be undone."), L.T("Delete"), danger: true)) return;
             _storage.SaveProfiles(_profiles.Where(x => x != p));
             _profiles.Remove(p); RegisterShortcuts();
             _usage.Keep(_profiles.Select(x => x.Id)); _usage.Save();
@@ -334,7 +336,7 @@ public partial class MainWindow : Window
         if (vk == 0) return;
         if (Shortcut.Problem(modifiers, vk) is { } problem) { StatusText.Text = problem; return; }
         if (_profiles.FirstOrDefault(x => x != p && x.PrimaryVk == vk && x.PrimaryModifiers == modifiers) is { } other)
-        { StatusText.Text = $"'{other.Name}' already uses {Shortcut.Format(modifiers, vk)}."; return; }
+        { StatusText.Text = L.T($"'{other.Name}' already uses {Shortcut.Format(modifiers, vk)}."); return; }
         EndCapture();
         ChangeInPlace(p, c => { c.PrimaryVk = vk; c.PrimaryModifiers = modifiers; c.FallbackVk = 0; c.FallbackModifiers = 0; });
         RegisterShortcuts();

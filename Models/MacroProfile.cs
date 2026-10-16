@@ -19,7 +19,7 @@ public class MacroProfile : INotifyPropertyChanged
     private long _executionCount;
     private string _hotkeyStatus = "";
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = "New macro";
+    public string Name { get; set; } = L.T("New macro");
     public uint PrimaryVk { get; set; }
     public uint PrimaryModifiers { get; set; }
     public uint FallbackVk { get; set; }
@@ -64,19 +64,20 @@ public class MacroProfile : INotifyPropertyChanged
     [JsonIgnore] public string HotkeyLabel => Services.Shortcut.Format(PrimaryModifiers, PrimaryVk);
     [JsonIgnore] public string BehaviorBadge => Behavior switch
     {
-        MacroBehaviorType.ClickSpam => "Repeat input",
-        MacroBehaviorType.PressAndHold => "Hold input",
-        MacroBehaviorType.Script => "Script",
-        _ => "Sequence"
+        MacroBehaviorType.ClickSpam => L.T("Repeat input"),
+        MacroBehaviorType.PressAndHold => L.T("Hold input"),
+        MacroBehaviorType.Script => L.T("Script"),
+        _ => L.T("Sequence")
     };
     [JsonIgnore] public string BehaviorSummary => Behavior switch
     {
-        MacroBehaviorType.ClickSpam => $"{TargetLabel} every {SpamIntervalMs} ms{PointLabel}",
+        MacroBehaviorType.ClickSpam => L.T($"{TargetLabel} every {SpamIntervalMs} ms{PointLabel}"),
         MacroBehaviorType.PressAndHold => $"Hold {TargetLabel.ToLowerInvariant()}{PointLabel}",
-        MacroBehaviorType.Script => $"Script · {Script.Split('\n').Length} lines · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}",
-        _ => $"{Actions.Count(a => !a.IsGroupMarker)} steps · {(RepeatCount == 0 ? "Loop" : RepeatCount == 1 ? "Run once" : $"{RepeatCount} runs")}"
-    } + ExecutionMode switch { ExecutionMode.Background => " · background", ExecutionMode.QuickSwitch => " · quick switch", _ => "" };
-    private string PointLabel => UsePoint && TargetType == TargetInputType.Mouse ? $" at {PointX}, {PointY}" : "";
+        MacroBehaviorType.Script => L.T($"Script · {L.N(Script.Split('\n').Length, "{0} line", "{0} lines")} · {RunsText}"),
+        _ => L.T($"{L.N(Actions.Count(a => !a.IsGroupMarker), "{0} step", "{0} steps")} · {RunsText}")
+    } + ExecutionMode switch { ExecutionMode.Background => L.T(" · background"), ExecutionMode.QuickSwitch => L.T(" · quick switch"), _ => "" };
+    private string RunsText => RepeatCount == 0 ? L.T("Loop") : RepeatCount == 1 ? L.T("Run once") : L.N(RepeatCount, "{0} run", "{0} runs");
+    private string PointLabel => UsePoint && TargetType == TargetInputType.Mouse ? L.T($" at {PointX}, {PointY}") : "";
     [JsonIgnore] public string TargetLabel => TargetType == TargetInputType.Mouse ? $"{TargetMouseButton} click" : TargetKey;
     [JsonIgnore] public string StatusBadgeText => IsActive ? "Running" : "Ready";
     [JsonIgnore] public bool IsActive

@@ -44,7 +44,7 @@ public sealed class WindowMessageDriver : IInputDriver
         {
             "Left" => (0x201u, 0x1u, 0u), "Right" => (0x204u, 0x2u, 0u), "Middle" => (0x207u, 0x10u, 0u),
             "X1" => (0x20Bu, 0x20u, 1u), "X2" => (0x20Bu, 0x40u, 2u),
-            _ => throw new ArgumentException("Unknown mouse button.")
+            _ => throw new ArgumentException(L.T("Unknown mouse button."))
         };
         if (down) _buttons |= flag; else _buttons &= ~flag;
         // Up messages follow their down message: LBUTTONUP = LBUTTONDOWN + 1, XBUTTONUP = XBUTTONDOWN + 1.
@@ -109,6 +109,6 @@ public sealed class WindowMessageDriver : IInputDriver
     private static void Post(IntPtr window, uint message, IntPtr wParam, IntPtr lParam)
     {
         if (!PostMessage(window, message, wParam, lParam))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "The target window rejected background input. It may be closed or running as administrator.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("The target window rejected background input. It may be closed or running as administrator."));
     }
 }

@@ -61,14 +61,14 @@ public partial class MacroEditorView
     }
     private void ReadGridStep(MacroAction a)
     {
-        a.Grid = GridBox.SelectedItem as string ?? throw new ArgumentException("Pick a grid, or mark a new one on the screen.");
+        a.Grid = GridBox.SelectedItem as string ?? throw new ArgumentException(L.T("Pick a grid, or mark a new one on the screen."));
         a.StopIfMissing = GridStopBox.IsChecked == true;
         if (a.ActionType == MacroActionType.ClickCell)
         {
             a.Pick = (CellPick)Math.Max(0, CellPickBox.SelectedIndex);
-            a.CellValue = a.Pick == CellPick.Equals ? (long.TryParse(CellValueTextBox.Text.Trim(), out long v) ? v : throw new ArgumentException("The number to click must be a whole number.")) : 0;
+            a.CellValue = a.Pick == CellPick.Equals ? (long.TryParse(CellValueTextBox.Text.Trim(), out long v) ? v : throw new ArgumentException(L.T("The number to click must be a whole number."))) : 0;
         }
-        else a.GlideMs = Number(DragTimeTextBox.Text, "Drag time");
+        else a.GlideMs = Number(DragTimeTextBox.Text, L.T("Drag time"));
     }
     /// <summary>Keeps the grids that steps read; one marked and then left unused goes away on save.</summary>
     private void ApplyGrids(MacroProfile p)
@@ -88,7 +88,7 @@ public partial class MacroEditorView
         GridNameTextBox.Text = g.Name;
         GridRowsTextBox.Text = g.Rows.ToString();
         GridColumnsTextBox.Text = g.Columns.ToString();
-        GridInfoText.Text = $"{g.Area.Width} × {g.Area.Height} px {(g.Area.Space == CoordinateSpace.Window ? "in the target window" : "on the screen")}, at {g.Area.X}, {g.Area.Y}";
+        GridInfoText.Text = g.Area.Space == CoordinateSpace.Window ? L.T($"{g.Area.Width} × {g.Area.Height} px in the target window, at {g.Area.X}, {g.Area.Y}") : L.T($"{g.Area.Width} × {g.Area.Height} px on the screen, at {g.Area.X}, {g.Area.Y}");
         _loadingStep = loading;
     }
     private void GridBox_Changed(object sender, SelectionChangedEventArgs e)
@@ -110,8 +110,8 @@ public partial class MacroEditorView
         try
         {
             var copy = g.Clone();
-            copy.Rows = Number(GridRowsTextBox.Text, "Rows");
-            copy.Columns = Number(GridColumnsTextBox.Text, "Columns");
+            copy.Rows = Number(GridRowsTextBox.Text, L.T("Rows"));
+            copy.Columns = Number(GridColumnsTextBox.Text, L.T("Columns"));
             ProfileValidator.ValidateGrid(copy);
             g.Rows = copy.Rows; g.Columns = copy.Columns;
             ShowStepHint("");
@@ -132,7 +132,7 @@ public partial class MacroEditorView
         if (name == old) return;
         if (name.Length == 0 || _grids.Any(x => x != g && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            Say(name.Length == 0 ? "A grid needs a name." : $"Another grid is already called '{name}'.", true);
+            Say(name.Length == 0 ? L.T("A grid needs a name.") : L.T($"Another grid is already called '{name}'."), true);
             GridNameTextBox.Text = old; return;
         }
         var picked = SelectedIndices();
@@ -158,7 +158,7 @@ public partial class MacroEditorView
     /// <summary>Drag around a grid on the screen; it becomes the picked step's grid. Inside the target window it follows the window.</summary>
     private async Task MarkGridAsync()
     {
-        var snip = await OutOfTheWay(() => ScreenSnipWindow.TakeAsync(false, MaxGridSide, "Drag around the whole grid, edge to edge"));
+        var snip = await OutOfTheWay(() => ScreenSnipWindow.TakeAsync(false, MaxGridSide, L.T("Drag around the whole grid, edge to edge")));
         if (snip == null) return;
         var area = new ScreenArea(snip.Bounds.X, snip.Bounds.Y, snip.Bounds.Width, snip.Bounds.Height);
         if (_window != null && WindowSystem.Instance.Find(_window) is var handle && handle != IntPtr.Zero)
@@ -178,7 +178,7 @@ public partial class MacroEditorView
             CommitLooking();
         }
         else RefreshGridBox(CurrentGrid?.Name);
-        Say($"Added {grid.Name}. Set its rows and columns, then Read it now to check the numbers.");
+        Say(L.T($"Added {grid.Name}. Set its rows and columns, then Read it now to check the numbers."));
         GridRowsTextBox.Focus(); GridRowsTextBox.SelectAll();
     }
     private async void ReadGrid_Click(object sender, RoutedEventArgs e)
@@ -208,8 +208,8 @@ public partial class MacroEditorView
     {
         GridReadText.Text = reading.ToString();
         int numbers = reading.Values.Count(v => v != null);
-        string pair = reading.Pair() is var (from, to) ? $" A matching pair: {reading.Values[from]} at row {from / reading.Columns + 1}, column {from % reading.Columns + 1}." : " No matching pair.";
-        GridReadNote.Text = (numbers == 0 ? "No numbers found. Check the grid's edges and that the numbers are on the screen." : $"Read {numbers} of {reading.Values.Length} cells in {ms} ms.")
+        string pair = reading.Pair() is var (from, to) ? L.T($" A matching pair: {reading.Values[from]} at row {from / reading.Columns + 1}, column {from % reading.Columns + 1}.") : L.T(" No matching pair.");
+        GridReadNote.Text = (numbers == 0 ? L.T("No numbers found. Check the grid's edges and that the numbers are on the screen.") : L.T($"Read {numbers} of {reading.Values.Length} cells in {ms} ms."))
             + (numbers > 0 ? pair : "");
     }
 }

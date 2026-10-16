@@ -72,7 +72,7 @@ public sealed class WindowsOcrReader : IGridReader
         var values = new long?[rows * columns];
         if (image.Width == 0 || image.Height == 0) return values;
         _engine ??= OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US")) ?? OcrEngine.TryCreateFromUserProfileLanguages()
-            ?? throw new InvalidOperationException("Windows has no text recognition installed. Add a language with OCR in Windows Settings, Time & language.");
+            ?? throw new InvalidOperationException(L.T("Windows has no text recognition installed. Add a language with OCR in Windows Settings, Time & language."));
         int scale = Math.Clamp((int)Math.Ceiling(CellHeightWanted / Math.Max(1.0, (double)image.Height / rows)), 1, 4);
         while (scale > 1 && Math.Max(image.Width, image.Height) * scale > OcrEngine.MaxImageDimension) scale--;
         var big = Enlarge(image, scale);
@@ -135,7 +135,7 @@ public sealed class GridLocator(IScreen screen, IWindowSystem windows, IntPtr wi
     public bool Has(string? name) => _grids.ContainsKey(name ?? "");
     /// <summary>Where the grid is on the screen now.</summary>
     public (int X, int Y, int Width, int Height) Area(string? name) { var g = Get(name); return ScreenAreas.Resolve(screen, windows, window, g.Area, g.Name); }
-    public ScreenGrid Get(string? name) => _grids.TryGetValue(name ?? "", out var g) ? g : throw new ArgumentException($"There is no grid called '{name}'.");
+    public ScreenGrid Get(string? name) => _grids.TryGetValue(name ?? "", out var g) ? g : throw new ArgumentException(L.T($"There is no grid called '{name}'."));
     public GridReading Read(string? name)
     {
         var grid = Get(name);
@@ -155,7 +155,7 @@ public static class ScreenAreas
     /// <summary>An area in screen pixels, cut to what the monitors show. Window areas follow the window.</summary>
     public static (int X, int Y, int Width, int Height) Resolve(IScreen screen, IWindowSystem windows, IntPtr window, ScreenArea area, string owner)
     {
-        if (area.Space == CoordinateSpace.Window && window == IntPtr.Zero) throw new InvalidOperationException($"'{owner}' is in the target window, which was not found.");
+        if (area.Space == CoordinateSpace.Window && window == IntPtr.Zero) throw new InvalidOperationException(L.T($"'{owner}' is in the target window, which was not found."));
         var (left, top) = area.Space == CoordinateSpace.Window ? windows.ClientToScreen(window, area.X, area.Y) : (area.X, area.Y);
         var bounds = screen.Bounds;
         int x1 = Math.Max(left, bounds.X), y1 = Math.Max(top, bounds.Y);

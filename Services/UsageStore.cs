@@ -83,7 +83,7 @@ public sealed class UsageStore
         var t = TimeSpan.FromMilliseconds(Math.Max(0, ms));
         if (t.TotalSeconds < 60) return $"{(int)t.TotalSeconds} s";
         if (t.TotalMinutes < 60) return $"{(int)t.TotalMinutes} min";
-        return t.Minutes == 0 ? $"{(int)t.TotalHours} h" : $"{(int)t.TotalHours} h {t.Minutes} min";
+        return t.Minutes == 0 ? $"{(int)t.TotalHours} h" : L.T($"{(int)t.TotalHours} h {t.Minutes} min");
     }
     /// <summary>A running clock: 0:07, 12:30, 1:02:03.</summary>
     public static string Clock(TimeSpan t) => t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t:mm\\:ss}" : $"{(int)t.TotalMinutes}:{t:ss}";
@@ -95,10 +95,10 @@ public sealed class UsageStore
         int days = (today - t.Date).Days;
         return days switch
         {
-            <= 0 => $"today {t:HH:mm}",
-            1 => "yesterday",
-            < 7 => $"{days} days ago",
-            _ => t.ToString("d MMM", System.Globalization.CultureInfo.InvariantCulture)
+            <= 0 => L.T($"today {t:HH:mm}"),
+            1 => L.T("yesterday"),
+            < 7 => L.N(days, "{0} day ago", "{0} days ago"),
+            _ => t.ToString("d MMM", System.Globalization.CultureInfo.CurrentCulture)
         };
     }
 }

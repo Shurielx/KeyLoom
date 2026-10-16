@@ -23,7 +23,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
 {
     public const int MaxPoints = 400, DefaultGlideMs = 200;
     private const double PanelWidth = 400;
-    private static readonly (string Value, string Label)[] Buttons = [("Left", "Left"), ("Right", "Right"), ("Middle", "Middle"), ("X1", "Back"), ("X2", "Forward")];
+    private static readonly (string Value, string Label)[] Buttons = [("Left", L.T("Left")), ("Right", L.T("Right")), ("Middle", L.T("Middle")), ("X1", L.T("Back")), ("X2", L.T("Forward"))];
     private static readonly Brush ClickFill = Frozen(new SolidColorBrush(Color.FromRgb(210, 65, 47)));
     private static readonly Brush HoldFill = Frozen(new SolidColorBrush(Color.FromRgb(214, 128, 24)));
     private static readonly Brush MoveFill = Frozen(new SolidColorBrush(Color.FromRgb(15, 108, 189)));
@@ -42,8 +42,8 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     private readonly ContentControl _panelBody = new() { Focusable = false };
     private readonly Border _showPanel;
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly RadioButton _pointTab = new() { Content = "Point", GroupName = "BuilderTab", IsChecked = true };
-    private readonly RadioButton _allTab = new() { Content = "All steps", GroupName = "BuilderTab" };
+    private readonly RadioButton _pointTab = new() { Content = L.T("Point"), GroupName = "BuilderTab", IsChecked = true };
+    private readonly RadioButton _allTab = new() { Content = L.T("All steps"), GroupName = "BuilderTab" };
     /// <summary>Text fields that have not applied their value yet; they run before anything else changes.</summary>
     private readonly List<Action> _editors = [];
     private List<RoutePoint> _points = [];
@@ -71,9 +71,9 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         _targets = (targets ?? []).Select(t => t.Clone()).ToList();
         _screen = screen ?? ScreenCapture.Instance;
         if (RouteBuilder.Points(_steps).Count > MaxPoints)
-            throw new ArgumentException($"The builder shows up to {MaxPoints:N0} points. Recorded macros with more are easier to change in the list.");
+            throw new ArgumentException(L.T($"The builder shows up to {MaxPoints:N0} points. Recorded macros with more are easier to change in the list."));
         _space = space; _monitor = monitor; _name = name; _settleMs = settleMs;
-        Title = "Keyloom macro builder";
+        Title = L.T("Keyloom macro builder");
         IsHitTestVisible = true; Focusable = true; ShowActivated = true;
         var backdrop = new Border { Background = Frozen(new SolidColorBrush(Color.FromArgb(0x38, 5, 10, 18))) };
         backdrop.MouseLeftButtonDown += (_, e) => { _backdropPressed = true; e.Handled = true; };
@@ -151,18 +151,19 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     }
     private void AddTimePill(int k, int waitMs, int glideMs, Point at, bool last)
     {
-        string text = waitMs == 0 && glideMs == 0 ? "+ wait" : string.Join(" · ", new[]
+        string text = waitMs == 0 && glideMs == 0 ? L.T("+ wait") : string.Join(" · ", new[]
         {
-            waitMs > 0 ? $"{waitMs:N0} ms" : "", glideMs > 0 ? $"glide {glideMs:N0} ms" : ""
+            waitMs > 0 ? $"{waitMs:N0} ms" : "", glideMs > 0 ? L.T($"glide {glideMs:N0} ms") : ""
         }.Where(s => s.Length > 0));
-        string next = last ? "the next run" : $"point {k + 2}";
+        string next = last ? L.T("the next run") : $"point {k + 2}";
         var pill = new Border
         {
             Child = new TextBlock { Text = text, FontSize = 11.5, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White },
             Padding = new(7, 2, 7, 3), CornerRadius = new(9), Cursor = Cursors.Hand, Background = PillFill,
-            BorderBrush = LineBrush, BorderThickness = new(1), Opacity = text == "+ wait" ? .75 : 1,
-            ToolTip = text == "+ wait" ? $"Add a wait at point {k + 1} before {next}"
-                : $"From point {k + 1} to {next}: stays {waitMs:N0} ms at point {k + 1}{(glideMs > 0 ? $", then glides {glideMs:N0} ms" : "")}. Click to change."
+            BorderBrush = LineBrush, BorderThickness = new(1), Opacity = text == L.T("+ wait") ? .75 : 1,
+            ToolTip = text == L.T("+ wait") ? L.T($"Add a wait at point {k + 1} before {next}")
+                : (glideMs > 0 ? L.T($"From point {k + 1} to {next}: stays {waitMs:N0} ms at point {k + 1}, then glides {glideMs:N0} ms. Click to change.")
+                    : L.T($"From point {k + 1} to {next}: stays {waitMs:N0} ms at point {k + 1}. Click to change."))
         };
         pill.MouseLeftButtonDown += (_, e) => e.Handled = true;
         pill.MouseLeftButtonUp += (_, e) => { e.Handled = true; CommitEdits(); Attempt(() => EditWait(k)); };
@@ -220,13 +221,13 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     {
         var p = _points[k];
         var own = p.Steps.Select(i => _steps[i].DisplayText).ToList();
-        return $"Point {k + 1}: cursor to {Where(_steps[p.Index])}" + (own.Count == 0 ? "\nNothing else happens here" : "\n" + string.Join("\n", own.Take(8)) + (own.Count > 8 ? "\n…" : ""));
+        return L.T($"Point {k + 1}: cursor to {Where(_steps[p.Index])}") + (own.Count == 0 ? L.T("\nNothing else happens here") : "\n" + string.Join("\n", own.Take(8)) + (own.Count > 8 ? "\n…" : ""));
     }
     private static string Where(MacroAction move) => move.Space switch
     {
-        CoordinateSpace.Window => $"{move.X}, {move.Y} in the window",
-        CoordinateSpace.Start => $"{move.X:+0;-0;+0}, {move.Y:+0;-0;+0} from where the cursor starts",
-        _ => $"{move.X}, {move.Y} on the screen"
+        CoordinateSpace.Window => L.T($"{move.X}, {move.Y} in the window"),
+        CoordinateSpace.Start => L.T($"{move.X:+0;-0;+0}, {move.Y:+0;-0;+0} from where the cursor starts"),
+        _ => L.T($"{move.X}, {move.Y} on the screen")
     };
 
     // ---- Picking, dragging and menus ----
@@ -277,36 +278,36 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     /// <summary>Right click on empty space: new points there, and steps for the picked point or the end.</summary>
     private ContextMenu SpaceMenu(Point at)
     {
-        string after = Current >= 0 ? $", after point {Current + 1}" : _points.Count > 0 ? ", at the end" : "";
+        string after = Current >= 0 ? L.T($", after point {Current + 1}") : _points.Count > 0 ? L.T(", at the end") : "";
         var menu = new ContextMenu();
-        menu.Items.Add(new MenuItem { Header = $"New point here{after}", IsEnabled = false });
-        menu.Items.Add(Item("Click here", "IconMouse", () => AddPointAt(at, [new() { ActionType = MacroActionType.MouseClick, MouseButton = _lastButton }])));
-        menu.Items.Add(Item("Hold here", "IconHold", () => AddPointAt(at, RouteBuilder.Hold(_lastButton))));
-        menu.Items.Add(Item("Cursor here, no click", "IconTarget", () => AddPointAt(at, [])));
+        menu.Items.Add(new MenuItem { Header = L.T($"New point here{after}"), IsEnabled = false });
+        menu.Items.Add(Item(L.T("Click here"), "IconMouse", () => AddPointAt(at, [new() { ActionType = MacroActionType.MouseClick, MouseButton = _lastButton }])));
+        menu.Items.Add(Item(L.T("Hold here"), "IconHold", () => AddPointAt(at, RouteBuilder.Hold(_lastButton))));
+        menu.Items.Add(Item(L.T("Cursor here, no click"), "IconTarget", () => AddPointAt(at, [])));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("New picture to find...", "IconImage", () => StartSnip(color: false)));
-        menu.Items.Add(Item("New color to find...", "IconTarget", () => StartSnip(color: true)));
+        menu.Items.Add(Item(L.T("New picture to find..."), "IconImage", () => StartSnip(color: false)));
+        menu.Items.Add(Item(L.T("New color to find..."), "IconTarget", () => StartSnip(color: true)));
         menu.Items.Add(new Separator());
-        if (Current >= 0) menu.Items.Add(AddMenu($"Add to point {Current + 1}", AtPoint(Current), Current));
-        menu.Items.Add(AddMenu("Add at the end", () => _steps.Count, -1));
-        if (_picked.Count > 0) menu.Items.Add(Item(_picked.Count > 1 ? $"Group {_picked.Count} points" : "Group this point", "IconGroup", GroupPicked, "Ctrl+G"));
+        if (Current >= 0) menu.Items.Add(AddMenu(L.T($"Add to point {Current + 1}"), AtPoint(Current), Current));
+        menu.Items.Add(AddMenu(L.T("Add at the end"), () => _steps.Count, -1));
+        if (_picked.Count > 0) menu.Items.Add(Item(_picked.Count > 1 ? L.N(_picked.Count, "Group {0} point", "Group {0} points") : L.T("Group this point"), "IconGroup", GroupPicked, "Ctrl+G"));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item(_panel.Visibility == Visibility.Visible ? "Hide panel" : "Show panel", "IconEdit", TogglePanel, "H"));
-        menu.Items.Add(Item("Undo", null, Undo, "Ctrl+Z", _undo.Count > 0));
-        menu.Items.Add(Item("Done", "IconCheck", Done, "Esc"));
+        menu.Items.Add(Item(_panel.Visibility == Visibility.Visible ? L.T("Hide panel") : L.T("Show panel"), "IconEdit", TogglePanel, "H"));
+        menu.Items.Add(Item(L.T("Undo"), null, Undo, "Ctrl+Z", _undo.Count > 0));
+        menu.Items.Add(Item(L.T("Done"), "IconCheck", Done, "Esc"));
         return menu;
     }
     private ContextMenu PointMenu(int k)
     {
         var menu = new ContextMenu();
-        menu.Items.Add(AddMenu($"Add to point {k + 1}", AtPoint(k), k));
+        menu.Items.Add(AddMenu(L.T($"Add to point {k + 1}"), AtPoint(k), k));
         bool glides = _steps[_points[k].Index].GlideMs > 0;
-        menu.Items.Add(Item(glides ? "Jump here instead of gliding" : "Glide here instead of jumping", "IconMove", () => Attempt(() => SetGlide(k, glides ? 0 : DefaultGlideMs))));
-        menu.Items.Add(Item(_picked.Count > 1 ? $"Group {_picked.Count} points" : "Group this point", "IconGroup", GroupPicked, "Ctrl+G"));
-        if (_points[k].Group >= 0) menu.Items.Add(Item("Ungroup", "IconGroup", () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, _points[k].Group)))));
-        menu.Items.Add(Item("Duplicate point", "IconCopy", () => Attempt(() => Duplicate(k)), "Ctrl+D"));
+        menu.Items.Add(Item(glides ? L.T("Jump here instead of gliding") : L.T("Glide here instead of jumping"), "IconMove", () => Attempt(() => SetGlide(k, glides ? 0 : DefaultGlideMs))));
+        menu.Items.Add(Item(_picked.Count > 1 ? L.N(_picked.Count, "Group {0} point", "Group {0} points") : L.T("Group this point"), "IconGroup", GroupPicked, "Ctrl+G"));
+        if (_points[k].Group >= 0) menu.Items.Add(Item(L.T("Ungroup"), "IconGroup", () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, _points[k].Group)))));
+        menu.Items.Add(Item(L.T("Duplicate point"), "IconCopy", () => Attempt(() => Duplicate(k)), "Ctrl+D"));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item(_picked.Count > 1 ? $"Delete {_picked.Count} points" : "Delete point", "IconTrash", DeletePicked, "Delete"));
+        menu.Items.Add(Item(_picked.Count > 1 ? L.N(_picked.Count, "Delete {0} point", "Delete {0} points") : L.T("Delete point"), "IconTrash", DeletePicked, "Delete"));
         return menu;
     }
     /// <summary>Where steps added to a point go: before the wait it ends with, so that stays the wait before the next point.</summary>
@@ -334,17 +335,17 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         });
         return
         [
-            Item("Click", "IconMouse", () => Add(new MacroAction { ActionType = MacroActionType.MouseClick, MouseButton = _lastButton })),
-            Item("Hold a button", "IconHold", () => Add(RouteBuilder.Hold(_lastButton))),
-            Item("Wait", "IconClock", () => Add(new MacroAction { ActionType = MacroActionType.Delay, DelayMs = RouteBuilder.DefaultWaitMs })),
+            Item(L.T("Click"), "IconMouse", () => Add(new MacroAction { ActionType = MacroActionType.MouseClick, MouseButton = _lastButton })),
+            Item(L.T("Hold a button"), "IconHold", () => Add(RouteBuilder.Hold(_lastButton))),
+            Item(L.T("Wait"), "IconClock", () => Add(new MacroAction { ActionType = MacroActionType.Delay, DelayMs = RouteBuilder.DefaultWaitMs })),
             new Separator(),
-            Item("Press a key", "IconKeyboard", () => Add(new MacroAction { ActionType = MacroActionType.KeyPress, KeyName = "E" })),
-            Item("Hold a key", "IconHold", () => Add(RouteBuilder.HoldKey("W"))),
-            Item("Type text", "IconText", () => Add(new MacroAction { ActionType = MacroActionType.Text, Text = "Hello" })),
-            Item("Scroll", "IconScroll", () => Add(new MacroAction { ActionType = MacroActionType.MouseScroll, ScrollAmount = 1 })),
+            Item(L.T("Press a key"), "IconKeyboard", () => Add(new MacroAction { ActionType = MacroActionType.KeyPress, KeyName = "E" })),
+            Item(L.T("Hold a key"), "IconHold", () => Add(RouteBuilder.HoldKey("W"))),
+            Item(L.T("Type text"), "IconText", () => Add(new MacroAction { ActionType = MacroActionType.Text, Text = "Hello" })),
+            Item(L.T("Scroll"), "IconScroll", () => Add(new MacroAction { ActionType = MacroActionType.MouseScroll, ScrollAmount = 1 })),
             new Separator(),
-            TargetItems("Click on a target", "IconImage", t => Add(new MacroAction { ActionType = MacroActionType.ClickTarget, Target = t, MouseButton = _lastButton, TimeoutMs = 1000 })),
-            TargetItems("Wait until a target shows", "IconClock", t => Add(new MacroAction { ActionType = MacroActionType.WaitUntil, Target = t }))
+            TargetItems(L.T("Click on a target"), "IconImage", t => Add(new MacroAction { ActionType = MacroActionType.ClickTarget, Target = t, MouseButton = _lastButton, TimeoutMs = 1000 })),
+            TargetItems(L.T("Wait until a target shows"), "IconClock", t => Add(new MacroAction { ActionType = MacroActionType.WaitUntil, Target = t }))
         ];
     }
 
@@ -406,7 +407,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         Change(() => RouteBuilder.Group(_steps, points, $"Group {number}"));
         // The first point shows the group's settings.
         Pick([first]);
-        Say($"Grouped {points.Count:N0} {(points.Count == 1 ? "point" : "points")}. Set how often the group repeats below.");
+        Say(L.T($"Grouped {L.N(points.Count, "{0} point", "{0} points")}. Set how often the group repeats below."));
     });
     /// <summary>Changes the steps as one undo step, then redraws. A failed change leaves the steps as they were.</summary>
     private void Change(Action change)
@@ -436,20 +437,20 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
 
     private Border Panel()
     {
-        var header = new Grid { Cursor = Cursors.SizeAll, Background = Brushes.Transparent, Margin = new(0, 0, 0, 10), ToolTip = "Drag to move the panel" };
+        var header = new Grid { Cursor = Cursors.SizeAll, Background = Brushes.Transparent, Margin = new(0, 0, 0, 10), ToolTip = L.T("Drag to move the panel") };
         header.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var title = new DockPanel { VerticalAlignment = VerticalAlignment.Center };
         var flask = Glyph("IconFlask", 12);
         flask.Margin = new(0, 0, 8, 0);
         DockPanel.SetDock(flask, Dock.Left); title.Children.Add(flask);
-        title.Children.Add(new TextBlock { Text = $"Builder · {_name}", FontSize = 14, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+        title.Children.Add(new TextBlock { Text = L.T($"Builder · {_name}"), FontSize = 14, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
         header.Children.Add(title);
         var help = Glyph("IconHelp", 13);
         help.Margin = new(0, 0, 4, 0);
         help.Cursor = Cursors.Help;
-        help.ToolTip = "Left click picks a point and drags it; Ctrl+click picks more.\nRight click adds points and steps.\nA dashed line jumps the cursor, a solid one glides it.\nH hides this panel, Esc finishes, Ctrl+Z undoes.";
-        var hide = IconButton("IconMinimize", "Hide the panel (H). Right click still adds and changes things.", TogglePanel);
+        help.ToolTip = L.T("Left click picks a point and drags it; Ctrl+click picks more.\nRight click adds points and steps.\nA dashed line jumps the cursor, a solid one glides it.\nH hides this panel, Esc finishes, Ctrl+Z undoes.");
+        var hide = IconButton("IconMinimize", L.T("Hide the panel (H). Right click still adds and changes things."), TogglePanel);
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Children = { help, hide } };
         Grid.SetColumn(tools, 1);
         header.Children.Add(tools);
@@ -470,11 +471,11 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         _status.Visibility = Visibility.Collapsed;
         var tabs = new Border { Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { _pointTab, _allTab } }, HorizontalAlignment = HorizontalAlignment.Left, Margin = new(0, 0, 0, 12) };
         tabs.SetResourceReference(StyleProperty, "SegmentBar");
-        var undo = new Button { Content = "Undo", Padding = new(11, 4, 11, 4), Margin = new(0, 0, 6, 0), ToolTip = "Ctrl+Z" };
+        var undo = new Button { Content = L.T("Undo"), Padding = new(11, 4, 11, 4), Margin = new(0, 0, 6, 0), ToolTip = "Ctrl+Z" };
         undo.Click += (_, _) => Undo();
-        var cancel = new Button { Content = "Cancel", Padding = new(11, 4, 11, 4), Margin = new(0, 0, 6, 0), ToolTip = "Leave without changing the macro" };
+        var cancel = new Button { Content = L.T("Cancel"), Padding = new(11, 4, 11, 4), Margin = new(0, 0, 6, 0), ToolTip = L.T("Leave without changing the macro") };
         cancel.Click += (_, _) => Finish(null);
-        var done = new Button { Content = "Done", Padding = new(14, 4, 14, 4), ToolTip = "Put these steps in the editor (Esc). Save the macro there; one Ctrl+Z in the list undoes it." };
+        var done = new Button { Content = L.T("Done"), Padding = new(14, 4, 14, 4), ToolTip = L.T("Put these steps in the editor (Esc). Save the macro there; one Ctrl+Z in the list undoes it.") };
         done.SetResourceReference(StyleProperty, "PrimaryButton");
         done.Click += (_, _) => Done();
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 12, 0, 0), Children = { undo, cancel, done } };
@@ -491,7 +492,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     }
     private Border ShowPanelPill()
     {
-        var text = new TextBlock { Text = "Show panel  (H)", FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White };
+        var text = new TextBlock { Text = L.T("Show panel  (H)"), FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White };
         var pill = new Border { Child = text, Padding = new(12, 6, 12, 7), CornerRadius = new(14), Background = PillFill, BorderBrush = LineBrush, BorderThickness = new(1), Cursor = Cursors.Hand, Visibility = Visibility.Collapsed };
         pill.MouseLeftButtonDown += (_, e) => e.Handled = true;
         pill.MouseLeftButtonUp += (_, e) => { e.Handled = true; TogglePanel(); };
@@ -549,25 +550,25 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     private void OverviewPanel(StackPanel body)
     {
         int steps = _steps.Count(a => !a.IsGroupMarker);
-        body.Children.Add(Heading(_points.Count == 0 ? "No points yet" : $"{_points.Count:N0} {(_points.Count == 1 ? "point" : "points")} · {steps:N0} steps"));
-        body.Children.Add(Muted(_points.Count == 0 ? "Right click where the cursor should go and choose Click here, Hold here or Cursor here." : "Pick a point to see what happens there, or open All steps.", new(0, 0, 0, 12)));
+        body.Children.Add(Heading(_points.Count == 0 ? L.T("No points yet") : L.N(_points.Count, "{0} point", "{0} points") + " · " + L.N(steps, "{0} step", "{0} steps")));
+        body.Children.Add(Muted(_points.Count == 0 ? L.T("Right click where the cursor should go and choose Click here, Hold here or Cursor here.") : L.T("Pick a point to see what happens there, or open All steps."), new(0, 0, 0, 12)));
         body.Children.Add(ClickDelayField());
         TargetsSummary(body);
         var (start, end) = RouteBuilder.Opening(_steps);
         if (end > start || _points.Count == 0)
         {
-            body.Children.Add(Label("Before the first point"));
+            body.Children.Add(Label(L.T("Before the first point")));
             Timeline(body, RouteBuilder.Units(_steps, start, end), press: false);
-            body.Children.Add(AddButton(AtPoint(-1), -1, "Add a step"));
+            body.Children.Add(AddButton(AtPoint(-1), -1, L.T("Add a step")));
         }
     }
     private void PickedPanel(StackPanel body)
     {
-        body.Children.Add(Heading($"{_picked.Count:N0} points picked"));
+        body.Children.Add(Heading(L.N(_picked.Count, "{0} point picked", "{0} points picked")));
         body.Children.Add(Muted("Points " + string.Join(", ", _picked.Order().Select(k => k + 1)), new(0, 0, 0, 12)));
-        var group = new Button { Content = "Group them", Padding = new(11, 4, 11, 4), Margin = new(0, 0, 6, 0), ToolTip = "Ctrl+G. Points must sit in the same group, or in none." };
+        var group = new Button { Content = L.T("Group them"), Padding = new(11, 4, 11, 4), Margin = new(0, 0, 6, 0), ToolTip = L.T("Ctrl+G. Points must sit in the same group, or in none.") };
         group.Click += (_, _) => GroupPicked();
-        var delete = new Button { Content = "Delete", Padding = new(11, 4, 11, 4), ToolTip = "Delete" };
+        var delete = new Button { Content = L.T("Delete"), Padding = new(11, 4, 11, 4), ToolTip = L.T("Delete") };
         delete.SetResourceReference(StyleProperty, "DangerButton");
         delete.Click += (_, _) => DeletePicked();
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { group, delete } });
@@ -578,7 +579,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         var p = _points[k];
         var move = _steps[p.Index];
         var head = new DockPanel { Margin = new(0, 0, 0, 10) };
-        var delete = IconButton("IconTrash", "Delete this point and its steps (Delete)", DeletePicked);
+        var delete = IconButton("IconTrash", L.T("Delete this point and its steps (Delete)"), DeletePicked);
         DockPanel.SetDock(delete, Dock.Right); head.Children.Add(delete);
         head.Children.Add(new StackPanel { Children = { Heading($"Point {k + 1}"), Muted($"at {Where(move)}", new()) } });
         body.Children.Add(head);
@@ -586,19 +587,19 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         // How the cursor gets there.
         var bar = new Border { HorizontalAlignment = HorizontalAlignment.Left };
         bar.SetResourceReference(StyleProperty, "SegmentBar");
-        var jump = new RadioButton { Content = "Jump", GroupName = "Travel", IsChecked = move.GlideMs == 0, ToolTip = "The cursor appears there at once" };
-        var glide = new RadioButton { Content = "Glide", GroupName = "Travel", IsChecked = move.GlideMs > 0, ToolTip = "The cursor travels there along a line, like a hand would" };
+        var jump = new RadioButton { Content = L.T("Jump"), GroupName = "Travel", IsChecked = move.GlideMs == 0, ToolTip = L.T("The cursor appears there at once") };
+        var glide = new RadioButton { Content = L.T("Glide"), GroupName = "Travel", IsChecked = move.GlideMs > 0, ToolTip = L.T("The cursor travels there along a line, like a hand would") };
         foreach (var choice in new[] { jump, glide }) choice.SetResourceReference(StyleProperty, "Segment");
         jump.Checked += (_, _) => { if (!_rebuilding) Attempt(() => SetGlide(k, 0)); };
         glide.Checked += (_, _) => { if (!_rebuilding) Attempt(() => SetGlide(k, DefaultGlideMs)); };
         bar.Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { jump, glide } };
         var travel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 0, 0, 14) };
-        travel.Children.Add(new TextBlock { Text = "Cursor", Width = 58, VerticalAlignment = VerticalAlignment.Center });
+        travel.Children.Add(new TextBlock { Text = L.T("Cursor"), Width = 58, VerticalAlignment = VerticalAlignment.Center });
         travel.Children.Add(bar);
         if (move.GlideMs > 0)
         {
             travel.Children.Add(Muted("in", new(8, 0, 6, 0)));
-            travel.Children.Add(Unit(Box(move.GlideMs.ToString(), 56, "How long the glide takes", text => RouteBuilder.Change(_steps, p.Index, a => a.GlideMs = Whole(text, "Glide"))), "ms"));
+            travel.Children.Add(Unit(Box(move.GlideMs.ToString(), 56, L.T("How long the glide takes"), text => RouteBuilder.Change(_steps, p.Index, a => a.GlideMs = Whole(text, "Glide"))), "ms"));
         }
         body.Children.Add(travel);
 
@@ -606,12 +607,12 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         var units = RouteBuilder.Units(_steps, p.Index + 1, p.End);
         int trailing = RouteBuilder.TrailingWait(_steps, p);
         var inner = trailing >= 0 ? units.Take(units.Count - 1).ToList() : units;
-        body.Children.Add(Label("At this point"));
+        body.Children.Add(Label(L.T("At this point")));
         Timeline(body, inner, press: true);
-        body.Children.Add(AddButton(AtPoint(k), k, "Add a step"));
+        body.Children.Add(AddButton(AtPoint(k), k, L.T("Add a step")));
 
         // The wait before the next point closes the timeline.
-        string next = k + 1 < _points.Count ? $"point {k + 2}" : "the next run";
+        string next = k + 1 < _points.Count ? $"point {k + 2}" : L.T("the next run");
         var then = new DockPanel { Margin = new(0, 14, 0, 0), LastChildFill = true };
         var clock = Glyph("IconClock", 12);
         clock.Margin = new(0, 0, 8, 0);
@@ -619,25 +620,25 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         if (trailing >= 0)
         {
             int at = trailing;
-            var remove = IconButton("IconClose", "Go straight on, without this wait", () => Attempt(() => Change(() => _steps.RemoveAt(at))));
+            var remove = IconButton("IconClose", L.T("Go straight on, without this wait"), () => Attempt(() => Change(() => _steps.RemoveAt(at))));
             DockPanel.SetDock(remove, Dock.Right); then.Children.Add(remove);
             then.Children.Add(new StackPanel
             {
                 Orientation = Orientation.Horizontal, Tag = trailing,
                 Children =
                 {
-                    new TextBlock { Text = "Then wait", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 0) },
-                    Box(_steps[trailing].DelayMs.ToString(), 60, "Milliseconds before going on", text => RouteBuilder.Change(_steps, at, a => a.DelayMs = Whole(text, "Wait"))),
-                    Muted($"ms → {next}", new(6, 0, 0, 0))
+                    new TextBlock { Text = L.T("Then wait"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 0) },
+                    Box(_steps[trailing].DelayMs.ToString(), 60, L.T("Milliseconds before going on"), text => RouteBuilder.Change(_steps, at, a => a.DelayMs = Whole(text, "Wait"))),
+                    Muted(L.T($"ms → {next}"), new(6, 0, 0, 0))
                 }
             });
         }
         else
         {
-            var add = new Button { Content = "+ Wait", Padding = new(8, 2, 8, 2), ToolTip = $"Wait at point {k + 1} before {next}" };
+            var add = new Button { Content = L.T("+ Wait"), Padding = new(8, 2, 8, 2), ToolTip = L.T($"Wait at point {k + 1} before {next}") };
             add.Click += (_, _) => Attempt(() => EditWait(k));
             DockPanel.SetDock(add, Dock.Right); then.Children.Add(add);
-            then.Children.Add(Muted($"Then straight on → {next}", new()));
+            then.Children.Add(Muted(L.T($"Then straight on → {next}"), new()));
         }
         body.Children.Add(then);
         if (p.Group >= 0) GroupSection(body, p.Group);
@@ -645,7 +646,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     /// <summary>Rows with the time each one starts at, counted from when the cursor arrives.</summary>
     private void Timeline(StackPanel body, List<StepUnit> units, bool press)
     {
-        if (units.Count == 0) { body.Children.Add(Muted("Nothing yet: the cursor only goes here.", new(0, 0, 0, 2))); return; }
+        if (units.Count == 0) { body.Children.Add(Muted(L.T("Nothing yet: the cursor only goes here."), new(0, 0, 0, 2))); return; }
         int time = 0;
         bool settled = false;
         for (int u = 0; u < units.Count; u++)
@@ -659,12 +660,14 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
                 settled = true;
                 if (_settleMs > time)
                 {
-                    why = $"Starts at {_settleMs} ms because of the click delay after moving" + (time > 0 ? $"; the {time} ms of waits before it count toward that." : ".") + " Change it under All steps.";
+                    why = time > 0
+                        ? L.T($"Starts at {_settleMs} ms because of the click delay after moving; the {time} ms of waits before it count toward that. Change it under All steps.")
+                        : L.T($"Starts at {_settleMs} ms because of the click delay after moving. Change it under All steps.");
                     time = _settleMs;
                 }
             }
             int index = u;
-            var row = UnitRow(unit, $"+{time:N0} ms",
+            var row = UnitRow(unit, L.T($"+{time:N0} ms"),
                 u > 0 ? () => Attempt(() => Change(() => RouteBuilder.ShiftUnit(_steps, units, index, -1))) : null,
                 u < units.Count - 1 ? () => Attempt(() => Change(() => RouteBuilder.ShiftUnit(_steps, units, index, 1))) : null);
             if (why != null && row.Children[0] is TextBlock timeText)
@@ -680,13 +683,13 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     /// <summary>The macro's click delay after moving, which applies to every click and hold after a cursor move.</summary>
     private FrameworkElement ClickDelayField()
     {
-        var box = Box(_settleMs.ToString(), 52, "Clicks and holds wait at least this long after the cursor arrives, so games see it there first. Waits before the click count toward it. 0 clicks right away.", text =>
+        var box = Box(_settleMs.ToString(), 52, L.T("Clicks and holds wait at least this long after the cursor arrives, so games see it there first. Waits before the click count toward it. 0 clicks right away."), text =>
         {
-            int ms = Whole(text, "Click delay after moving");
-            if (ms > 1000) throw new ArgumentException("Click delay after moving must be between 0 and 1000 ms.");
+            int ms = Whole(text, L.T("Click delay after moving"));
+            if (ms > 1000) throw new ArgumentException(L.T("Click delay after moving must be between 0 and 1000 ms."));
             _settleMs = ms;
         });
-        var row = Field("Click delay", box, "ms after moving");
+        var row = Field(L.T("Click delay"), box, L.T("ms after moving"));
         row.Margin = new(0, 0, 0, 12);
         row.ColumnDefinitions[0].Width = new(80);
         return row;
@@ -716,8 +719,8 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
             body.Children.Add(row);
             i += unit.Length;
         }
-        if (_steps.Count == 0) body.Children.Add(Muted("No steps yet.", new(0, 0, 0, 2)));
-        body.Children.Add(AddButton(() => _steps.Count, -1, "Add a step at the end"));
+        if (_steps.Count == 0) body.Children.Add(Muted(L.T("No steps yet."), new(0, 0, 0, 2)));
+        body.Children.Add(AddButton(() => _steps.Count, -1, L.T("Add a step at the end")));
     }
     private Grid CursorRow(int k, string time)
     {
@@ -726,11 +729,11 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         AddCell(row, 0, Muted(time, new()));
         var dot = new Grid { Width = 18, Height = 18, HorizontalAlignment = HorizontalAlignment.Left, Children = { new Ellipse { Fill = MoveFill }, new TextBlock { Text = (k + 1).ToString(), FontSize = 10, FontWeight = FontWeights.Bold, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } } };
         AddCell(row, 1, dot);
-        var text = new TextBlock { Text = $"{(move.GlideMs > 0 ? "Glide" : "Cursor")} to {Where(move)}{(move.GlideMs > 0 ? $" in {move.GlideMs:N0} ms" : "")}", TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = "Show this point" };
+        var text = new TextBlock { Text = $"{(move.GlideMs > 0 ? "Glide" : "Cursor")} to {Where(move)}{(move.GlideMs > 0 ? $" in {move.GlideMs:N0} ms" : "")}", TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = L.T("Show this point") };
         Grid.SetColumnSpan(text, 2);
         AddCell(row, 2, text);
         row.MouseLeftButtonUp += (_, _) => Pick([k], fromList: true);
-        var delete = IconButton("IconClose", "Delete this point and its steps", () => Attempt(() => Change(() => RouteBuilder.Remove(_steps, _points[k]))));
+        var delete = IconButton("IconClose", L.T("Delete this point and its steps"), () => Attempt(() => Change(() => RouteBuilder.Remove(_steps, _points[k]))));
         AddCell(row, 4, delete);
         ShowOnHover(row, delete);
         return row;
@@ -742,7 +745,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         row.Margin = new(depth * 14, 4, 0, 4);
         AddCell(row, 0, Muted(time, new()));
         AddCell(row, 1, Glyph("IconGroup", 12));
-        var text = new TextBlock { Text = $"{g.GroupName}{(g.Runs > 1 ? $" · repeats {g.Runs:N0}×" : "")}{(g.GapMs > 0 ? $" · +{g.GapMs:N0} ms between steps" : "")}", FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = "Show its first point and the group's settings" };
+        var text = new TextBlock { Text = g.GroupName + (g.Runs > 1 ? L.T($" · repeats {g.Runs:N0}×") : "") + (g.GapMs > 0 ? L.T($" · +{g.GapMs:N0} ms between steps") : ""), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = L.T("Show its first point and the group's settings") };
         Grid.SetColumnSpan(text, 2);
         AddCell(row, 2, text);
         row.MouseLeftButtonUp += (_, _) =>
@@ -750,7 +753,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
             int first = _points.FindIndex(p => p.Group == start);
             if (first >= 0) Pick([first]);
         };
-        var ungroup = IconButton("IconClose", "Ungroup: keep the steps, drop the group", () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, start))));
+        var ungroup = IconButton("IconClose", L.T("Ungroup: keep the steps, drop the group"), () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, start))));
         AddCell(row, 4, ungroup);
         ShowOnHover(row, ungroup);
         return row;
@@ -766,29 +769,29 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         var icon = Glyph("IconGroup", 12);
         icon.Margin = new(0, 0, 8, 0);
         DockPanel.SetDock(icon, Dock.Left); top.Children.Add(icon);
-        var ungroup = IconButton("IconClose", "Ungroup: keep the steps, drop the group", () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, start))));
+        var ungroup = IconButton("IconClose", L.T("Ungroup: keep the steps, drop the group"), () => Attempt(() => Change(() => RouteBuilder.Ungroup(_steps, start))));
         DockPanel.SetDock(ungroup, Dock.Right); top.Children.Add(ungroup);
-        top.Children.Add(Box(g.GroupName, 150, "Group name", text => RouteBuilder.Change(_steps, start, a => a.Name = text.Trim())));
+        top.Children.Add(Box(g.GroupName, 150, L.T("Group name"), text => RouteBuilder.Change(_steps, start, a => a.Name = text.Trim())));
         int count = _points.Count(p => p.Group == start);
         var settings = new WrapPanel { Margin = new(20, 0, 0, 0) };
         settings.Children.Add(new StackPanel
         {
             Orientation = Orientation.Horizontal, Margin = new(0, 0, 14, 4),
-            ToolTip = $"The group's {count:N0} {(count == 1 ? "point plays" : "points play")} this many times in a row before the macro goes on",
+            ToolTip = L.N(count, "The group's {0} point plays this many times in a row before the macro goes on", "The group's {0} points play this many times in a row before the macro goes on"),
             Children =
             {
-                new TextBlock { Text = "Repeat", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 6, 0) },
-                Unit(Box(g.Runs.ToString(), 44, "Times in a row", text => RouteBuilder.Change(_steps, start, a => a.Repeat = Whole(text, "Repeat"))), "×")
+                new TextBlock { Text = L.T("Repeat"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 6, 0) },
+                Unit(Box(g.Runs.ToString(), 44, L.T("Times in a row"), text => RouteBuilder.Change(_steps, start, a => a.Repeat = Whole(text, "Repeat"))), "×")
             }
         });
         settings.Children.Add(new StackPanel
         {
             Orientation = Orientation.Horizontal, Margin = new(0, 0, 0, 4),
-            ToolTip = "Added after every step inside the group, and between repeats. Usually 0: Wait steps are clearer.",
+            ToolTip = L.T("Added after every step inside the group, and between repeats. Usually 0: Wait steps are clearer."),
             Children =
             {
-                new TextBlock { Text = "Extra wait", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 6, 0) },
-                Unit(Box(g.GapMs.ToString(), 44, "Milliseconds after each step in the group", text => RouteBuilder.Change(_steps, start, a => a.GapMs = Whole(text, "Extra wait"))), "ms")
+                new TextBlock { Text = L.T("Extra wait"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 6, 0) },
+                Unit(Box(g.GapMs.ToString(), 44, L.T("Milliseconds after each step in the group"), text => RouteBuilder.Change(_steps, start, a => a.GapMs = Whole(text, L.T("Extra wait")))), "ms")
             }
         });
         box.Child = new StackPanel { Children = { top, settings } };
@@ -796,7 +799,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     }
     private Button AddButton(Func<int> at, int point, string text)
     {
-        var button = new Button { Padding = new(10, 4, 10, 4), Margin = new(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Also on right click" };
+        var button = new Button { Padding = new(10, 4, 10, 4), Margin = new(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = L.T("Also on right click") };
         button.Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { Glyph("IconPlus", 9), new TextBlock { Text = text, Margin = new(7, 0, 0, 0) } } };
         button.Click += (_, _) =>
         {
@@ -839,22 +842,22 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         var row = RowGrid(unit.Start);
         AddCell(row, 0, Muted(time, new()));
         var (icon, label) = unit.IsHold
-            ? (a.ActionType == MacroActionType.KeyDown ? ("IconHold", "Hold key") : ("IconHold", "Hold"))
+            ? (a.ActionType == MacroActionType.KeyDown ? ("IconHold", L.T("Hold key")) : ("IconHold", L.T("Hold")))
             : a.ActionType switch
             {
-                MacroActionType.MouseClick => ("IconMouse", "Click"),
-                MacroActionType.MouseDown => ("IconHold", "Press"),
-                MacroActionType.MouseUp => ("IconRelease", "Release"),
-                MacroActionType.KeyPress => ("IconKeyboard", "Key"),
-                MacroActionType.KeyDown => ("IconHold", "Key down"),
-                MacroActionType.KeyUp => ("IconRelease", "Key up"),
-                MacroActionType.Delay => ("IconClock", "Wait"),
-                MacroActionType.MouseMove => ("IconMove", "Move by"),
-                MacroActionType.MouseScroll => ("IconScroll", "Scroll"),
-                MacroActionType.Text => ("IconText", "Type"),
-                MacroActionType.ClickTarget => ("IconImage", "Click on"),
-                MacroActionType.WaitUntil => ("IconClock", "Wait until"),
-                _ => ("IconInfo", "Step")
+                MacroActionType.MouseClick => ("IconMouse", L.T("Click")),
+                MacroActionType.MouseDown => ("IconHold", L.T("Press")),
+                MacroActionType.MouseUp => ("IconRelease", L.T("Release")),
+                MacroActionType.KeyPress => ("IconKeyboard", L.T("Key")),
+                MacroActionType.KeyDown => ("IconHold", L.T("Key down")),
+                MacroActionType.KeyUp => ("IconRelease", L.T("Key up")),
+                MacroActionType.Delay => ("IconClock", L.T("Wait")),
+                MacroActionType.MouseMove => ("IconMove", L.T("Move by")),
+                MacroActionType.MouseScroll => ("IconScroll", L.T("Scroll")),
+                MacroActionType.Text => ("IconText", L.T("Type")),
+                MacroActionType.ClickTarget => ("IconImage", L.T("Click on")),
+                MacroActionType.WaitUntil => ("IconClock", L.T("Wait until")),
+                _ => ("IconInfo", L.T("Step"))
             };
         AddCell(row, 1, Glyph(icon, 12));
         AddCell(row, 2, new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
@@ -862,10 +865,10 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(6, 0, 0, 0) };
         if (up != null || down != null)
         {
-            tools.Children.Add(IconButton("IconArrowUp", "Earlier", up ?? (() => { }), up != null));
-            tools.Children.Add(IconButton("IconArrowDown", "Later", down ?? (() => { }), down != null));
+            tools.Children.Add(IconButton("IconArrowUp", L.T("Earlier"), up ?? (() => { }), up != null));
+            tools.Children.Add(IconButton("IconArrowDown", L.T("Later"), down ?? (() => { }), down != null));
         }
-        tools.Children.Add(IconButton("IconClose", "Remove", () => Attempt(() => Change(() => _steps.RemoveRange(unit.Start, unit.Length)))));
+        tools.Children.Add(IconButton("IconClose", L.T("Remove"), () => Attempt(() => Change(() => _steps.RemoveRange(unit.Start, unit.Length)))));
         AddCell(row, 4, tools);
         ShowOnHover(row, tools);
         return row;
@@ -884,24 +887,24 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
             Children =
             {
                 what, Muted("for", new(6, 0, 6, 0)),
-                Unit(Box(_steps[wait].DelayMs.ToString(), 50, "How long it stays held", text => RouteBuilder.Change(_steps, wait, s => s.DelayMs = Whole(text, "Hold time"))), "ms")
+                Unit(Box(_steps[wait].DelayMs.ToString(), 50, L.T("How long it stays held"), text => RouteBuilder.Change(_steps, wait, s => s.DelayMs = Whole(text, L.T("Hold time")))), "ms")
             }
         };
     }
     /// <summary>The value of a step, changed in place. Text fields apply on Enter or when they lose focus.</summary>
     private FrameworkElement Editor(int i, MacroAction a) => a.ActionType switch
     {
-        MacroActionType.Delay => Unit(Box(a.DelayMs.ToString(), 70, "Milliseconds", text => RouteBuilder.Change(_steps, i, s => s.DelayMs = Whole(text, "Wait"))), "ms"),
+        MacroActionType.Delay => Unit(Box(a.DelayMs.ToString(), 70, L.T("Milliseconds"), text => RouteBuilder.Change(_steps, i, s => s.DelayMs = Whole(text, "Wait"))), "ms"),
         MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp => ButtonBox(a.MouseButton, button => RouteBuilder.Change(_steps, i, s => s.MouseButton = button)),
         MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => KeyBox(a.KeyName, name => RouteBuilder.Change(_steps, i, s => s.KeyName = name)),
-        MacroActionType.MouseScroll => Unit(Box(a.ScrollAmount.ToString(), 56, "Notches. Negative scrolls down.", text => RouteBuilder.Change(_steps, i, s => s.ScrollAmount = Whole(text, "Scroll", negative: true))), "notches"),
-        MacroActionType.MouseMove => Box($"{a.X}, {a.Y}", 90, "x, y in pixels", text =>
+        MacroActionType.MouseScroll => Unit(Box(a.ScrollAmount.ToString(), 56, L.T("Notches. Negative scrolls down."), text => RouteBuilder.Change(_steps, i, s => s.ScrollAmount = Whole(text, "Scroll", negative: true))), "notches"),
+        MacroActionType.MouseMove => Box($"{a.X}, {a.Y}", 90, L.T("x, y in pixels"), text =>
         {
             var parts = text.Split(',');
-            if (parts.Length != 2) throw new ArgumentException("Enter the move as x, y. Example: 20, -10.");
+            if (parts.Length != 2) throw new ArgumentException(L.T("Enter the move as x, y. Example: 20, -10."));
             RouteBuilder.Change(_steps, i, s => { s.X = Whole(parts[0], "x", true); s.Y = Whole(parts[1], "y", true); });
         }),
-        MacroActionType.Text => Box(a.Text, 150, "Text to type", text => RouteBuilder.Change(_steps, i, s => s.Text = text)),
+        MacroActionType.Text => Box(a.Text, 150, L.T("Text to type"), text => RouteBuilder.Change(_steps, i, s => s.Text = text)),
         MacroActionType.ClickTarget or MacroActionType.WaitUntil => TargetEditor(i, a),
         _ => Muted(a.DisplayText, new())
     };
@@ -934,8 +937,8 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     /// <summary>Click it, then press the key or combination, like W or Ctrl+E.</summary>
     private TextBox KeyBox(string value, Action<string> apply)
     {
-        var box = new TextBox { Text = value, Width = 80, IsReadOnly = true, Cursor = Cursors.Hand, HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Click, then press a key or combination" };
-        box.GotKeyboardFocus += (_, _) => box.Text = "Press a key…";
+        var box = new TextBox { Text = value, Width = 80, IsReadOnly = true, Cursor = Cursors.Hand, HorizontalAlignment = HorizontalAlignment.Left, ToolTip = L.T("Click, then press a key or combination") };
+        box.GotKeyboardFocus += (_, _) => box.Text = L.T("Press a key…");
         box.LostKeyboardFocus += (_, _) => { if (!_rebuilding) box.Text = value; };
         box.PreviewKeyDown += (_, e) =>
         {
@@ -1025,7 +1028,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
     }
     private static int Whole(string text, string label, bool negative = false)
     {
-        if (!int.TryParse(text.Trim(), out int value) || !negative && value < 0) throw new ArgumentException($"{label} must be a whole number{(negative ? "" : " of 0 or more")}.");
+        if (!int.TryParse(text.Trim(), out int value) || !negative && value < 0) throw new ArgumentException(negative ? L.T($"{label} must be a whole number.") : L.T($"{label} must be a whole number of 0 or more."));
         return value;
     }
 

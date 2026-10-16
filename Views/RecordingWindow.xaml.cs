@@ -11,18 +11,19 @@ public partial class RecordingWindow : Window
     public RecordingWindow()
     {
         InitializeComponent();
+        L.Apply(this);
         Backdrop.Attach(this);
         Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - Width) / 2;
         Top = SystemParameters.WorkArea.Top + 18;
     }
-    public void Countdown(int seconds) { StateText.Text = $"Starting in {seconds}..."; }
+    public void Countdown(int seconds) { StateText.Text = L.T($"Starting in {seconds}..."); }
     public void Status(bool paused, long elapsed, int steps)
     {
         PauseButton.IsEnabled = true;
-        PauseButton.Content = paused ? "Resume" : "Pause";
-        StopButton.Content = "Stop";
-        StateText.Text = paused ? "Recording paused" : "Recording";
-        DetailsText.Text = $"{TimeSpan.FromMilliseconds(elapsed):mm\\:ss}   ·   {steps:N0} steps   ·   F8 to stop";
+        PauseButton.Content = paused ? L.T("Resume") : L.T("Pause");
+        StopButton.Content = L.T("Stop");
+        StateText.Text = paused ? L.T("Recording paused") : L.T("Recording");
+        DetailsText.Text = $"{TimeSpan.FromMilliseconds(elapsed):mm\\:ss}   ·   " + L.N(steps, "{0} step", "{0} steps") + "   ·   " + L.T("F8 to stop");
         if (paused) RecordingDot.Fill = new SolidColorBrush(Color.FromRgb(176, 132, 40));
         else RecordingDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "RecordBrush");
         RecordingHalo.Visibility = paused ? Visibility.Hidden : Visibility.Visible;

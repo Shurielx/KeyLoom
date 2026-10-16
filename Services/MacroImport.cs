@@ -41,11 +41,11 @@ public static class MacroImport
     public static string Describe(ImportPlan plan)
     {
         int n = plan.Macros.Count;
-        string text = n == 1 ? $"'{plan.Macros[0].Name}' is added to your macros." : $"{n} macros are added to your list. Nothing you already have is replaced.";
+        string text = n == 1 ? L.T($"'{plan.Macros[0].Name}' is added to your macros.") : L.N(n, "{0} macro is added to your list. Nothing you already have is replaced.", "{0} macros are added to your list. Nothing you already have is replaced.");
         if (plan.ShortcutsCleared.Count > 0)
             text += plan.ShortcutsCleared.Count == 1
-                ? $" '{plan.ShortcutsCleared[0]}' comes without a shortcut, because yours already use it."
-                : $" {plan.ShortcutsCleared.Count} come without a shortcut, because yours already use them: {string.Join(", ", plan.ShortcutsCleared.Select(x => $"'{x}'"))}.";
+                ? L.T($" '{plan.ShortcutsCleared[0]}' comes without a shortcut, because yours already use it.")
+                : " " + L.T($"{L.N(plan.ShortcutsCleared.Count, "{0} macro comes", "{0} macros come")} without a shortcut, because yours already use them: {string.Join(", ", plan.ShortcutsCleared.Select(x => $"'{x}'"))}.");
         return text;
     }
 }

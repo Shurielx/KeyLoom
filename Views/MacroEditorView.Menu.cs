@@ -32,35 +32,35 @@ public partial class MacroEditorView
         var block = PickedBlock();
         if (block.Count == 0)
         {
-            if (_clipboard.Length > 0) yield return Item("Paste", null, "Ctrl+V", Paste);
+            if (_clipboard.Length > 0) yield return Item(L.T("Paste"), null, "Ctrl+V", Paste);
             yield break;
         }
         var picked = SelectedIndices();
         int group = PickedGroup();
-        yield return Item("Insert wait before", "IconClock", null, () => InsertWait(block[0]));
-        yield return Item("Insert wait after", "IconClock", null, () => InsertWait(block[^1] + 1));
+        yield return Item(L.T("Insert wait before"), "IconClock", null, () => InsertWait(block[0]));
+        yield return Item(L.T("Insert wait after"), "IconClock", null, () => InsertWait(block[^1] + 1));
         if (picked.Count(i => !_steps[i].IsGroupMarker) > 1)
-            yield return Item("Insert waits between picked steps", "IconClock", null, InsertWaitsBetween);
+            yield return Item(L.T("Insert waits between picked steps"), "IconClock", null, InsertWaitsBetween);
         yield return new Separator();
         if (group >= 0)
         {
             bool folded = _steps[group].Collapsed;
-            yield return Item(folded ? "Unfold group" : "Fold group", "IconChevron", null, () => ToggleFold(_steps[group]));
-            yield return Item("Ungroup", "IconGroup", "Ctrl+Shift+G", () => Ungroup(group));
+            yield return Item(folded ? L.T("Unfold group") : L.T("Fold group"), "IconChevron", null, () => ToggleFold(_steps[group]));
+            yield return Item(L.T("Ungroup"), "IconGroup", "Ctrl+Shift+G", () => Ungroup(group));
         }
-        yield return Item(group >= 0 ? "Put in a new group" : "Group", "IconGroup", "Ctrl+G", () => GroupSteps(PickedBlock()));
+        yield return Item(group >= 0 ? L.T("Put in a new group") : L.T("Group"), "IconGroup", "Ctrl+G", () => GroupSteps(PickedBlock()));
         yield return new Separator();
-        yield return Item("Duplicate", "IconCopy", "Ctrl+D", () => Duplicate(PickedBlock()));
-        var copies = Item("Duplicate several times", "IconCopy", null, null);
-        foreach (int n in new[] { 2, 3, 5, 10 }) copies.Items.Add(Item($"{n} copies", null, null, () => DuplicateTimes(PickedBlock(), n)));
+        yield return Item(L.T("Duplicate"), "IconCopy", "Ctrl+D", () => Duplicate(PickedBlock()));
+        var copies = Item(L.T("Duplicate several times"), "IconCopy", null, null);
+        foreach (int n in new[] { 2, 3, 5, 10 }) copies.Items.Add(Item(L.N(n, "{0} copy", "{0} copies"), null, null, () => DuplicateTimes(PickedBlock(), n)));
         yield return copies;
-        yield return Item("Copy", null, "Ctrl+C", () => Copy(PickedBlock()));
-        yield return Item("Cut", null, "Ctrl+X", () => { var cut = PickedBlock(); Copy(cut); Delete(cut); });
-        var paste = Item("Paste", null, "Ctrl+V", Paste);
+        yield return Item(L.T("Copy"), null, "Ctrl+C", () => Copy(PickedBlock()));
+        yield return Item(L.T("Cut"), null, "Ctrl+X", () => { var cut = PickedBlock(); Copy(cut); Delete(cut); });
+        var paste = Item(L.T("Paste"), null, "Ctrl+V", Paste);
         paste.IsEnabled = _clipboard.Length > 0;
         yield return paste;
         yield return new Separator();
-        var delete = Item("Delete", "IconTrash", "Delete", () => Delete(PickedBlock()));
+        var delete = Item(L.T("Delete"), "IconTrash", "Delete", () => Delete(PickedBlock()));
         if (delete.Icon is Path icon) icon.SetResourceReference(Shape.FillProperty, "DangerIconBrush");
         yield return delete;
     }
@@ -84,7 +84,7 @@ public partial class MacroEditorView
         var picked = SelectedIndices().Where(i => !_steps[i].IsGroupMarker).ToList();
         var after = picked.Take(picked.Count - 1)
             .Where(i => _steps[i].ActionType != MacroActionType.Delay && (i + 1 >= _steps.Count || _steps[i + 1].ActionType != MacroActionType.Delay)).ToList();
-        if (after.Count == 0) { Say("The picked steps already have waits between them."); return; }
+        if (after.Count == 0) { Say(L.T("The picked steps already have waits between them.")); return; }
         EnsureRoom(after.Count);
         Remember();
         var waits = new List<MacroAction>();
@@ -100,7 +100,7 @@ public partial class MacroEditorView
         finally { _selecting = false; }
         var added = waits.Select(_steps.IndexOf).Order().ToList();
         Select(added); AnimateSteps(added);
-        Say($"Added {added.Count:N0} {(added.Count == 1 ? "wait" : "waits")}. Set their time below.");
+        Say(L.T($"Added {L.N(added.Count, "{0} wait", "{0} waits")}. Set their time below."));
         Dispatcher.BeginInvoke(() => { BulkWaitTextBox.Focus(); BulkWaitTextBox.SelectAll(); }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
     /// <summary>Adds <paramref name="copies"/> copies of the steps right after them, as one change.</summary>
@@ -108,7 +108,7 @@ public partial class MacroEditorView
     {
         if (block.Count == 0) return;
         Insert(block[^1] + 1, Enumerable.Range(0, copies).SelectMany(_ => block.Select(i => _steps[i].Clone())).ToList());
-        Say($"Added {copies:N0} copies.");
+        Say(L.T($"Added {L.N(copies, "{0} copy", "{0} copies")}."));
     }
 
     // ---- + between rows ----

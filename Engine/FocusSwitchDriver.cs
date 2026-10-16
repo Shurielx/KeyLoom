@@ -65,9 +65,9 @@ public sealed class FocusSwitchDriver : IInputDriver, IBurstDriver
         _previous = _focus.Foreground();
         _engaged = true;
         if (_previous == _window) { _previous = IntPtr.Zero; return; }
-        if (_focus.IsMinimized(_window)) { _engaged = false; throw new InvalidOperationException("The target window is minimized. Leave it open, it can stay behind your other windows."); }
+        if (_focus.IsMinimized(_window)) { _engaged = false; throw new InvalidOperationException(L.T("The target window is minimized. Leave it open, it can stay behind your other windows.")); }
         _cursor = _focus.Cursor();
-        if (!_focus.Activate(_window)) { _engaged = false; throw new InvalidOperationException("Windows did not let Keyloom bring the target window to the front."); }
+        if (!_focus.Activate(_window)) { _engaged = false; throw new InvalidOperationException(L.T("Windows did not let Keyloom bring the target window to the front.")); }
         _focus.Pause(SettleMs);
         // Put the pointer over the target first, so input never lands in the window you are using.
         _inner.Position(X, Y); _inner.Move(1, 0); _inner.Move(-1, 0);

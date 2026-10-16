@@ -46,7 +46,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                 stepKeys[a] = KeyResolver.Resolve(a.KeyName);
             IntPtr window = snapshot.NeedsWindow ? _windows.Find(snapshot.Window!) : IntPtr.Zero;
             if (snapshot.NeedsWindow && window == IntPtr.Zero)
-                throw new ArgumentException($"Target window '{snapshot.Window!.Label}' was not found. Open it or pick the window again.");
+                throw new ArgumentException(L.T($"Target window '{snapshot.Window!.Label}' was not found. Open it or pick the window again."));
             _cts = new();
             var token = _cts.Token;
             Volatile.Write(ref _activeProfile, profile);
@@ -182,7 +182,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                 int cell = reading.Pick(a.Pick, a.CellValue);
                 if (cell < 0)
                 {
-                    if (a.StopIfMissing) throw new InvalidOperationException($"{a.GridName} has no cell with {a.PickText}, so the macro stopped.");
+                    if (a.StopIfMissing) throw new InvalidOperationException(L.T($"{a.GridName} has no cell with {a.PickText}, so the macro stopped."));
                     break;
                 }
                 input.Position(reading.Centers[cell].X, reading.Centers[cell].Y);
@@ -194,7 +194,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                 var reading = grids.Read(a.Grid);
                 if (reading.Pair() is not var (from, to))
                 {
-                    if (a.StopIfMissing) throw new InvalidOperationException($"{a.GridName} has no two cells with the same number, so the macro stopped.");
+                    if (a.StopIfMissing) throw new InvalidOperationException(L.T($"{a.GridName} has no two cells with the same number, so the macro stopped."));
                     break;
                 }
                 // Press, travel and let go, with short pauses so the game sees a drag and not a click.
@@ -230,8 +230,8 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             {
                 if (!a.StopIfMissing) return null;
                 throw new InvalidOperationException(a.ActionType == MacroActionType.ClickTarget || !a.Gone
-                    ? $"'{a.TargetName}' was not found on the screen, so the macro stopped."
-                    : $"'{a.TargetName}' did not go away, so the macro stopped.");
+                    ? L.T($"'{a.TargetName}' was not found on the screen, so the macro stopped.")
+                    : L.T($"'{a.TargetName}' did not go away, so the macro stopped."));
             }
             Wait((int)Math.Min(LookEveryMs, Math.Max(1, forever ? LookEveryMs : a.TimeoutMs - clock.ElapsedMilliseconds)), token);
         }

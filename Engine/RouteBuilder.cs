@@ -106,7 +106,7 @@ public static class RouteBuilder
     }
     public static void Insert(List<MacroAction> steps, int at, IReadOnlyList<MacroAction> added)
     {
-        if (steps.Count + added.Count > ProfileValidator.MaxActions) throw new ArgumentException($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps.");
+        if (steps.Count + added.Count > ProfileValidator.MaxActions) throw new ArgumentException(L.T($"A sequence can contain up to {ProfileValidator.MaxActions:N0} steps."));
         foreach (var a in added) ProfileValidator.ValidateAction(a);
         steps.InsertRange(at, added);
     }
@@ -127,8 +127,8 @@ public static class RouteBuilder
     /// <summary>Puts points that sit side by side in one group. They must share the same parent group.</summary>
     public static int Group(List<MacroAction> steps, IReadOnlyCollection<RoutePoint> points, string name)
     {
-        if (points.Count == 0) throw new ArgumentException("Pick the points to group first.");
-        if (points.Select(p => p.Group).Distinct().Count() > 1) throw new ArgumentException("Points in different groups can't be grouped together.");
+        if (points.Count == 0) throw new ArgumentException(L.T("Pick the points to group first."));
+        if (points.Select(p => p.Group).Distinct().Count() > 1) throw new ArgumentException(L.T("Points in different groups can't be grouped together."));
         int start = points.Min(p => p.Index), end = points.Max(p => p.End);
         int depth = 0;
         for (int i = start; i < end; i++)
@@ -136,7 +136,7 @@ public static class RouteBuilder
             if (steps[i].ActionType == MacroActionType.GroupStart) depth++;
             else if (steps[i].ActionType == MacroActionType.GroupEnd && --depth < 0) break;
         }
-        if (depth != 0) throw new ArgumentException("Those points cross a group edge. Pick points from the same group.");
+        if (depth != 0) throw new ArgumentException(L.T("Those points cross a group edge. Pick points from the same group."));
         var grouped = steps.ToList();
         grouped.Insert(end, new MacroAction { ActionType = MacroActionType.GroupEnd });
         grouped.Insert(start, new MacroAction { ActionType = MacroActionType.GroupStart, Name = name, Repeat = 1 });
@@ -147,7 +147,7 @@ public static class RouteBuilder
     public static void Ungroup(List<MacroAction> steps, int groupStart)
     {
         int end = StepGroups.EndOf(steps, groupStart);
-        if (end < 0) throw new ArgumentException("That group has no end.");
+        if (end < 0) throw new ArgumentException(L.T("That group has no end."));
         steps.RemoveAt(end); steps.RemoveAt(groupStart);
     }
 }

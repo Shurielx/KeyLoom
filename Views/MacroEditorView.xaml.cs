@@ -30,6 +30,7 @@ public partial class MacroEditorView : UserControl
     public MacroEditorView(MacroProfile profile, IEnumerable<MacroProfile>? others = null, bool isNew = false)
     {
         InitializeComponent();
+        L.Apply(this);
         Profile = profile; _others = others ?? []; IsNew = isNew;
         _steps = new(profile.Actions.Select(a => a.Clone()));
         MacroNameTextBox.Text = profile.Name;
@@ -43,14 +44,14 @@ public partial class MacroEditorView : UserControl
         RunsTextBox.Text = profile.RepeatCount.ToString();
         StepTypeBox.ItemsSource = new[]
         {
-            new StepChoice(MacroActionType.MouseClick, "Click"), new(MacroActionType.MouseDown, "Hold button"),
-            new(MacroActionType.MouseUp, "Release button"), new(MacroActionType.KeyPress, "Press key"),
-            new(MacroActionType.KeyDown, "Hold key"), new(MacroActionType.KeyUp, "Release key"),
-            new(MacroActionType.Delay, "Wait"), new(MacroActionType.MouseMove, "Move cursor by"),
-            new(MacroActionType.MouseScroll, "Scroll"), new(MacroActionType.Text, "Type text"),
-            new(MacroActionType.MousePosition, "Cursor position"),
-            new(MacroActionType.ClickTarget, "Click on target"), new(MacroActionType.WaitUntil, "Wait until"),
-            new(MacroActionType.ClickCell, "Click a cell"), new(MacroActionType.DragPair, "Drag a matching pair")
+            new StepChoice(MacroActionType.MouseClick, L.T("Click")), new(MacroActionType.MouseDown, L.T("Hold button")),
+            new(MacroActionType.MouseUp, L.T("Release button")), new(MacroActionType.KeyPress, L.T("Press key")),
+            new(MacroActionType.KeyDown, L.T("Hold key")), new(MacroActionType.KeyUp, L.T("Release key")),
+            new(MacroActionType.Delay, L.T("Wait")), new(MacroActionType.MouseMove, L.T("Move cursor by")),
+            new(MacroActionType.MouseScroll, L.T("Scroll")), new(MacroActionType.Text, L.T("Type text")),
+            new(MacroActionType.MousePosition, L.T("Cursor position")),
+            new(MacroActionType.ClickTarget, L.T("Click on target")), new(MacroActionType.WaitUntil, L.T("Wait until")),
+            new(MacroActionType.ClickCell, L.T("Click a cell")), new(MacroActionType.DragPair, L.T("Drag a matching pair"))
         };
         _loadingStep = true; StepTypeBox.SelectedIndex = 0; StepMouseBox.SelectedIndex = 0; _loadingStep = false;
         BindSteps(_steps);
@@ -85,7 +86,7 @@ public partial class MacroEditorView : UserControl
         ShortcutTextBox.Text = Shortcut.Format(_modifiers, _key);
         ClearShortcutButton.Visibility = _key == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
-    private void Shortcut_Focused(object sender, KeyboardFocusChangedEventArgs e) => ShortcutTextBox.Text = "Press a shortcut...";
+    private void Shortcut_Focused(object sender, KeyboardFocusChangedEventArgs e) => ShortcutTextBox.Text = L.T("Press a shortcut...");
     private void Shortcut_Unfocused(object sender, KeyboardFocusChangedEventArgs e) => UpdateShortcut();
     private void ClearShortcut_Click(object sender, RoutedEventArgs e) { _key = 0; _modifiers = 0; UpdateShortcut(); }
     private void Shortcut_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -114,11 +115,11 @@ public partial class MacroEditorView : UserControl
         PreviewCard.Visibility = _hasRoute && sequence ? Visibility.Visible : Visibility.Collapsed;
         // Repeat and hold have a few settings; their card only grows as tall as they are.
         Inspector.VerticalAlignment = sequence || script ? VerticalAlignment.Stretch : VerticalAlignment.Top;
-        ModeText.Text = script ? "Does what a script you write says" : sequence ? "Plays steps you record or build" : hold ? "Keeps a key or button held down" : "Clicks or presses again and again";
+        ModeText.Text = script ? L.T("Does what a script you write says") : sequence ? L.T("Plays steps you record or build") : hold ? L.T("Keeps a key or button held down") : L.T("Clicks or presses again and again");
         ButtonLabel.Visibility = MouseButtonPanel.Visibility = keyboard ? Visibility.Collapsed : Visibility.Visible;
         KeyLabel.Visibility = KeyPanel.Visibility = keyboard ? Visibility.Visible : Visibility.Collapsed;
         IntervalPanel.Visibility = RunsPanel.Visibility = hold ? Visibility.Collapsed : Visibility.Visible;
-        IntervalLabel.Text = sequence || script ? "Pause between runs" : "Every";
+        IntervalLabel.Text = sequence || script ? L.T("Pause between runs") : L.T("Every");
         // Only pointer input can follow a move.
         SettlePanel.Visibility = sequence || script || !keyboard ? Visibility.Visible : Visibility.Collapsed;
         ModeHintText.Visibility = hold ? Visibility.Visible : Visibility.Collapsed;
@@ -143,17 +144,17 @@ public partial class MacroEditorView : UserControl
     private MacroActionType StepType => StepTypeBox.SelectedValue is MacroActionType kind ? kind : MacroActionType.MouseClick;
     private static string StepHint(MacroActionType type) => type switch
     {
-        MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => "Examples: Space, F8, Ctrl+C. Use Plus for the + key.",
-        MacroActionType.Delay => "Wait time in milliseconds.",
-        MacroActionType.MouseMove => "Relative movement: x, y in pixels. Example: 20, -10.",
-        MacroActionType.MousePosition => "x, y in pixels. Screen positions can be negative on extra monitors; window positions follow the target window.",
-        MacroActionType.MouseScroll => "Positive scrolls up; negative scrolls down. Example: -3.",
-        MacroActionType.Text => "Types this text into the focused app.",
-        MacroActionType.ClickTarget => "Finds the target on the screen and clicks its middle, wherever it is.",
-        MacroActionType.WaitUntil => "Holds the macro here until the screen shows the target, or until it is gone.",
-        MacroActionType.ClickCell => "Reads the numbers in the grid and clicks the cell you choose.",
-        MacroActionType.DragPair => "Reads the grid and drags one of two equal numbers onto the other, the lowest pair first.",
-        _ => "Choose a mouse button."
+        MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => L.T("Examples: Space, F8, Ctrl+C. Use Plus for the + key."),
+        MacroActionType.Delay => L.T("Wait time in milliseconds."),
+        MacroActionType.MouseMove => L.T("Relative movement: x, y in pixels. Example: 20, -10."),
+        MacroActionType.MousePosition => L.T("x, y in pixels. Screen positions can be negative on extra monitors; window positions follow the target window."),
+        MacroActionType.MouseScroll => L.T("Positive scrolls up; negative scrolls down. Example: -3."),
+        MacroActionType.Text => L.T("Types this text into the focused app."),
+        MacroActionType.ClickTarget => L.T("Finds the target on the screen and clicks its middle, wherever it is."),
+        MacroActionType.WaitUntil => L.T("Holds the macro here until the screen shows the target, or until it is gone."),
+        MacroActionType.ClickCell => L.T("Reads the numbers in the grid and clicks the cell you choose."),
+        MacroActionType.DragPair => L.T("Reads the grid and drags one of two equal numbers onto the other, the lowest pair first."),
+        _ => L.T("Choose a mouse button.")
     };
     private void StepType_Changed(object sender, SelectionChangedEventArgs e)
     {
@@ -168,13 +169,13 @@ public partial class MacroEditorView : UserControl
         MoveOptions.Visibility = StepType == MacroActionType.MousePosition ? Visibility.Visible : Visibility.Collapsed;
         StepValueLabel.Text = StepType switch
         {
-            MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => "Key",
-            MacroActionType.Delay => "Wait (ms)",
-            MacroActionType.MouseMove => "Move by x, y",
-            MacroActionType.MousePosition => "Position x, y",
-            MacroActionType.MouseScroll => "Notches",
-            MacroActionType.Text => "Text",
-            _ => "Button"
+            MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp => L.T("Key"),
+            MacroActionType.Delay => L.T("Wait (ms)"),
+            MacroActionType.MouseMove => L.T("Move by x, y"),
+            MacroActionType.MousePosition => L.T("Position x, y"),
+            MacroActionType.MouseScroll => L.T("Notches"),
+            MacroActionType.Text => L.T("Text"),
+            _ => L.T("Button")
         };
         StepValueTextBox.Visibility = mouse ? Visibility.Collapsed : Visibility.Visible;
         StepValueTextBox.AcceptsReturn = StepType == MacroActionType.Text;
@@ -241,7 +242,7 @@ public partial class MacroEditorView : UserControl
         if (group < 0)
         {
             PlaceTargetOptions(false); SetUntilWords(false);
-            StopIfMissingBox.Visibility = Visibility.Visible; UntilLabel.Text = "Wait until it";
+            StopIfMissingBox.Visibility = Visibility.Visible; UntilLabel.Text = L.T("Wait until it");
             ShowTargetOptions(StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil);
         }
         bool sequence = Mode == 2;
@@ -279,17 +280,17 @@ public partial class MacroEditorView : UserControl
     {
         string value = StepValueTextBox.Text.Trim();
         var a = new MacroAction { ActionType = StepType, MouseButton = ProfileButtons[Math.Max(0, StepMouseBox.SelectedIndex)], KeyName = value, Text = StepValueTextBox.Text };
-        if (StepType == MacroActionType.Delay) a.DelayMs = Number(value, "Wait time");
-        if (StepType == MacroActionType.MouseScroll) a.ScrollAmount = Number(value, "Scroll amount");
+        if (StepType == MacroActionType.Delay) a.DelayMs = Number(value, L.T("Wait time"));
+        if (StepType == MacroActionType.MouseScroll) a.ScrollAmount = Number(value, L.T("Scroll amount"));
         if (StepType is MacroActionType.MouseMove or MacroActionType.MousePosition)
         {
             var parts = value.Split(',');
-            if (parts.Length != 2) throw new ArgumentException("Enter the position as x, y.");
+            if (parts.Length != 2) throw new ArgumentException(L.T("Enter the position as x, y."));
             a.X = Number(parts[0], "X"); a.Y = Number(parts[1], "Y");
             if (StepType == MacroActionType.MousePosition)
             {
                 a.Space = (CoordinateSpace)Math.Max(0, StepSpaceBox.SelectedIndex);
-                a.GlideMs = Number(GlideTextBox.Text, "Glide");
+                a.GlideMs = Number(GlideTextBox.Text, L.T("Glide"));
             }
         }
         if (StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil) ReadTargetStep(a);
@@ -324,7 +325,7 @@ public partial class MacroEditorView : UserControl
     private void Save_Click(object sender, RoutedEventArgs e) => Attempt(() =>
     {
         if (_key != 0 && _others.Any(p => p.Id != Profile.Id && p.PrimaryVk == _key && p.PrimaryModifiers == _modifiers))
-            throw new ArgumentException("Another macro already uses this shortcut.");
+            throw new ArgumentException(L.T("Another macro already uses this shortcut."));
         ReadForm(Profile);
         Saved?.Invoke();
     });
@@ -339,10 +340,10 @@ public partial class MacroEditorView : UserControl
         p.TargetType = KeyboardTarget ? TargetInputType.Keyboard : TargetInputType.Mouse;
         p.TargetMouseButton = SelectedButton;
         p.TargetKey = TargetKeyTextBox.Text.Trim();
-        p.StartDelayMs = Number(StartDelayTextBox.Text, "Start delay");
-        p.PointerSettleMs = Number(SettleTextBox.Text, "Click delay after moving");
-        p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, "Interval");
-        p.RepeatCount = p.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, "Runs");
+        p.StartDelayMs = Number(StartDelayTextBox.Text, L.T("Start delay"));
+        p.PointerSettleMs = Number(SettleTextBox.Text, L.T("Click delay after moving"));
+        p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, L.T("Interval"));
+        p.RepeatCount = p.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, L.T("Runs"));
         p.Actions = p.Behavior == MacroBehaviorType.Script ? new() : new(_steps.Select(a => a.Clone()));
         p.Script = p.Behavior == MacroBehaviorType.Script ? ScriptText : "";
         ApplyTarget(p);
@@ -363,7 +364,7 @@ public partial class MacroEditorView : UserControl
         try { Say(""); action(); }
         catch (ArgumentException ex) { Say(ex.Message, true); }
     }
-    private static int Number(string value, string label) => int.TryParse(value.Trim(), out int number) ? number : throw new ArgumentException($"{label} must be a whole number.");
+    private static int Number(string value, string label) => int.TryParse(value.Trim(), out int number) ? number : throw new ArgumentException(L.T($"{label} must be a whole number."));
     /// <summary>The window that hosts the editor; minimized while picking or recording so the target is reachable.</summary>
     private Window? Host => Window.GetWindow(this);
 }

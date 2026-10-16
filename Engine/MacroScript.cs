@@ -13,7 +13,7 @@ namespace Keyloom.Engine;
 /// <summary>Where a script went wrong, counted from line 1 of the script as the person wrote it.</summary>
 public sealed record ScriptProblem(int Line, int Column, string Message)
 {
-    public override string ToString() => Line > 0 ? $"Line {Line}: {Message}" : Message;
+    public override string ToString() => Line > 0 ? L.T($"Line {Line}: {Message}") : Message;
 }
 
 /// <summary>One function a script can call, for the help page and the editor's suggestions.</summary>
@@ -86,16 +86,16 @@ public sealed partial class MacroScript
             if (stop.Message.Length == 0) return false;
             throw new InvalidOperationException(stop.Message);
         }
-        catch (JavaScriptException ex) { throw new InvalidOperationException("The script stopped. " + Problem(ex)); }
-        catch (MemoryLimitExceededException) { throw new InvalidOperationException("The script used too much memory and was stopped."); }
-        catch (RecursionDepthOverflowException) { throw new InvalidOperationException("The script called itself too many times and was stopped."); }
-        catch (ScriptUsageException ex) { throw new InvalidOperationException("The script stopped. " + ex.Message); }
+        catch (JavaScriptException ex) { throw new InvalidOperationException(L.T($"The script stopped. {Problem(ex)}")); }
+        catch (MemoryLimitExceededException) { throw new InvalidOperationException(L.T("The script used too much memory and was stopped.")); }
+        catch (RecursionDepthOverflowException) { throw new InvalidOperationException(L.T("The script called itself too many times and was stopped.")); }
+        catch (ScriptUsageException ex) { throw new InvalidOperationException(L.T($"The script stopped. {ex.Message}")); }
     }
 
     /// <summary>The first mistake that keeps the script from running at all, or null when it reads fine.</summary>
     public static ScriptProblem? Check(string code)
     {
-        if (code.Length > MaxLength) return new(0, 0, $"A script can be up to {MaxLength:N0} characters.");
+        if (code.Length > MaxLength) return new(0, 0, L.T($"A script can be up to {MaxLength:N0} characters."));
         try { Jint.Engine.PrepareScript(Opening + code + Closing, Source); return null; }
         catch (ScriptPreparationException ex) when (ex.InnerException is Acornima.ParseErrorException parse)
         {
@@ -120,12 +120,12 @@ public sealed partial class MacroScript
     {
         message = Regex.Replace(message, @"\s*\(script:\d+:\d+\)$", "");
         if (message.EndsWith(" is not defined", StringComparison.Ordinal))
-            return $"'{message[..^15]}' is not something Keyloom knows. Check its spelling, or open Help for the list of functions.";
+            return L.T($"'{message[..^15]}' is not something Keyloom knows. Check its spelling, or open Help for the list of functions.");
         if (message.StartsWith("Unexpected end of input", StringComparison.Ordinal) || message.StartsWith("Unexpected token '}'", StringComparison.Ordinal) && message.Contains("end"))
-            return "The script ends too early. A ( { or [ is not closed.";
+            return L.T("The script ends too early. A ( { or [ is not closed.");
         // Messages that start with a function name, like press(), keep its spelling.
         if (Regex.IsMatch(message, @"^\w+\(\)")) return message;
-        return message.Length > 0 ? char.ToUpperInvariant(message[0]) + message[1..] : "Something went wrong.";
+        return message.Length > 0 ? char.ToUpperInvariant(message[0]) + message[1..] : L.T("Something went wrong.");
     }
 
     private void Define()
@@ -133,7 +133,7 @@ public sealed partial class MacroScript
         Function("press", a => { _input.Press(Keys(a, 0, "press")); return JsValue.Undefined; });
         Function("hold", a => { foreach (var k in Keys(a, 0, "hold")) _input.KeyDown(k); return JsValue.Undefined; });
         Function("release", a => { foreach (var k in Keys(a, 0, "release").Reverse()) _input.KeyUp(k); return JsValue.Undefined; });
-        Function("type", a => { _input.Text(Text(a, 0, "type", "the text to type, such as type(\"Hello\")"), _token); return JsValue.Undefined; });
+        Function("type", a => { _input.Text(Text(a, 0, "type", L.T("the text to type, such as type(\"Hello\")")), _token); return JsValue.Undefined; });
         Function("click", a =>
         {
             int next = MoveIfPoint(a, "click");
@@ -145,16 +145,16 @@ public sealed partial class MacroScript
         Function("moveTo", a =>
         {
             var (x, y, next) = Point(a, 0, "moveTo");
-            int ms = a.Length > next && !a[next].IsUndefined() ? Whole(a, next, "moveTo", "the glide time in ms", 0, 60000) : 0;
+            int ms = a.Length > next && !a[next].IsUndefined() ? Whole(a, next, "moveTo", L.T("the glide time in ms"), 0, 60000) : 0;
             if (ms > 0) _input.Glide(x, y, ms, _token); else _input.Position(x, y);
             return JsValue.Undefined;
         });
-        Function("moveBy", a => { _input.Move(Whole(a, 0, "moveBy", "how far right, such as moveBy(20, 0)"), Whole(a, 1, "moveBy", "how far down, such as moveBy(0, -10)")); return JsValue.Undefined; });
+        Function("moveBy", a => { _input.Move(Whole(a, 0, "moveBy", L.T("how far right, such as moveBy(20, 0)")), Whole(a, 1, "moveBy", L.T("how far down, such as moveBy(0, -10)"))); return JsValue.Undefined; });
         Function("drag", a =>
         {
             var (fx, fy, next) = Point(a, 0, "drag");
             var (tx, ty, after) = Point(a, next, "drag");
-            int ms = a.Length > after && !a[after].IsUndefined() ? Whole(a, after, "drag", "the drag time in ms", 1, 60000) : 150;
+            int ms = a.Length > after && !a[after].IsUndefined() ? Whole(a, after, "drag", L.T("the drag time in ms"), 1, 60000) : 150;
             string button = Button(a, after + 1, "drag");
             _input.Position(fx, fy);
             _input.MouseDown(button);
@@ -164,13 +164,13 @@ public sealed partial class MacroScript
             _input.MouseUp(button);
             return JsValue.Undefined;
         });
-        Function("scroll", a => { _input.Scroll(Whole(a, 0, "scroll", "how many notches, such as scroll(-3) to scroll down")); return JsValue.Undefined; });
-        Function("wait", a => { _input.Settle(); Wait(Whole(a, 0, "wait", "the time in ms, such as wait(500)", 0, 86_400_000)); return JsValue.Undefined; });
+        Function("scroll", a => { _input.Scroll(Whole(a, 0, "scroll", L.T("how many notches, such as scroll(-3) to scroll down"))); return JsValue.Undefined; });
+        Function("wait", a => { _input.Settle(); Wait(Whole(a, 0, "wait", L.T("the time in ms, such as wait(500)"), 0, 86_400_000)); return JsValue.Undefined; });
         Function("mouse", _ => { var (x, y) = _windows.Cursor(); return PointObject(x, y); });
         Function("inWindow", a =>
         {
-            if (_window == IntPtr.Zero) throw new ScriptUsageException("inWindow() needs a target window. Pick one under More options.");
-            var (x, y) = _pointer.Resolve(CoordinateSpace.Window, Whole(a, 0, "inWindow", "x inside the window"), Whole(a, 1, "inWindow", "y inside the window"));
+            if (_window == IntPtr.Zero) throw new ScriptUsageException(L.T("inWindow() needs a target window. Pick one under More options."));
+            var (x, y) = _pointer.Resolve(CoordinateSpace.Window, Whole(a, 0, "inWindow", L.T("x inside the window")), Whole(a, 1, "inWindow", L.T("y inside the window")));
             return PointObject(x, y);
         });
         Function("find", a => Found(_targets.Locate(Target(a, "find"))));
@@ -193,8 +193,8 @@ public sealed partial class MacroScript
         });
         Function("__readGrid", a =>
         {
-            string name = Text(a, 0, "readGrid", "the name of a grid, such as readGrid(\"Board\")");
-            try { _grids.Get(name); } catch (ArgumentException) { throw new ScriptUsageException($"This macro has no grid called '{name}'. Mark one under Grids."); }
+            string name = Text(a, 0, "readGrid", L.T("the name of a grid, such as readGrid(\"Board\")"));
+            try { _grids.Get(name); } catch (ArgumentException) { throw new ScriptUsageException(L.T($"This macro has no grid called '{name}'. Mark one under Grids.")); }
             var reading = _grids.Read(name);
             var o = new JsObject(_engine);
             o.Set("rows", reading.Rows); o.Set("columns", reading.Columns);
@@ -216,8 +216,8 @@ public sealed partial class MacroScript
         Function("stop", a => throw new ScriptStoppedException(a.Length > 0 && !a[0].IsUndefined() ? Show(a[0]) : ""));
         Function("random", a =>
         {
-            int min = Whole(a, 0, "random", "the lowest number, such as random(1, 6)"), max = Whole(a, 1, "random", "the highest number, such as random(1, 6)");
-            if (max < min) throw new ScriptUsageException("random() needs the lowest number first, such as random(1, 6).");
+            int min = Whole(a, 0, "random", L.T("the lowest number, such as random(1, 6)")), max = Whole(a, 1, "random", L.T("the highest number, such as random(1, 6)"));
+            if (max < min) throw new ScriptUsageException(L.T("random() needs the lowest number first, such as random(1, 6)."));
             return _random.Next(min, max + 1);
         });
     }
@@ -234,7 +234,7 @@ public sealed partial class MacroScript
     /// </summary>
     private string Ask(JsValue[] a, string name, string ending)
     {
-        string question = Text(a, 0, name, $"a question, such as {name}(\"How many coins are there?\")");
+        string question = Text(a, 0, name, L.T($"a question, such as {name}(\"How many coins are there?\")"));
         (int X, int Y, int Width, int Height)? area = null;
         bool look = true;
         if (a.Length > 1 && !a[1].IsUndefined() && !a[1].IsNull())
@@ -248,7 +248,7 @@ public sealed partial class MacroScript
                 else
                 {
                     try { area = _targets.SearchArea(_targets.Get(thing)); }
-                    catch (ArgumentException) { throw new ScriptUsageException($"{name}(): this macro has no target or grid called '{thing}'."); }
+                    catch (ArgumentException) { throw new ScriptUsageException(L.T($"{name}(): this macro has no target or grid called '{thing}'.")); }
                 }
             }
             else if (where is ObjectInstance o && o.Get("width").IsNumber() && o.Get("height").IsNumber())
@@ -256,7 +256,7 @@ public sealed partial class MacroScript
                 var (x, y, _) = Point([where], 0, name);
                 area = (x, y, (int)o.Get("width").AsNumber(), (int)o.Get("height").AsNumber());
             }
-            else throw new ScriptUsageException($"{name}() looks at a target or grid by name, an area {{ x, y, width, height }}, or nothing with false.");
+            else throw new ScriptUsageException(L.T($"{name}() looks at a target or grid by name, an area {{ x, y, width, height }}, or nothing with false."));
         }
         _input.Settle();
         return _eyes.Ask(question + ending, area, look, _token);
@@ -264,7 +264,7 @@ public sealed partial class MacroScript
     private JsValue Watch(JsValue[] a, string name, bool gone)
     {
         string target = Target(a, name);
-        int timeout = a.Length > 1 && !a[1].IsUndefined() ? Whole(a, 1, name, "how long to wait in ms", 0, 86_400_000) : -1;
+        int timeout = a.Length > 1 && !a[1].IsUndefined() ? Whole(a, 1, name, L.T("how long to wait in ms"), 0, 86_400_000) : -1;
         _input.Settle();
         var clock = Stopwatch.StartNew();
         while (true)
@@ -276,8 +276,8 @@ public sealed partial class MacroScript
     }
     private string Target(JsValue[] a, string name)
     {
-        string target = Text(a, 0, name, $"the name of a target, such as {name}(\"Play\")");
-        try { _targets.Get(target); } catch (ArgumentException) { throw new ScriptUsageException($"This macro has no target called '{target}'. Add it under Targets."); }
+        string target = Text(a, 0, name, L.T($"the name of a target, such as {name}(\"Play\")"));
+        try { _targets.Get(target); } catch (ArgumentException) { throw new ScriptUsageException(L.T($"This macro has no target called '{target}'. Add it under Targets.")); }
         return target;
     }
     private JsValue Found(Match? match)
@@ -307,27 +307,27 @@ public sealed partial class MacroScript
         if (a.Length > at && a[at].IsObject() && a[at] is ObjectInstance o)
         {
             var x = o.Get("x"); var y = o.Get("y");
-            if (!x.IsNumber() || !y.IsNumber()) throw new ScriptUsageException($"{name}() was given something without an x and a y.");
+            if (!x.IsNumber() || !y.IsNumber()) throw new ScriptUsageException(L.T($"{name}() was given something without an x and a y."));
             return ((int)Math.Round(x.AsNumber()), (int)Math.Round(y.AsNumber()), at + 1);
         }
-        if (a.Length > at && a[at].IsNull()) throw new ScriptUsageException($"{name}() was given nothing to go to. Was the target not found?");
-        return (Whole(a, at, name, $"x and y, such as {name}(400, 300)"), Whole(a, at + 1, name, $"x and y, such as {name}(400, 300)"), at + 2);
+        if (a.Length > at && a[at].IsNull()) throw new ScriptUsageException(L.T($"{name}() was given nothing to go to. Was the target not found?"));
+        return (Whole(a, at, name, L.T($"x and y, such as {name}(400, 300)")), Whole(a, at + 1, name, L.T($"x and y, such as {name}(400, 300)")), at + 2);
     }
     private static int Whole(JsValue[] a, int at, string name, string what, int min = -1_000_000, int max = 1_000_000)
     {
-        if (a.Length <= at || !a[at].IsNumber() || double.IsNaN(a[at].AsNumber())) throw new ScriptUsageException($"{name}() needs {what}.");
+        if (a.Length <= at || !a[at].IsNumber() || double.IsNaN(a[at].AsNumber())) throw new ScriptUsageException(L.T($"{name}() needs {what}."));
         double value = Math.Round(a[at].AsNumber());
-        if (value < min || value > max) throw new ScriptUsageException($"{name}() takes {min:N0} to {max:N0} for {what.Split(',')[0]}, not {value:N0}.");
+        if (value < min || value > max) throw new ScriptUsageException(L.T($"{name}() takes {min:N0} to {max:N0} for {what.Split(',')[0]}, not {value:N0}."));
         return (int)value;
     }
     private static string Text(JsValue[] a, int at, string name, string what)
     {
-        if (a.Length <= at || !a[at].IsString()) throw new ScriptUsageException($"{name}() needs {what}.");
+        if (a.Length <= at || !a[at].IsString()) throw new ScriptUsageException(L.T($"{name}() needs {what}."));
         return a[at].AsString();
     }
     private ushort[] Keys(JsValue[] a, int at, string name)
     {
-        string text = Text(a, at, name, $"a key, such as {name}(\"E\") or {name}(\"Ctrl+S\")");
+        string text = Text(a, at, name, L.T($"a key, such as {name}(\"E\") or {name}(\"Ctrl+S\")"));
         if (_keys.TryGetValue(text, out var keys)) return keys;
         try { return _keys[text] = KeyResolver.Resolve(text); }
         catch (ArgumentException ex) { throw new ScriptUsageException($"{name}(): {ex.Message}"); }
@@ -335,11 +335,11 @@ public sealed partial class MacroScript
     private static string Button(JsValue[] a, int at, string name)
     {
         if (a.Length <= at || a[at].IsUndefined()) return "Left";
-        if (!a[at].IsString()) throw new ScriptUsageException($"{name}() takes a mouse button as text: \"left\", \"right\", \"middle\", \"back\" or \"forward\".");
+        if (!a[at].IsString()) throw new ScriptUsageException(L.T($"{name}() takes a mouse button as text: \"left\", \"right\", \"middle\", \"back\" or \"forward\"."));
         return a[at].AsString().ToLowerInvariant() switch
         {
             "left" => "Left", "right" => "Right", "middle" => "Middle", "back" or "x1" => "X1", "forward" or "x2" => "X2",
-            var other => throw new ScriptUsageException($"{name}(): unknown mouse button \"{other}\". Use \"left\", \"right\", \"middle\", \"back\" or \"forward\".")
+            var other => throw new ScriptUsageException(L.T($"{name}(): unknown mouse button \"{other}\". Use \"left\", \"right\", \"middle\", \"back\" or \"forward\"."))
         };
     }
     private static string Show(JsValue v) => v switch
@@ -384,48 +384,48 @@ public sealed partial class MacroScript
     /// <summary>Every function a script can call, as the help page and the suggestions list them.</summary>
     public static readonly IReadOnlyList<ScriptFunction> Functions =
     [
-        new("Keyboard", "press", "press(key)", "Presses and lets go of a key or a combination.", "press(\"E\")\npress(\"Ctrl+S\")"),
-        new("Keyboard", "hold", "hold(key)", "Holds a key down until release().", "hold(\"Shift\")"),
-        new("Keyboard", "release", "release(key)", "Lets go of a key held with hold().", "release(\"Shift\")"),
-        new("Keyboard", "type", "type(text)", "Types text into the app in front.", "type(\"gg\")"),
-        new("Mouse", "click", "click(button?) · click(x, y, button?) · click(point, button?)", "Clicks where the pointer is, or moves to a point first. The button is \"left\" unless you say \"right\", \"middle\", \"back\" or \"forward\".", "click()\nclick(\"right\")\nclick(640, 360)"),
-        new("Mouse", "mouseDown", "mouseDown(button?) · mouseDown(x, y, button?)", "Holds a mouse button down until mouseUp().", "mouseDown(\"left\")"),
-        new("Mouse", "mouseUp", "mouseUp(button?) · mouseUp(x, y, button?)", "Lets go of a mouse button.", "mouseUp(\"left\")"),
-        new("Mouse", "moveTo", "moveTo(x, y, ms?) · moveTo(point, ms?)", "Moves the pointer to a point on the screen. With a time, it glides there.", "moveTo(640, 360)\nmoveTo(640, 360, 200)"),
-        new("Mouse", "moveBy", "moveBy(x, y)", "Moves the pointer from where it is. Negative goes left or up.", "moveBy(0, -40)"),
-        new("Mouse", "drag", "drag(from, to, ms?, button?)", "Holds the button at one point, glides to the other and lets go. Points can be cells, found targets or { x, y }.", "drag({ x: 100, y: 100 }, { x: 300, y: 100 })"),
-        new("Mouse", "scroll", "scroll(notches)", "Scrolls the wheel. Positive scrolls up, negative down.", "scroll(-3)"),
-        new("Mouse", "mouse", "mouse()", "Where the pointer is now, as { x, y }.", "const at = mouse()\nlog(at.x, at.y)"),
-        new("Mouse", "inWindow", "inWindow(x, y)", "Turns a point inside the target window into a point on the screen, so it follows the window.", "click(inWindow(200, 150))"),
-        new("Waiting", "wait", "wait(ms)", "Pauses the script. 1000 ms is one second.", "wait(500)"),
-        new("Waiting", "waitFor", "waitFor(target, ms?)", "Waits until a target shows on the screen. Gives true, or false if the time ran out. Without a time it waits as long as it takes.", "if (!waitFor(\"Ready\", 5000)) stop(\"Not ready\")"),
-        new("Waiting", "waitUntilGone", "waitUntilGone(target, ms?)", "Waits until a target is no longer on the screen.", "waitUntilGone(\"Loading\")"),
-        new("Screen", "onScreen", "onScreen(target)", "True when the target is on the screen right now.", "if (onScreen(\"Chest\")) clickOn(\"Chest\")"),
-        new("Screen", "find", "find(target)", "Where the target is, as { x, y, width, height } with x and y in its middle, or null.", "const play = find(\"Play\")\nif (play) click(play)"),
-        new("Screen", "clickOn", "clickOn(target, button?)", "Finds the target and clicks its middle. Gives true when it was there.", "clickOn(\"Play\")"),
-        new("Screen", "colorAt", "colorAt(x, y) · colorAt(point)", "The color of one pixel, as \"#RRGGBB\".", "if (colorAt(20, 900) === \"#3FBF3F\") log(\"full health\")"),
-        new("Grids", "readGrid", "readGrid(grid)", "Reads the numbers in a grid. Gives a grid with at(row, column), highest(), lowest(), find(number), empty(), pair() and cells(). Each cell has row, column, value, x and y, so click(cell) works.", "const board = readGrid(\"Board\")\nconst top = board.highest()\nif (top) click(top)"),
-        new("AI", "ask", "ask(question, where?)", "Asks the AI about the screen and gives back its answer as text. It looks at the target window, or the whole screen; give a target or grid name or { x, y, width, height } to show it less, or false to show it nothing. Needs AI on in Settings.", "const name = ask(\"What is the name of the open shop?\")\nlog(name)"),
-        new("AI", "askYesNo", "askYesNo(question, where?)", "Asks a yes-or-no question about the screen. Gives true for yes and false for anything else.", "if (askYesNo(\"Is a boss on the screen?\")) press(\"Q\")"),
-        new("AI", "askNumber", "askNumber(question, where?)", "Asks for a number on the screen, like coins or health. Gives the number, or null when there is none.", "const coins = askNumber(\"How many coins does the top bar show?\")\nif (coins !== null && coins >= 500) clickOn(\"Buy\")"),
-        new("Other", "log", "log(...things)", "Writes to the Output under the script, to see what the script sees.", "log(\"score\", 42)"),
-        new("Other", "stop", "stop(message?)", "Ends the macro. With a message, Keyloom shows it.", "stop(\"Out of energy\")"),
-        new("Other", "random", "random(min, max)", "A whole number from min to max, both included.", "wait(random(200, 400))"),
-        new("Other", "memory", "memory", "An object that keeps what you put in it from one run to the next, until the macro stops.", "memory.count = (memory.count || 0) + 1"),
-        new("Other", "run", "run", "Which run this is, counting from 1.", "if (run % 10 === 0) press(\"R\")")
+        new(L.T("Keyboard"), "press", "press(key)", L.T("Presses and lets go of a key or a combination."), "press(\"E\")\npress(\"Ctrl+S\")"),
+        new(L.T("Keyboard"), "hold", "hold(key)", L.T("Holds a key down until release()."), "hold(\"Shift\")"),
+        new(L.T("Keyboard"), "release", "release(key)", L.T("Lets go of a key held with hold()."), "release(\"Shift\")"),
+        new(L.T("Keyboard"), "type", "type(text)", L.T("Types text into the app in front."), "type(\"gg\")"),
+        new(L.T("Mouse"), "click", "click(button?) · click(x, y, button?) · click(point, button?)", L.T("Clicks where the pointer is, or moves to a point first. The button is \"left\" unless you say \"right\", \"middle\", \"back\" or \"forward\"."), "click()\nclick(\"right\")\nclick(640, 360)"),
+        new(L.T("Mouse"), "mouseDown", "mouseDown(button?) · mouseDown(x, y, button?)", L.T("Holds a mouse button down until mouseUp()."), "mouseDown(\"left\")"),
+        new(L.T("Mouse"), "mouseUp", "mouseUp(button?) · mouseUp(x, y, button?)", L.T("Lets go of a mouse button."), "mouseUp(\"left\")"),
+        new(L.T("Mouse"), "moveTo", "moveTo(x, y, ms?) · moveTo(point, ms?)", L.T("Moves the pointer to a point on the screen. With a time, it glides there."), "moveTo(640, 360)\nmoveTo(640, 360, 200)"),
+        new(L.T("Mouse"), "moveBy", "moveBy(x, y)", L.T("Moves the pointer from where it is. Negative goes left or up."), "moveBy(0, -40)"),
+        new(L.T("Mouse"), "drag", "drag(from, to, ms?, button?)", L.T("Holds the button at one point, glides to the other and lets go. Points can be cells, found targets or { x, y }."), "drag({ x: 100, y: 100 }, { x: 300, y: 100 })"),
+        new(L.T("Mouse"), "scroll", "scroll(notches)", L.T("Scrolls the wheel. Positive scrolls up, negative down."), "scroll(-3)"),
+        new(L.T("Mouse"), "mouse", "mouse()", L.T("Where the pointer is now, as { x, y }."), "const at = mouse()\nlog(at.x, at.y)"),
+        new(L.T("Mouse"), "inWindow", "inWindow(x, y)", L.T("Turns a point inside the target window into a point on the screen, so it follows the window."), "click(inWindow(200, 150))"),
+        new(L.T("Waiting"), "wait", "wait(ms)", L.T("Pauses the script. 1000 ms is one second."), "wait(500)"),
+        new(L.T("Waiting"), "waitFor", "waitFor(target, ms?)", L.T("Waits until a target shows on the screen. Gives true, or false if the time ran out. Without a time it waits as long as it takes."), "if (!waitFor(\"Ready\", 5000)) stop(\"Not ready\")"),
+        new(L.T("Waiting"), "waitUntilGone", "waitUntilGone(target, ms?)", L.T("Waits until a target is no longer on the screen."), "waitUntilGone(\"Loading\")"),
+        new(L.T("Screen"), "onScreen", "onScreen(target)", L.T("True when the target is on the screen right now."), "if (onScreen(\"Chest\")) clickOn(\"Chest\")"),
+        new(L.T("Screen"), "find", "find(target)", L.T("Where the target is, as { x, y, width, height } with x and y in its middle, or null."), "const play = find(\"Play\")\nif (play) click(play)"),
+        new(L.T("Screen"), "clickOn", "clickOn(target, button?)", L.T("Finds the target and clicks its middle. Gives true when it was there."), "clickOn(\"Play\")"),
+        new(L.T("Screen"), "colorAt", "colorAt(x, y) · colorAt(point)", L.T("The color of one pixel, as \"#RRGGBB\"."), "if (colorAt(20, 900) === \"#3FBF3F\") log(\"full health\")"),
+        new(L.T("Grids"), "readGrid", "readGrid(grid)", L.T("Reads the numbers in a grid. Gives a grid with at(row, column), highest(), lowest(), find(number), empty(), pair() and cells(). Each cell has row, column, value, x and y, so click(cell) works."), "const board = readGrid(\"Board\")\nconst top = board.highest()\nif (top) click(top)"),
+        new(L.T("AI"), "ask", "ask(question, where?)", L.T("Asks the AI about the screen and gives back its answer as text. It looks at the target window, or the whole screen; give a target or grid name or { x, y, width, height } to show it less, or false to show it nothing. Needs AI on in Settings."), "const name = ask(\"What is the name of the open shop?\")\nlog(name)"),
+        new(L.T("AI"), "askYesNo", "askYesNo(question, where?)", L.T("Asks a yes-or-no question about the screen. Gives true for yes and false for anything else."), "if (askYesNo(\"Is a boss on the screen?\")) press(\"Q\")"),
+        new(L.T("AI"), "askNumber", "askNumber(question, where?)", L.T("Asks for a number on the screen, like coins or health. Gives the number, or null when there is none."), "const coins = askNumber(\"How many coins does the top bar show?\")\nif (coins !== null && coins >= 500) clickOn(\"Buy\")"),
+        new(L.T("Other"), "log", "log(...things)", L.T("Writes to the Output under the script, to see what the script sees."), "log(\"score\", 42)"),
+        new(L.T("Other"), "stop", "stop(message?)", L.T("Ends the macro. With a message, Keyloom shows it."), "stop(\"Out of energy\")"),
+        new(L.T("Other"), "random", "random(min, max)", L.T("A whole number from min to max, both included."), "wait(random(200, 400))"),
+        new(L.T("Other"), "memory", "memory", L.T("An object that keeps what you put in it from one run to the next, until the macro stops."), "memory.count = (memory.count || 0) + 1"),
+        new(L.T("Other"), "run", "run", L.T("Which run this is, counting from 1."), "if (run % 10 === 0) press(\"R\")")
     ];
 
     /// <summary>Ready-made scripts for the Examples menu: a name and the code.</summary>
     public static readonly IReadOnlyList<(string Name, string Code)> Examples =
     [
-        ("Press keys in a rhythm", """
+        (L.T("Press keys in a rhythm"), """
             // Presses 1, 2 and 3 with a short pause after each.
             for (const key of ["1", "2", "3"]) {
               press(key)
               wait(250)
             }
             """),
-        ("Click a target when it shows", """
+        (L.T("Click a target when it shows"), """
             // Waits up to 10 seconds for the target, then clicks it.
             // Add a target named "Play" under Targets first.
             if (waitFor("Play", 10000)) {
@@ -434,7 +434,7 @@ public sealed partial class MacroScript
               log("Play did not show up")
             }
             """),
-        ("Do something every few runs", """
+        (L.T("Do something every few runs"), """
             // Set Runs to 0 so this repeats until you stop it.
             click()
             if (run % 20 === 0) {
@@ -442,7 +442,7 @@ public sealed partial class MacroScript
             }
             wait(random(80, 120))
             """),
-        ("Merge the lowest pair in a grid", """
+        (L.T("Merge the lowest pair in a grid"), """
             // Mark a grid named "Board" under Grids first.
             const board = readGrid("Board")
             const pair = board.pair()
@@ -453,7 +453,7 @@ public sealed partial class MacroScript
               stop("No two cells match")
             }
             """),
-        ("Count and stop", """
+        (L.T("Count and stop"), """
             memory.clicks = (memory.clicks || 0) + 1
             click()
             if (memory.clicks >= 100) stop("Clicked 100 times")

@@ -20,6 +20,7 @@ public partial class SettingsView : UserControl
     public SettingsView(string? path = null, IReadOnlyList<MacroProfile>? profiles = null, UsageStore? usage = null)
     {
         InitializeComponent();
+        L.Apply(this);
         _path = path; _profiles = profiles ?? []; _usage = usage;
         var settings = AppSettings.Current;
         ExperimentalBox.IsChecked = settings.ShowExperimental;
@@ -34,6 +35,9 @@ public partial class SettingsView : UserControl
         (settings.Theme switch { AppTheme.Light => LightThemeRadio, AppTheme.Dark => DarkThemeRadio, _ => SystemThemeRadio }).IsChecked = true;
         IndicatorBox.IsChecked = settings.ShowRunIndicator;
         SoundBox.IsChecked = settings.ClickSounds;
+        LanguagePanel.Visibility = L.Available.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        LanguageBox.ItemsSource = new[] { new KeyValuePair<string, string>("", L.T("Same as Windows")) }.Concat(L.Available.Select(c => new KeyValuePair<string, string>(c, L.NameOf(c)))).ToList();
+        LanguageBox.SelectedValue = L.Available.Contains(settings.Language) ? settings.Language : "";
         (settings.IndicatorPlace switch { IndicatorPlace.TopRight => PlaceTopRightRadio, IndicatorPlace.BottomRight => PlaceBottomRightRadio, _ => PlaceTopRadio }).IsChecked = true;
         VersionText.Text = $"Keyloom {AppVersion.Display}";
         _loading = false;
@@ -59,6 +63,10 @@ public partial class SettingsView : UserControl
     {
         if (!_loading) Save(s => s.Scripts = ScriptsBox.IsChecked == true);
     }
+    private void Language_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_loading && LanguageBox.SelectedValue is string code) Save(s => s.Language = code);
+    }
     private void Ai_Changed(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
@@ -73,8 +81,8 @@ public partial class SettingsView : UserControl
         OllamaPanel.Visibility = online ? Visibility.Collapsed : Visibility.Visible;
         OpenRouterPanel.Visibility = online ? Visibility.Visible : Visibility.Collapsed;
         AiProviderHint.Text = online
-            ? "Reaches models like Claude and Gemini over the internet. What the AI is shown, a picture of the window or screen, goes to OpenRouter and the model's maker, and each question costs a little."
-            : "Runs models on your PC, free and offline: nothing leaves it. Install Ollama from ollama.com and get a model that can see, such as: ollama pull gemma3";
+            ? L.T("Reaches models like Claude and Gemini over the internet. What the AI is shown, a picture of the window or screen, goes to OpenRouter and the model's maker, and each question costs a little.")
+            : L.T("Runs models on your PC, free and offline: nothing leaves it. Install Ollama from ollama.com and get a model that can see, such as: ollama pull gemma3");
     }
     private void AiProvider_Changed(object sender, RoutedEventArgs e)
     {
@@ -93,7 +101,7 @@ public partial class SettingsView : UserControl
     {
         if (_loading) return;
         string url = OllamaUrlTextBox.Text.Trim(), key = OpenRouterKeyBox.Password.Trim(), model = AiModelBox.Text.Trim();
-        if (url.Length > 0 && !Uri.TryCreate(url, UriKind.Absolute, out _)) { AiStatusText.Text = "The Ollama address should look like http://localhost:11434."; return; }
+        if (url.Length > 0 && !Uri.TryCreate(url, UriKind.Absolute, out _)) { AiStatusText.Text = L.T("The Ollama address should look like http://localhost:11434."); return; }
         Save(s =>
         {
             s.OllamaUrl = url.Length > 0 ? url : Engine.AiVision.DefaultOllamaUrl;
@@ -104,7 +112,7 @@ public partial class SettingsView : UserControl
     private Engine.AiSetup TypedSetup => new(PickedProvider, AiModelBox.Text.Trim(), OllamaUrlTextBox.Text.Trim(), OpenRouterKeyBox.Password.Trim());
     private async void LoadModels_Click(object sender, RoutedEventArgs e)
     {
-        AiStatusText.Text = "Loading models...";
+        AiStatusText.Text = L.T("Loading models...");
         try
         {
             var models = await Engine.AiVision.ModelsAsync(TypedSetup, AiHttp.Value);
@@ -112,8 +120,8 @@ public partial class SettingsView : UserControl
             AiModelBox.ItemsSource = models;
             AiModelBox.Text = typed;
             AiStatusText.Text = models.Count == 0
-                ? PickedProvider == Engine.AiProvider.Ollama ? "Ollama has no models yet. Get one that can see, such as: ollama pull gemma3" : "No models that can look at pictures were found."
-                : $"{models.Count:N0} model{(models.Count == 1 ? "" : "s")} that can look at pictures. Pick one from the list.";
+                ? PickedProvider == Engine.AiProvider.Ollama ? L.T("Ollama has no models yet. Get one that can see, such as: ollama pull gemma3") : L.T("No models that can look at pictures were found.")
+                : L.N(models.Count, "{0} model can look at pictures. Pick it from the list.", "{0} models can look at pictures. Pick one from the list.");
             if (models.Count > 0) AiModelBox.IsDropDownOpen = true;
         }
         catch (InvalidOperationException ex) { AiStatusText.Text = ex.Message; }
@@ -123,7 +131,7 @@ public partial class SettingsView : UserControl
     {
         AiField_Changed(sender, e);
         var setup = TypedSetup;
-        AiStatusText.Text = $"Asking {setup.Model}...";
+        AiStatusText.Text = L.T($"Asking {setup.Model}...");
         AiTestButton.IsEnabled = false;
         try
         {
@@ -131,7 +139,7 @@ public partial class SettingsView : UserControl
             var blue = new Engine.PixelImage(64, 64, Enumerable.Repeat(0xFF2060E0u, 64 * 64).ToArray());
             var clock = Stopwatch.StartNew();
             string answer = await Task.Run(() => new Engine.AiVision(setup, AiHttp.Value).Ask("What color is this picture? Answer with one word.", blue, CancellationToken.None));
-            AiStatusText.Text = $"It works. Asked what color a blue square is, {setup.Model} said \"{answer}\" in {clock.Elapsed.TotalSeconds:N1} s.";
+            AiStatusText.Text = L.T($"It works. Asked what color a blue square is, {setup.Model} said \"{answer}\" in {clock.Elapsed.TotalSeconds:N1} s.");
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException) { AiStatusText.Text = ex.Message; }
         finally { AiTestButton.IsEnabled = true; }
@@ -158,7 +166,7 @@ public partial class SettingsView : UserControl
     private void Save(Action<AppSettings> change)
     {
         try { AppSettings.Current.With(change).Save(_path); ErrorText.Text = ""; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { ErrorText.Text = "Settings could not be saved: " + ex.Message; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { ErrorText.Text = L.T($"Settings could not be saved: {ex.Message}"); }
     }
 
     private void ShowUsage()
@@ -169,7 +177,7 @@ public partial class SettingsView : UserControl
         long total = Math.Max(1, used.Sum(x => x.Usage.RunMs));
         StartsText.Text = usage.TotalStarts.ToString("N0");
         RunTimeText.Text = UsageStore.Duration(usage.TotalRunMs);
-        TopText.Text = used.Count == 0 ? "None yet" : used.MaxBy(x => x.Usage.Starts).Profile.Name;
+        TopText.Text = used.Count == 0 ? L.T("None yet") : used.MaxBy(x => x.Usage.Starts).Profile.Name;
         UsageList.ItemsSource = used.Select(x =>
         {
             double share = (double)x.Usage.RunMs / total;
@@ -178,13 +186,13 @@ public partial class SettingsView : UserControl
                 new GridLength(Math.Max(.01, share), GridUnitType.Star), new GridLength(Math.Max(.01, 1 - share), GridUnitType.Star));
         }).ToList();
         UsageList.Visibility = used.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-        SinceText.Text = used.Count == 0 ? "Start a macro and it shows up here: how often it ran and for how long." : $"Counting since {usage.Since.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}. Test runs from the editor don't count.";
+        SinceText.Text = used.Count == 0 ? L.T("Start a macro and it shows up here: how often it ran and for how long.") : L.T($"Counting since {usage.Since.ToString("d MMM yyyy", System.Globalization.CultureInfo.CurrentCulture)}. Test runs from the editor don't count.");
         ResetUsageButton.IsEnabled = used.Count > 0;
     }
     private async void ResetUsage_Click(object sender, RoutedEventArgs e)
     {
         if (_usage == null) return;
-        if (SheetLayer.For(this) is { } sheets && !await sheets.ConfirmAsync("Reset usage?", "Run counts and times start again from zero. Your macros stay as they are.", "Reset", danger: true)) return;
+        if (SheetLayer.For(this) is { } sheets && !await sheets.ConfirmAsync(L.T("Reset usage?"), L.T("Run counts and times start again from zero. Your macros stay as they are."), L.T("Reset"), danger: true)) return;
         _usage.Reset();
     }
     private void OpenFolder_Click(object sender, RoutedEventArgs e)

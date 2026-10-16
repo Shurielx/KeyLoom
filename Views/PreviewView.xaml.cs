@@ -25,12 +25,13 @@ public partial class PreviewView : UserControl, IDisposable
     public PreviewView(MacroProfile profile, IWindowSystem? windows = null, Func<Task>? testRun = null)
     {
         InitializeComponent();
+        L.Apply(this);
         windows ??= WindowSystem.Instance;
         _testRun = testRun;
         TestButton.Visibility = testRun != null ? Visibility.Visible : Visibility.Collapsed;
         // The preview follows what plays: groups expanded into their repeats and waits.
         _steps = StepGroups.Expand(profile.Actions).ToArray();
-        TitleText.Text = $"Preview · {profile.Name}";
+        TitleText.Text = L.T($"Preview · {profile.Name}");
         IntPtr window = profile.Window != null ? windows.Find(profile.Window) : IntPtr.Zero;
         var resolver = new PointerResolver(windows, window, profile);
         _timeline = MacroTimeline.Build(_steps, (space, x, y) => resolver.Resolve(space, x, y));
@@ -42,7 +43,7 @@ public partial class PreviewView : UserControl, IDisposable
         ScreenBox.IsEnabled = _timeline.HasPointer;
         Strip.Show(_steps, Enumerable.Range(0, _steps.Count).ToArray());
         if (profile.Window != null && window == IntPtr.Zero && _steps.Any(a => a.Space == CoordinateSpace.Window))
-            NoteText.Text = $"{profile.Window.Label} is not open, so window positions are drawn from the top-left of the main screen. " + NoteText.Text;
+            NoteText.Text = L.T($"{profile.Window.Label} is not open, so window positions are drawn from the top-left of the main screen.") + " " + NoteText.Text;
         _player.Duration = _timeline.Duration;
         TimeSlider.Maximum = Math.Max(1, _timeline.Duration);
         _player.Changed += Sync;
@@ -72,10 +73,10 @@ public partial class PreviewView : UserControl, IDisposable
         // The on-screen marker runs at about 30 fps; it is a hint, and transparent windows are costly to recompose.
         if (_overlay != null && (!_player.IsPlaying || Environment.TickCount64 - _overlayFrame >= 33))
         { _overlay.Time = time; _overlayFrame = Environment.TickCount64; }
-        PlayText.Text = _player.IsPlaying ? "Pause" : "Play";
+        PlayText.Text = _player.IsPlaying ? L.T("Pause") : L.T("Play");
         PlayIcon.Data = (Geometry)FindResource(_player.IsPlaying ? "IconStop" : "IconPlay");
         int step = _steps.Count == 0 ? -1 : _timeline.StepAt(time);
-        StepText.Text = step < 0 ? "No steps" : $"Step {step + 1:N0} of {_steps.Count:N0} · {_steps[step].DisplayText}";
+        StepText.Text = step < 0 ? L.T("No steps") : L.T($"Step {step + 1:N0} of {_steps.Count:N0} · {_steps[step].DisplayText}");
         DelayBar.Width = _timeline.DelayAt(time) is { } d ? DelayTrack.ActualWidth * (1 - d.Progress) : 0;
         if (step != _shownStep) ShowNow(step);
         _syncing = false;
@@ -86,8 +87,8 @@ public partial class PreviewView : UserControl, IDisposable
         _shownStep = step;
         if (NowPanel.Visibility != Visibility.Visible) return;
         NowStep.DataContext = step >= 0 ? StepView.From(_steps[step]) : null;
-        PreviousText.Text = step > 0 ? $"before · {_steps[step - 1].DisplayText}" : " ";
-        NextText.Text = step >= 0 && step + 1 < _steps.Count ? $"next at {StepLayoutConverter.FormatTime(_starts[step + 1])} · {_steps[step + 1].DisplayText}" : "end of the run";
+        PreviousText.Text = step > 0 ? L.T($"before · {_steps[step - 1].DisplayText}") : " ";
+        NextText.Text = step >= 0 && step + 1 < _steps.Count ? L.T($"next at {StepLayoutConverter.FormatTime(_starts[step + 1])} · {_steps[step + 1].DisplayText}") : L.T("end of the run");
     }
     private void Play_Click(object sender, RoutedEventArgs e)
     {

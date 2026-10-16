@@ -2,6 +2,13 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-11 · 2026-10-17
+
+### Changed
+- Every text is ready to translate; Keyloom stays English
+- A new language is one file, see docs/TRANSLATING.md
+- Counts like 1 step, 2 steps work in any language
+
 ## 0.3-dev-10 · 2026-10-17
 
 ### Added

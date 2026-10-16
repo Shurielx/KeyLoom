@@ -23,6 +23,13 @@
               <StackPanel><Path Data="{StaticResource IconMoon}" Style="{StaticResource AccentIcon}" Width="18" Height="18" Margin="0,1"/><TextBlock Text="Dark" HorizontalAlignment="Center" Margin="0,7,0,0" FontWeight="SemiBold"/></StackPanel>
             </RadioButton>
           </UniformGrid>
+          <!-- Shown once Keyloom has more than one language -->
+          <StackPanel x:Name="LanguagePanel" Visibility="Collapsed">
+            <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,14"/>
+            <TextBlock Text="Language" FontWeight="SemiBold"/>
+            <ComboBox x:Name="LanguageBox" Width="220" HorizontalAlignment="Left" Margin="0,8,0,0" DisplayMemberPath="Value" SelectedValuePath="Key" SelectionChanged="Language_Changed" AutomationProperties.Name="Language"/>
+            <TextBlock x:Name="LanguageHint" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0" Text="Keyloom speaks the new language after you restart it."/>
+          </StackPanel>
           <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,14"/>
           <CheckBox x:Name="SoundBox" Style="{StaticResource Switch}" Checked="Sound_Changed" Unchecked="Sound_Changed">
             <Grid>

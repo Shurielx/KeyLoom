@@ -31,6 +31,7 @@ public partial class AboutView : UserControl
     public AboutView(HttpClient? http = null, string? currentVersion = null)
     {
         InitializeComponent();
+        L.Apply(this);
         _http = http ?? SharedHttp.Value;
         _current = currentVersion ?? AppVersion.Display;
         VersionText.Text = _current;
@@ -44,7 +45,7 @@ public partial class AboutView : UserControl
         ChangelogList.ItemsSource = UpdateService.ParseChangelog(markdown)
             .Select(e => new ChangelogEntryView(e.Version, e.Date, e.Sections, e.Version == _current, UpdateService.IsNewer(e.Version, _current)))
             .ToList();
-        SourceText.Text = source == ChangelogSource.GitHub ? "Latest from GitHub" : "Included with this version";
+        SourceText.Text = source == ChangelogSource.GitHub ? L.T("Latest from GitHub") : L.T("Included with this version");
     }
 
     /// <summary>Fetches the newest changelog and releases together, then shows what it found.</summary>
@@ -53,7 +54,7 @@ public partial class AboutView : UserControl
         _cts?.Cancel();
         var cts = _cts = new CancellationTokenSource();
         CheckButton.IsEnabled = false;
-        SetStatus("Checking GitHub for a newer version...", StatusKind.Working);
+        SetStatus(L.T("Checking GitHub for a newer version..."), StatusKind.Working);
         var changelog = UpdateService.FetchChangelogAsync(_http, cts.Token);
         var releases = UpdateService.FetchReleasesAsync(_http, cts.Token);
         string? online = await changelog;
@@ -63,14 +64,14 @@ public partial class AboutView : UserControl
         if (online != null) ShowChangelog(online, ChangelogSource.GitHub);
         if (found == null)
         {
-            SetStatus("Couldn't reach GitHub. The changelog below came with this version.", StatusKind.Offline);
+            SetStatus(L.T("Couldn't reach GitHub. The changelog below came with this version."), StatusKind.Offline);
             return;
         }
         _newer = UpdateService.NewerThan(found, _current);
-        if (_newer == null) SetStatus("You have the latest version.", StatusKind.Latest);
+        if (_newer == null) SetStatus(L.T("You have the latest version."), StatusKind.Latest);
         else
         {
-            SetStatus($"Keyloom {_newer.Version} is out{(_newer.IsPrerelease ? " (development build)" : "")}.", StatusKind.Available);
+            SetStatus((_newer.IsPrerelease ? L.T($"Keyloom {_newer.Version} is out (development build).") : L.T($"Keyloom {_newer.Version} is out.")), StatusKind.Available);
             DownloadText.Text = $"Get {_newer.Version}";
         }
     }
@@ -103,7 +104,7 @@ public partial class AboutView : UserControl
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            SetStatus($"Couldn't open the browser. The releases are at {UpdateService.ReleasesUrl}", StatusKind.Offline);
+            SetStatus(L.T($"Couldn't open the browser. The releases are at {UpdateService.ReleasesUrl}"), StatusKind.Offline);
         }
     }
 }

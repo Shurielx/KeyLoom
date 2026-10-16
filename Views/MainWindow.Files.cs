@@ -12,7 +12,7 @@ public partial class MainWindow
 {
     /// <summary>Bigger files are not macro files people made; reading them would only stall the window.</summary>
     private const long MaxImportBytes = 16 * 1024 * 1024;
-    private const string FileFilter = "Keyloom macros (*.keyloom)|*.keyloom|All files (*.*)|*.*";
+    private static string FileFilter => L.T("Keyloom macros (*.keyloom)|*.keyloom|All files (*.*)|*.*");
 
     private void Files_Click(object sender, RoutedEventArgs e)
     {
@@ -29,10 +29,10 @@ public partial class MainWindow
     }
     private void Import_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = FileFilter, Title = "Import macros" };
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = FileFilter, Title = L.T("Import macros") };
         if (dialog.ShowDialog(this) == true) Run(() => ImportAsync(dialog.FileName));
     }
-    private void ExportAll_Click(object sender, RoutedEventArgs e) => AskExport(_profiles.ToList(), "Keyloom macros");
+    private void ExportAll_Click(object sender, RoutedEventArgs e) => AskExport(_profiles.ToList(), L.T("Keyloom macros"));
     private void ExportOne_Click(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { Tag: MacroProfile p }) AskExport([p], p.Name);
@@ -40,21 +40,21 @@ public partial class MainWindow
     private void AskExport(List<MacroProfile> macros, string name)
     {
         if (macros.Count == 0) return;
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = FileFilter, Title = "Export macros", DefaultExt = MacroFile.Extension, FileName = SafeFileName(name) + MacroFile.Extension };
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = FileFilter, Title = L.T("Export macros"), DefaultExt = MacroFile.Extension, FileName = SafeFileName(name) + MacroFile.Extension };
         if (dialog.ShowDialog(this) == true) Export(dialog.FileName, macros);
     }
     private static string SafeFileName(string name)
     {
         var bad = Path.GetInvalidFileNameChars();
         string safe = new string(name.Select(c => bad.Contains(c) ? '-' : c).ToArray()).Trim(' ', '.');
-        return safe.Length == 0 ? "Keyloom macros" : safe;
+        return safe.Length == 0 ? L.T("Keyloom macros") : safe;
     }
     /// <summary>Writes the macros as a .keyloom file. Returns false and says why when it can't.</summary>
     internal bool Export(string path, IReadOnlyList<MacroProfile> macros)
     {
         try { File.WriteAllText(path, MacroFile.Write(macros)); StatusText.Text = ""; return true; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { StatusText.Text = "The macros could not be exported: " + ex.Message; return false; }
+        { StatusText.Text = L.T($"The macros could not be exported: {ex.Message}"); return false; }
     }
 
     private void Window_DragOver(object sender, DragEventArgs e)
@@ -77,19 +77,19 @@ public partial class MainWindow
         string file = Path.GetFileName(path);
         try
         {
-            if (new FileInfo(path).Length > MaxImportBytes) { StatusText.Text = $"'{file}' is too big to be a Keyloom macro file."; return; }
+            if (new FileInfo(path).Length > MaxImportBytes) { StatusText.Text = L.T($"'{file}' is too big to be a Keyloom macro file."); return; }
             read = MacroFile.Read(await File.ReadAllTextAsync(path));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-        { StatusText.Text = $"'{file}' could not be imported. {ex.Message}"; return; }
-        if (read.Count == 0) { StatusText.Text = $"'{file}' has no macros in it."; return; }
+        { StatusText.Text = L.T($"'{file}' could not be imported. {ex.Message}"); return; }
+        if (read.Count == 0) { StatusText.Text = L.T($"'{file}' has no macros in it."); return; }
         var plan = MacroImport.Prepare(_profiles, read);
-        string title = plan.Macros.Count == 1 ? "Import this macro?" : $"Import {plan.Macros.Count} macros?";
-        if (confirm && !await Sheets.ConfirmAsync(title, MacroImport.Describe(plan), "Import")) return;
+        string title = plan.Macros.Count == 1 ? L.T("Import this macro?") : L.N(plan.Macros.Count, "Import {0} macro?", "Import {0} macros?");
+        if (confirm && !await Sheets.ConfirmAsync(title, MacroImport.Describe(plan), L.T("Import"))) return;
         await _executor.StopAsync();
         try { _storage.SaveProfiles(_profiles.Concat(plan.Macros).ToArray()); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-        { StatusText.Text = "The macros could not be saved: " + ex.Message; return; }
+        { StatusText.Text = L.T($"The macros could not be saved: {ex.Message}"); return; }
         foreach (var p in plan.Macros) _profiles.Add(p);
         StatusText.Text = "";
         RegisterShortcuts();

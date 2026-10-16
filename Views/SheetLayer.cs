@@ -105,7 +105,7 @@ public sealed class SheetLayer : Grid
         heading.SetResourceReference(StyleProperty, "SectionTitle");
         var body = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Margin = new(0, 0, 0, 18) };
         body.SetResourceReference(StyleProperty, "Muted");
-        var cancel = new Button { Content = "Cancel", MinWidth = 84, Margin = new(0, 0, 8, 0) };
+        var cancel = new Button { Content = L.T("Cancel"), MinWidth = 84, Margin = new(0, 0, 8, 0) };
         var ok = new Button { Content = confirm, MinWidth = 84 };
         ok.SetResourceReference(StyleProperty, danger ? "DangerButton" : "PrimaryButton");
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Children = { cancel, ok } };

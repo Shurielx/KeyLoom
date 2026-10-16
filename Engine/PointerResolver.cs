@@ -17,7 +17,7 @@ public sealed class PointerResolver
     }
     public void EnsureAlive()
     {
-        if (_window != IntPtr.Zero && !_windows.IsAlive(_window)) throw new InvalidOperationException("The target window was closed. The macro stopped.");
+        if (_window != IntPtr.Zero && !_windows.IsAlive(_window)) throw new InvalidOperationException(L.T("The target window was closed. The macro stopped."));
     }
     public (int X, int Y) Resolve(CoordinateSpace space, int x, int y)
     {

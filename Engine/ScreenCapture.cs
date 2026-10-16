@@ -49,9 +49,9 @@ public sealed class ScreenCapture : IScreen
             // A negative height gives rows from the top down, the order PixelImage uses.
             var info = new BitmapInfo { Size = Marshal.SizeOf<BitmapInfo>(), Width = width, Height = -height, Planes = 1, BitCount = 32 };
             bitmap = CreateDIBSection(screen, ref info, 0, out IntPtr bits, IntPtr.Zero, 0);
-            if (bitmap == IntPtr.Zero) throw new InvalidOperationException("The screen could not be read.");
+            if (bitmap == IntPtr.Zero) throw new InvalidOperationException(L.T("The screen could not be read."));
             old = SelectObject(memory, bitmap);
-            if (!BitBlt(memory, 0, 0, width, height, screen, x, y, 0x00CC0020)) throw new InvalidOperationException("The screen could not be read.");
+            if (!BitBlt(memory, 0, 0, width, height, screen, x, y, 0x00CC0020)) throw new InvalidOperationException(L.T("The screen could not be read."));
             var pixels = new uint[width * height];
             Marshal.Copy(bits, (int[])(object)pixels, 0, pixels.Length);
             for (int i = 0; i < pixels.Length; i++) pixels[i] |= 0xFF000000;

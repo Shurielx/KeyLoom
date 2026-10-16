@@ -14,7 +14,7 @@ public static class KeyResolver
     };
     public static ushort[] Resolve(string text)
     {
-        if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Enter a key or combination, such as Space or Ctrl+C.");
+        if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException(L.T("Enter a key or combination, such as Space or Ctrl+C."));
         var keys = new List<ushort>();
         foreach (string part in text.Split('+', StringSplitOptions.TrimEntries))
         {
@@ -36,7 +36,7 @@ public static class KeyResolver
                     keys.Add((ushort)(mapped & 0xFF)); continue;
                 }
             }
-            throw new ArgumentException($"Unknown key '{part}'. Use a key name such as F8, Space, LeftCtrl, or Ctrl+C.");
+            throw new ArgumentException(L.T($"Unknown key '{part}'. Use a key name such as F8, Space, LeftCtrl, or Ctrl+C."));
         }
         return keys.Distinct().ToArray();
     }

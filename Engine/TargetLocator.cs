@@ -16,14 +16,14 @@ public static class TargetPicture
             using var stream = new MemoryStream(Convert.FromBase64String(base64));
             var frame = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames[0];
             if (frame.PixelWidth > ScreenTarget.MaxPictureSide || frame.PixelHeight > ScreenTarget.MaxPictureSide)
-                throw new ArgumentException($"A target picture can be up to {ScreenTarget.MaxPictureSide} by {ScreenTarget.MaxPictureSide} pixels.");
+                throw new ArgumentException(L.T($"A target picture can be up to {ScreenTarget.MaxPictureSide} by {ScreenTarget.MaxPictureSide} pixels."));
             var bgra = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
             var pixels = new int[bgra.PixelWidth * bgra.PixelHeight];
             bgra.CopyPixels(pixels, bgra.PixelWidth * 4, 0);
             return new(bgra.PixelWidth, bgra.PixelHeight, (uint[])(object)pixels);
         }
         catch (Exception ex) when (ex is FormatException or NotSupportedException or FileFormatException or IOException or InvalidOperationException)
-        { throw new ArgumentException("The target picture could not be read. Capture it again.", ex); }
+        { throw new ArgumentException(L.T("The target picture could not be read. Capture it again."), ex); }
     }
     public static string Encode(PixelImage image)
     {
@@ -39,7 +39,7 @@ public static class TargetPicture
     {
         string hex = (text ?? "").Trim().TrimStart('#');
         if (hex.Length != 6 || !uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint rgb))
-            throw new ArgumentException($"\"{text}\" is not a color. Write it as #RRGGBB, like #FF8800.");
+            throw new ArgumentException(L.T($"\"{text}\" is not a color. Write it as #RRGGBB, like #FF8800."));
         return 0xFF000000 | rgb;
     }
     public static string ColorText(uint color) => $"#{color & 0xFFFFFF:X6}";
@@ -50,7 +50,7 @@ public sealed class TargetLocator(IScreen screen, IWindowSystem windows, IntPtr 
 {
     private readonly Dictionary<string, ScreenTarget> _targets = targets.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, PixelImage> _pictures = new(StringComparer.OrdinalIgnoreCase);
-    public ScreenTarget Get(string? name) => _targets.TryGetValue(name ?? "", out var t) ? t : throw new ArgumentException($"There is no target called '{name}'.");
+    public ScreenTarget Get(string? name) => _targets.TryGetValue(name ?? "", out var t) ? t : throw new ArgumentException(L.T($"There is no target called '{name}'."));
 
     /// <summary>Where the target is on the screen right now, in screen pixels, or null when it isn't there.</summary>
     public Match? Locate(string? name)
@@ -76,7 +76,7 @@ public sealed class TargetLocator(IScreen screen, IWindowSystem windows, IntPtr 
         (int X, int Y, int Width, int Height) area = bounds;
         if (target.Area is { } a)
         {
-            if (a.Space == CoordinateSpace.Window && window == IntPtr.Zero) throw new InvalidOperationException($"'{target.Name}' looks in the target window, which was not found.");
+            if (a.Space == CoordinateSpace.Window && window == IntPtr.Zero) throw new InvalidOperationException(L.T($"'{target.Name}' looks in the target window, which was not found."));
             var (left, top) = a.Space == CoordinateSpace.Window ? windows.ClientToScreen(window, a.X, a.Y) : (a.X, a.Y);
             area = (left, top, a.Width, a.Height);
         }

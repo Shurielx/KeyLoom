@@ -21,7 +21,11 @@ public partial class IconPicker : UserControl
     /// <summary>Raised with a message when a picture can't be used.</summary>
     public event Action<string>? Failed;
     // The choices have no group name, so they group by their panel and two pickers never uncheck each other.
-    public IconPicker() => InitializeComponent();
+    public IconPicker()
+    {
+        InitializeComponent();
+        L.Apply(this);
+    }
     /// <summary>Loads an icon without raising <see cref="Changed"/>. Behavior and target drive the automatic icon.</summary>
     public void Show(MacroIconKind kind, string glyph, string image, MacroBehaviorType behavior, TargetInputType target)
     {
@@ -79,8 +83,8 @@ public partial class IconPicker : UserControl
         CloseRequested?.Invoke();
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Choose a macro icon",
-            Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.ico;*.tif;*.tiff|All files|*.*"
+            Title = L.T("Choose a macro icon"),
+            Filter = L.T("Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.ico;*.tif;*.tiff|All files|*.*")
         };
         if (dialog.ShowDialog(Application.Current?.MainWindow) != true) return;
         try { UseImage(dialog.FileName); }

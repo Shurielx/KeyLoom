@@ -17,7 +17,7 @@ public partial class MacroEditorView
         if (!await sheets.ShowAsync(dialog, 420)) return;
         var options = dialog.Options;
         int available = ProfileValidator.MaxActions - (options.Append ? _steps.Count : 0);
-        if (available < 16) { Say("The sequence is full. Choose Replace sequence or remove some steps.", true); return; }
+        if (available < 16) { Say(L.T("The sequence is full. Choose Replace sequence or remove some steps."), true); return; }
         SetMode(2);
         Say("");
         var session = new RecordingSession();
@@ -43,18 +43,18 @@ public partial class MacroEditorView
     {
         if (recorded.Count == 0)
         {
-            Say(reason.Length > 0 ? reason : "Nothing recorded.", reason.Length > 0);
+            Say(reason.Length > 0 ? reason : L.T("Nothing recorded."), reason.Length > 0);
             return;
         }
         if (recorded.Count + (append ? _steps.Count : 0) > ProfileValidator.MaxActions)
-            throw new InvalidOperationException("Recording exceeds the sequence step limit.");
+            throw new InvalidOperationException(L.T("Recording exceeds the sequence step limit."));
         bool firstRecording = _steps.Count == 0;
         Remember();
         BindSteps(new ObservableCollection<MacroAction>((append ? _steps : Enumerable.Empty<MacroAction>()).Concat(recorded).Select(a => a.Clone())));
         ActionsListBox.SelectedIndex = append ? _steps.Count - recorded.Count : 0;
         ActionsListBox.ScrollIntoView(ActionsListBox.SelectedItem);
         if (!append || firstRecording) RunsTextBox.Text = "1";
-        Say(reason.Length > 0 ? reason : $"Recorded {recorded.Count:N0} {(recorded.Count == 1 ? "step" : "steps")}.");
+        Say(reason.Length > 0 ? reason : L.T($"Recorded {L.N(recorded.Count, "{0} step", "{0} steps")}."));
     }
     public void StopRecording() => _recording?.Stop();
 }
