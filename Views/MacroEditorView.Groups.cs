@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Keyloom.Engine;
 using Keyloom.Models;
+using Keyloom.Services;
 
 namespace Keyloom.Views;
 
@@ -158,7 +159,7 @@ public partial class MacroEditorView
         _loadingStep = true;
         GroupNameTextBox.Text = g.Name ?? "";
         GroupRunsTextBox.Text = g.Runs.ToString();
-        GroupGapTextBox.Text = g.GapMs.ToString();
+        GroupGapTextBox.Text = TimeText.Format(g.GapMs);
         _loadingStep = false;
         ShowBlock(g);
         ShowGroupHint("");
@@ -221,7 +222,7 @@ public partial class MacroEditorView
             int runs = Number(GroupRunsTextBox.Text, L.T("Times"));
             if (runs is < 1 or > StepGroups.MaxRepeat) throw new ArgumentException(L.T($"A group can play 1 to {StepGroups.MaxRepeat:N0} times."));
             copy.Repeat = runs == 1 ? 0 : runs;
-            copy.GapMs = Number(GroupGapTextBox.Text, L.T("Wait between steps"));
+            copy.GapMs = Time(GroupGapTextBox.Text, L.T("Wait between steps"));
             var check = _steps.ToList(); check[_groupStart] = copy;
             StepGroups.Validate(check);
             if (!_editRemembered) { Remember(); _editRemembered = true; }

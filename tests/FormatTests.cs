@@ -11,6 +11,11 @@ internal static partial class Program
             && Shortcut.Parse("") == (0u, 0u) && Shortcut.ToText(Shortcut.Control | Shortcut.Shift, 0x78) == "Ctrl+Shift+F9", "shortcuts read and write as text");
         Check(Fails(() => Shortcut.Parse("Ctrl+Shift"), "no key") && Fails(() => Shortcut.Parse("Ctrl+Nope"), "Unknown key \"Nope\""), "a shortcut without a real key is refused");
 
+        static int Ms(string t) => TimeText.TryParse(t, out int ms) ? ms : -1;
+        Check(Ms("250") == 250 && Ms("250ms") == 250 && Ms("2s") == 2000 && Ms("1.5s") == 1500 && Ms("10m") == 600000
+            && Ms("1h") == 3600000 && Ms("1h 30m") == 5400000 && Ms("2M") == 120000 && Ms("") == -1 && Ms("2x") == -1 && Ms("m") == -1, "time fields read ms, s, m and h");
+        Check(TimeText.Format(120000) == "2m" && TimeText.Format(5400000) == "1h 30m" && TimeText.Format(1500) == "1500" && TimeText.Format(50) == "50", "whole times show short");
+
         var seq = Profile(MacroBehaviorType.Sequence);
         seq.PrimaryVk = 0x78; seq.PrimaryModifiers = Shortcut.Control | Shortcut.Shift; seq.RepeatCount = 0; seq.PointerSettleMs = 35;
         seq.Window = new WindowTarget { ProcessName = "chrome", Title = "Reports", ClientWidth = 1280, ClientHeight = 720 };

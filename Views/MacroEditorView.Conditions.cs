@@ -68,7 +68,7 @@ public partial class MacroEditorView
         ShowIfOptions();
         TargetBox.SelectedItem = _targets.FirstOrDefault(t => string.Equals(t.Name, head.Target, StringComparison.OrdinalIgnoreCase))?.Name;
         UntilBox.SelectedIndex = head.Gone ? 1 : 0;
-        TimeoutTextBox.Text = head.TimeoutMs.ToString();
+        TimeoutTextBox.Text = TimeText.Format(head.TimeoutMs);
         FindResultText.Text = "";
         _loadingStep = loading;
         ShowTargetCard();
@@ -101,7 +101,7 @@ public partial class MacroEditorView
             {
                 copy.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException(L.T("Pick what the If looks for, or take a new picture or color from the screen."));
                 copy.Gone = UntilBox.SelectedIndex == 1;
-                copy.TimeoutMs = Number(TimeoutTextBox.Text, L.T("Time to look"));
+                copy.TimeoutMs = Time(TimeoutTextBox.Text, L.T("Time to look"));
             }
             var check = _steps.ToList(); check[_groupStart] = copy;
             StepGroups.Validate(check);

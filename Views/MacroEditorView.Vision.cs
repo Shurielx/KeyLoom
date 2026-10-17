@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Keyloom.Engine;
 using Keyloom.Models;
+using Keyloom.Services;
 
 namespace Keyloom.Views;
 
@@ -62,7 +63,7 @@ public partial class MacroEditorView
         if (a.ActionType is not (MacroActionType.ClickTarget or MacroActionType.WaitUntil)) return;
         TargetBox.SelectedItem = _targets.FirstOrDefault(t => string.Equals(t.Name, a.Target, StringComparison.OrdinalIgnoreCase))?.Name;
         UntilBox.SelectedIndex = a.Gone ? 1 : 0;
-        TimeoutTextBox.Text = a.TimeoutMs.ToString();
+        TimeoutTextBox.Text = TimeText.Format(a.TimeoutMs);
         StopIfMissingBox.IsChecked = a.StopIfMissing;
         FindResultText.Text = "";
         ShowTargetCard();
@@ -71,7 +72,7 @@ public partial class MacroEditorView
     {
         a.Target = TargetBox.SelectedItem as string ?? throw new ArgumentException(L.T("Pick what to look for, or take a new picture or color from the screen."));
         a.Gone = UntilBox.SelectedIndex == 1;
-        a.TimeoutMs = Number(TimeoutTextBox.Text, L.T("Time to look"));
+        a.TimeoutMs = Time(TimeoutTextBox.Text, L.T("Time to look"));
         a.StopIfMissing = StopIfMissingBox.IsChecked == true;
     }
     /// <summary>Keeps the targets that steps use; one captured and then left unused goes away on save.</summary>

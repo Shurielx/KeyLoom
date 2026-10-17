@@ -13,8 +13,8 @@ public static class ProfileValidator
         foreach (var action in p.Actions) ValidateAction(action);
         StepGroups.Validate(p.Actions);
         if (p.PrimaryVk > 254 || p.PrimaryModifiers > 15) throw new ArgumentException(L.T("Invalid shortcut."));
-        if (p.SpamIntervalMs is < 1 or > 3600000) throw new ArgumentException(L.T("Repeat interval must be between 1 and 3600000 ms."));
-        if (p.StartDelayMs is < 0 or > 3600000) throw new ArgumentException(L.T("Start delay must be between 0 and 3600000 ms."));
+        if (p.SpamIntervalMs is < 1 or > 3600000) throw new ArgumentException(L.T("Repeat interval must be between 1 ms and 1h."));
+        if (p.StartDelayMs is < 0 or > 3600000) throw new ArgumentException(L.T("Start delay must be between 0 and 1h."));
         if (p.PointerSettleMs is < 0 or > 1000) throw new ArgumentException(L.T("Click delay after moving must be between 0 and 1000 ms."));
         if (p.RepeatCount is < 0 or > 1000000) throw new ArgumentException(L.T("Repeat count must be between 0 and 1000000. Use 0 to loop."));
         if (p.Behavior == MacroBehaviorType.Sequence)
@@ -122,7 +122,7 @@ public static class ProfileValidator
         {
             case MacroActionType.KeyPress or MacroActionType.KeyDown or MacroActionType.KeyUp: KeyResolver.Resolve(a.KeyName); break;
             case MacroActionType.MouseClick or MacroActionType.MouseDown or MacroActionType.MouseUp: ValidateButton(a.MouseButton); break;
-            case MacroActionType.Delay when a.DelayMs is < 1 or > 3600000: throw new ArgumentException(L.T("Step delay must be between 1 and 3600000 ms."));
+            case MacroActionType.Delay when a.DelayMs is < 1 or > 3600000: throw new ArgumentException(L.T("Step delay must be between 1 ms and 1h."));
             case MacroActionType.MouseMove when Math.Abs((long)a.X) > 10000 || Math.Abs((long)a.Y) > 10000: throw new ArgumentException(L.T("Relative mouse movement is limited to 10000 px per axis."));
             case MacroActionType.MousePosition when !Enum.IsDefined(a.Space) || Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000: throw new ArgumentException(L.T("Pointer coordinates are out of range."));
             case MacroActionType.MousePosition when a.GlideMs is < 0 or > 60000: throw new ArgumentException(L.T("A cursor can glide for 0 to 60000 ms."));

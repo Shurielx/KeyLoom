@@ -782,7 +782,7 @@
                 <TextBlock x:Name="IntervalLabel" Text="Every" Style="{StaticResource StackLabel}"/>
                 <StackPanel Orientation="Horizontal">
                   <TextBox x:Name="IntervalTextBox" Width="80" AutomationProperties.Name="Interval"/>
-                  <TextBlock Text="ms" Style="{StaticResource Unit}"/>
+                  <TextBlock Text="ms, or 10s, 5m, 1h" Style="{StaticResource Unit}"/>
                 </StackPanel>
               </StackPanel>
               <StackPanel x:Name="RunsPanel">
@@ -805,7 +805,7 @@
                 <TextBlock Text="Start after" Style="{StaticResource StackLabel}"/>
                 <StackPanel Orientation="Horizontal">
                   <TextBox x:Name="StartDelayTextBox" Width="80" AutomationProperties.Name="Start after"/>
-                  <TextBlock Text="ms" Style="{StaticResource Unit}"/>
+                  <TextBlock Text="ms, or 10s, 5m, 1h" Style="{StaticResource Unit}"/>
                 </StackPanel>
                 <StackPanel x:Name="SettlePanel" ToolTip="Clicks and holds wait at least this long after the cursor arrives, so games see it there first. A Wait step before the click counts toward it. 0 clicks right away.">
                   <TextBlock Text="Click delay after moving" Style="{StaticResource StackLabel}"/>

@@ -38,9 +38,9 @@ public partial class MacroEditorView : UserControl
         (profile.TargetType == TargetInputType.Keyboard ? KeyboardRadio : MouseRadio).IsChecked = true;
         SelectButton(profile.TargetMouseButton);
         TargetKeyTextBox.Text = profile.TargetKey;
-        StartDelayTextBox.Text = profile.StartDelayMs.ToString();
-        SettleTextBox.Text = profile.PointerSettleMs.ToString();
-        IntervalTextBox.Text = profile.SpamIntervalMs.ToString();
+        StartDelayTextBox.Text = TimeText.Format(profile.StartDelayMs);
+        SettleTextBox.Text = TimeText.Format(profile.PointerSettleMs);
+        IntervalTextBox.Text = TimeText.Format(profile.SpamIntervalMs);
         RunsTextBox.Text = profile.RepeatCount.ToString();
         StepTypeBox.ItemsSource = new[]
         {
@@ -263,13 +263,13 @@ public partial class MacroEditorView : UserControl
         StepMouseBox.SelectedIndex = Math.Max(0, Array.IndexOf(ProfileButtons, a.MouseButton));
         StepSpaceBox.SelectedIndex = (int)a.Space;
         ThenClickBox.IsChecked = HasClickAfter(i);
-        GlideTextBox.Text = a.GlideMs.ToString();
+        GlideTextBox.Text = TimeText.Format(a.GlideMs);
         ShowTargetStep(a);
         ShowGridStep(a);
         if (a.ActionType == MacroActionType.MousePosition && (a.Space != CoordinateSpace.Screen || a.GlideMs > 0)) StepMoreToggle.IsChecked = true;
         StepValueTextBox.Text = a.ActionType switch
         {
-            MacroActionType.Delay => a.DelayMs.ToString(), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",
+            MacroActionType.Delay => TimeText.Format(a.DelayMs), MacroActionType.MouseMove or MacroActionType.MousePosition => $"{a.X}, {a.Y}",
             MacroActionType.MouseScroll => a.ScrollAmount.ToString(), MacroActionType.Text => a.Text,
             _ => a.KeyName
         };
@@ -281,7 +281,7 @@ public partial class MacroEditorView : UserControl
     {
         string value = StepValueTextBox.Text.Trim();
         var a = new MacroAction { ActionType = StepType, MouseButton = ProfileButtons[Math.Max(0, StepMouseBox.SelectedIndex)], KeyName = value, Text = StepValueTextBox.Text };
-        if (StepType == MacroActionType.Delay) a.DelayMs = Number(value, L.T("Wait time"));
+        if (StepType == MacroActionType.Delay) a.DelayMs = Time(value, L.T("Wait time"));
         if (StepType == MacroActionType.MouseScroll) a.ScrollAmount = Number(value, L.T("Scroll amount"));
         if (StepType is MacroActionType.MouseMove or MacroActionType.MousePosition)
         {
@@ -291,7 +291,7 @@ public partial class MacroEditorView : UserControl
             if (StepType == MacroActionType.MousePosition)
             {
                 a.Space = (CoordinateSpace)Math.Max(0, StepSpaceBox.SelectedIndex);
-                a.GlideMs = Number(GlideTextBox.Text, L.T("Glide"));
+                a.GlideMs = Time(GlideTextBox.Text, L.T("Glide"));
             }
         }
         if (StepType is MacroActionType.ClickTarget or MacroActionType.WaitUntil) ReadTargetStep(a);
@@ -341,9 +341,9 @@ public partial class MacroEditorView : UserControl
         p.TargetType = KeyboardTarget ? TargetInputType.Keyboard : TargetInputType.Mouse;
         p.TargetMouseButton = SelectedButton;
         p.TargetKey = TargetKeyTextBox.Text.Trim();
-        p.StartDelayMs = Number(StartDelayTextBox.Text, L.T("Start delay"));
-        p.PointerSettleMs = Number(SettleTextBox.Text, L.T("Click delay after moving"));
-        p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Number(IntervalTextBox.Text, L.T("Interval"));
+        p.StartDelayMs = Time(StartDelayTextBox.Text, L.T("Start delay"));
+        p.PointerSettleMs = Time(SettleTextBox.Text, L.T("Click delay after moving"));
+        p.SpamIntervalMs = p.Behavior == MacroBehaviorType.PressAndHold ? Math.Max(1, Profile.SpamIntervalMs) : Time(IntervalTextBox.Text, L.T("Interval"));
         p.RepeatCount = p.Behavior == MacroBehaviorType.PressAndHold ? 0 : Number(RunsTextBox.Text, L.T("Runs"));
         p.Actions = p.Behavior == MacroBehaviorType.Script ? new() : new(_steps.Select(a => a.Clone()));
         p.Script = p.Behavior == MacroBehaviorType.Script ? ScriptText : "";
@@ -366,6 +366,8 @@ public partial class MacroEditorView : UserControl
         catch (ArgumentException ex) { Say(ex.Message, true); }
     }
     private static int Number(string value, string label) => int.TryParse(value.Trim(), out int number) ? number : throw new ArgumentException(L.T($"{label} must be a whole number."));
+    /// <summary>A time field: a bare number is ms, or write 2s, 10m, 1h, 1h 30m.</summary>
+    private static int Time(string value, string label) => TimeText.TryParse(value, out int ms) ? ms : throw new ArgumentException(L.T($"{label}: write a time like 500, 2s, 10m or 1h."));
     /// <summary>The window that hosts the editor; minimized while picking or recording so the target is reachable.</summary>
     private Window? Host => Window.GetWindow(this);
 }

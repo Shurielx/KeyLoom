@@ -2,6 +2,13 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-18 · 2026-10-18
+
+### Added
+- Time fields take 10s, 2m, 1h or 1h 30m, not only ms
+- A plain number still means ms
+- Whole times show short, like 2m
+
 ## 0.3-dev-17 · 2026-10-17
 
 ### Changed
