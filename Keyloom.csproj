@@ -12,7 +12,7 @@
     <AssemblyName>Keyloom</AssemblyName>
     <RootNamespace>Keyloom</RootNamespace>
     <Version>0.3.0</Version>
-    <InformationalVersion>0.3-dev-18</InformationalVersion>
+    <InformationalVersion>0.3-dev-19</InformationalVersion>
     <AssemblyVersion>0.3.0.0</AssemblyVersion>
     <FileVersion>0.3.0.0</FileVersion>
     <Product>Keyloom</Product>

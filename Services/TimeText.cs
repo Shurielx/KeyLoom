@@ -41,4 +41,7 @@ public static partial class TimeText
         if (sec > 0) parts.Add($"{sec}s");
         return string.Join(" ", parts);
     }
+
+    /// <summary>A time to read in a sentence: "30s", "1m 30s" or "250 ms".</summary>
+    public static string Display(int ms) => ms < 1000 || ms % 1000 != 0 ? $"{ms:N0} ms" : Format(ms);
 }

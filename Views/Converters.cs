@@ -36,9 +36,9 @@ public sealed record StepView(string Tone, Geometry? Icon, string Title, string 
                 a.Condition + (a.TimeoutMs > 0 ? L.T($" · looks up to {a.TimeoutMs:N0} ms") : ""), false, false, IsGroup: true, Collapsed: a.Collapsed),
             MacroActionType.GroupStart when a.Block == BlockKind.Else => new("Group", Find("IconGroup"), L.T("Else"), L.T("when the If above does not play"),
                 false, false, IsGroup: true, Collapsed: a.Collapsed),
-            MacroActionType.GroupStart => new("Group", Find("IconGroup"), a.GroupName, string.Join(" · ", new[]
+            MacroActionType.GroupStart => new("Group", Find(a.Repeats ? "IconRepeat" : "IconGroup"), a.GroupName, string.Join(" · ", new[]
             {
-                a.Runs > 1 ? $"×{a.Runs:N0}" : "", a.GapMs > 0 ? L.T($"{a.GapMs:N0} ms between steps") : ""
+                a.RepeatText, a.GapMs > 0 ? L.T($"{a.GapMs:N0} ms between steps") : ""
             }.Where(s => s.Length > 0)), false, false, IsGroup: true, Collapsed: a.Collapsed),
             MacroActionType.GroupEnd => new("Group", null, "", L.T("end of group"), false, false, IsGroupEnd: true),
             MacroActionType.ClickTarget => new("Pointer", Find("IconTarget"), L.T("Click on"), string.Join(" · ", new[]

@@ -76,6 +76,6 @@ public partial class MacroEditorView
     }
     private static bool Same(MacroAction a, MacroAction b) =>
         a.ActionType == b.ActionType && a.MouseButton == b.MouseButton && a.KeyName == b.KeyName && a.DelayMs == b.DelayMs && a.X == b.X && a.Y == b.Y
-        && a.Space == b.Space && a.ScrollAmount == b.ScrollAmount && a.Text == b.Text && a.Name == b.Name && a.Repeat == b.Repeat && a.GapMs == b.GapMs && a.Collapsed == b.Collapsed
+        && a.Space == b.Space && a.ScrollAmount == b.ScrollAmount && a.Text == b.Text && a.Name == b.Name && a.Repeat == b.Repeat && a.ForMs == b.ForMs && a.GapMs == b.GapMs && a.Collapsed == b.Collapsed
         && a.Target == b.Target && a.TimeoutMs == b.TimeoutMs && a.Gone == b.Gone && a.StopIfMissing == b.StopIfMissing && a.Block == b.Block && a.GlideMs == b.GlideMs;
 }

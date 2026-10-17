@@ -29,6 +29,9 @@ public class MacroAction
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public string? Name { get; set; }
     /// <summary>How many times the group plays; 0 and 1 both mean once.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int Repeat { get; set; }
+    /// <summary>When set, the group plays again and again until this long has passed since it started, instead of <see cref="Repeat"/> times.
+    /// A pass that has begun always finishes.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int ForMs { get; set; }
     /// <summary>Extra wait between the group's steps, and between its runs.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public int GapMs { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Collapsed { get; set; }
@@ -75,6 +78,10 @@ public class MacroAction
     };
     [JsonIgnore] public bool IsGroupMarker => ActionType is MacroActionType.GroupStart or MacroActionType.GroupEnd;
     [JsonIgnore] public int Runs => Math.Max(1, Repeat);
+    /// <summary>True when the group plays more than once, by count or for a time.</summary>
+    [JsonIgnore] public bool Repeats => ForMs > 0 || Runs > 1;
+    /// <summary>How often the group plays, in words: "×10", "for 30s", or "" when it plays once.</summary>
+    [JsonIgnore] public string RepeatText => ForMs > 0 ? L.T($"for {Services.TimeText.Display(ForMs)}") : Runs > 1 ? $"×{Runs:N0}" : "";
     [JsonIgnore] public string GroupName => Block switch
     {
         BlockKind.If => L.T("If"), BlockKind.Else => L.T("Else"),
@@ -99,7 +106,7 @@ public class MacroAction
         MacroActionType.MouseScroll => L.N(ScrollAmount, "Scroll {0} notch", "Scroll {0} notches"),
         MacroActionType.GroupStart when Block == BlockKind.If => L.T($"If {Condition}"),
         MacroActionType.GroupStart when Block == BlockKind.Else => L.T("Else"),
-        MacroActionType.GroupStart => L.T($"Group {GroupName}") + (Runs > 1 ? $" ×{Runs}" : "") + (GapMs > 0 ? L.T($", {GapMs} ms between steps") : ""),
+        MacroActionType.GroupStart => L.T($"Group {GroupName}") + (Repeats ? " " + RepeatText : "") + (GapMs > 0 ? L.T($", {GapMs} ms between steps") : ""),
         MacroActionType.GroupEnd => L.T("End of group"),
         MacroActionType.ClickTarget => L.T($"Click {ButtonWord} on {TargetName}"),
         MacroActionType.WaitUntil => Gone ? L.T($"Wait until {TargetName} is gone") : L.T($"Wait until {TargetName} shows"),

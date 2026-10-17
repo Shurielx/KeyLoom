@@ -75,6 +75,8 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
         MacroScript? script = null;
         long count = 0;
         var progressClock = Stopwatch.StartNew();
+        // Groups that repeat for a time read this clock.
+        var runClock = Stopwatch.StartNew();
         try
         {
             input = new ExecutionInput(_windows.Cursor, p.ExecutionMode switch
@@ -126,7 +128,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     {
                         if (!script.Run(count + 1)) { count++; ended = true; break; }
                     }
-                    else foreach (var step in StepGroups.Expand(p.Actions, block => block.AsksAi ? eyes.Holds(block, token) : Holds(block, targets, token)))
+                    else foreach (var step in StepGroups.Expand(p.Actions, block => block.AsksAi ? eyes.Holds(block, token) : Holds(block, targets, token), () => runClock.Elapsed.TotalMilliseconds))
                     {
                         token.ThrowIfCancellationRequested();
                         pointer.EnsureAlive();

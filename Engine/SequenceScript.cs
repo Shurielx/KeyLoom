@@ -110,9 +110,11 @@ public static class SequenceScript
         {
             var g = node.Step;
             if (!string.IsNullOrWhiteSpace(g.Name)) Line("// " + g.Name.Replace("\r", " ").Replace("\n", " "));
-            if (g.Runs <= 1) { Nodes(node.Children!, g.GapMs, loops); return; }
+            if (!g.Repeats) { Nodes(node.Children!, g.GapMs, loops); return; }
             string i = loops < 3 ? "ijk"[loops].ToString() : "i" + (loops + 1).ToString(CultureInfo.InvariantCulture);
-            Line($"for (let {i} = 0; {i} < {g.Runs}; {i}++) {{");
+            // A group that repeats for a time starts passes until its time is up, like the steps do.
+            Line(g.ForMs > 0 ? $"for (let {i} = 0, {i}End = Date.now() + {g.ForMs}; {i} === 0 || Date.now() < {i}End; {i}++) {{"
+                : $"for (let {i} = 0; {i} < {g.Runs}; {i}++) {{");
             _indent++;
             if (g.GapMs > 0 && node.Children!.Count > 0) Line($"if ({i} > 0) wait({g.GapMs})");
             Nodes(node.Children!, g.GapMs, loops + 1);

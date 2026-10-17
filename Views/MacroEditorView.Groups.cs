@@ -68,13 +68,17 @@ public partial class MacroEditorView
 
     /// <summary>Puts the steps in a new group where the first of them was. Steps that were apart are gathered in order.</summary>
     private void GroupSteps(List<int> block) => MakeBlock(block, BlockKind.Group);
+    /// <summary>Puts the steps in a new group that plays them 10 times, ready to set how often or for how long.</summary>
+    private void RepeatSteps(List<int> block) => WrapSteps(block, BlockKind.Group, repeat: true);
     /// <summary>Puts the steps in a new group or If where the first of them was.</summary>
-    private void MakeBlock(List<int> block, BlockKind kind)
+    private void MakeBlock(List<int> block, BlockKind kind) => WrapSteps(block, kind, repeat: false);
+    private void WrapSteps(List<int> block, BlockKind kind, bool repeat)
     {
         EnsureRoom(2);
         Remember();
         var start = kind == BlockKind.If
             ? new MacroAction { ActionType = MacroActionType.GroupStart, Block = BlockKind.If, Target = _targets.FirstOrDefault()?.Name }
+            : repeat ? new MacroAction { ActionType = MacroActionType.GroupStart, Name = NextGroupName(L.T("Repeat")), Repeat = 10 }
             : new MacroAction { ActionType = MacroActionType.GroupStart, Name = NextGroupName() };
         int at = block.Count > 0 ? block[0] : InsertionAfter(SelectedIndices().LastOrDefault(-1));
         var moving = block.Select(i => _steps[i]).ToList();
@@ -88,12 +92,15 @@ public partial class MacroEditorView
         }
         finally { _selecting = false; }
         Select([at]); AnimateSteps(Enumerable.Range(at, moving.Count + 2), -6); FocusStep(at);
-        if (kind == BlockKind.Group) Dispatcher.BeginInvoke(() => { GroupNameTextBox.Focus(); GroupNameTextBox.SelectAll(); }, System.Windows.Threading.DispatcherPriority.Loaded);
+        var field = repeat ? GroupRunsTextBox : GroupNameTextBox;
+        if (kind == BlockKind.Group) Dispatcher.BeginInvoke(() => { field.Focus(); field.SelectAll(); }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
-    private string NextGroupName()
+    /// <summary>"Group 1", "Group 2"; with a <paramref name="word"/> like Repeat: "Repeat", then "Repeat 2".</summary>
+    private string NextGroupName(string? word = null)
     {
         var names = _steps.Where(a => a.ActionType == MacroActionType.GroupStart).Select(a => a.GroupName).ToHashSet();
-        for (int n = 1; ; n++) if (!names.Contains($"Group {n}")) return $"Group {n}";
+        if (word != null && !names.Contains(word)) return word;
+        for (int n = word == null ? 1 : 2; ; n++) if (!names.Contains($"{word ?? "Group"} {n}")) return $"{word ?? "Group"} {n}";
     }
     /// <summary>Removes a group's header and end and keeps its steps where they are.</summary>
     private void Ungroup(int start)
@@ -148,6 +155,7 @@ public partial class MacroEditorView
         }
     }
     private void AddGroup_Click(object sender, RoutedEventArgs e) => Attempt(() => GroupSteps(PickedBlock()));
+    private void AddRepeat_Click(object sender, RoutedEventArgs e) => Attempt(() => RepeatSteps(PickedBlock()));
     private void BulkGroup_Click(object sender, RoutedEventArgs e) => Attempt(() => GroupSteps(PickedBlock()));
     private void Ungroup_Click(object sender, RoutedEventArgs e) => Ungroup(_groupStart);
 
@@ -158,7 +166,9 @@ public partial class MacroEditorView
         var g = _steps[start];
         _loadingStep = true;
         GroupNameTextBox.Text = g.Name ?? "";
-        GroupRunsTextBox.Text = g.Runs.ToString();
+        (g.ForMs > 0 ? GroupForRadio : GroupTimesRadio).IsChecked = true;
+        GroupRunsTextBox.Text = g.ForMs > 0 ? TimeText.Format(g.ForMs) : g.Runs.ToString();
+        GroupRunsUnit.Text = g.ForMs > 0 ? "" : L.T("times");
         GroupGapTextBox.Text = TimeText.Format(g.GapMs);
         _loadingStep = false;
         ShowBlock(g);
@@ -190,10 +200,11 @@ public partial class MacroEditorView
         GroupHintText.Visibility = inside == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (inside == 0) return;
         var once = group.Select(a => a.Clone()).ToList();
-        once[0].Repeat = 0;
+        once[0].Repeat = 0; once[0].ForMs = 0;
         double pass = MacroTimeline.Build(StepGroups.Expand(once).ToList()).Duration, total = MacroTimeline.Build(StepGroups.Expand(group).ToList()).Duration;
-        GroupSummaryText.Text = (head.Runs == 1 ? L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} once") : L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} {L.N(head.Runs, "{0} time", "{0} times")}"))
-            + (head.GapMs == 0 ? "." : head.Runs > 1 ? L.T($", waiting {head.GapMs:N0} ms between steps and between passes.") : L.T($", waiting {head.GapMs:N0} ms between steps."))
+        long passes = StepGroups.PassesOf(group, 0);
+        GroupSummaryText.Text = (head.ForMs > 0 ? L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} again and again for {TimeText.Display(head.ForMs)}, about {L.N(passes, "{0} time", "{0} times")}") : head.Runs == 1 ? L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} once") : L.T($"Plays its {L.N(inside, "{0} step", "{0} steps")} {L.N(head.Runs, "{0} time", "{0} times")}"))
+            + (head.GapMs == 0 ? "." : head.Repeats ? L.T($", waiting {head.GapMs:N0} ms between steps and between passes.") : L.T($", waiting {head.GapMs:N0} ms between steps."))
             + (playedCount > inside ? " " + L.T($"That is {L.N(playedCount, "{0} step", "{0} steps")} in a run.") : "");
         if (head.Block != BlockKind.Group) GroupSummaryText.Text = BlockSummary(head, inside);
         GroupStartText.Text = (string)new StepLayoutConverter().Convert([head, _steps, StepsRevision], typeof(string), "Time", System.Globalization.CultureInfo.CurrentCulture);
@@ -219,9 +230,18 @@ public partial class MacroEditorView
         {
             var copy = _steps[_groupStart].Clone();
             copy.Name = GroupNameTextBox.Text.Trim() is { Length: > 0 } name ? name : null;
-            int runs = Number(GroupRunsTextBox.Text, L.T("Times"));
-            if (runs is < 1 or > StepGroups.MaxRepeat) throw new ArgumentException(L.T($"A group can play 1 to {StepGroups.MaxRepeat:N0} times."));
-            copy.Repeat = runs == 1 ? 0 : runs;
+            if (GroupForRadio.IsChecked == true)
+            {
+                int ms = Time(GroupRunsTextBox.Text, L.T("Repeat for"));
+                if (ms is < 1 or > StepGroups.MaxForMs) throw new ArgumentException(L.T("A group can repeat for 1 ms up to 1h."));
+                copy.ForMs = ms; copy.Repeat = 0;
+            }
+            else
+            {
+                int runs = Number(GroupRunsTextBox.Text, L.T("Times"));
+                if (runs is < 1 or > StepGroups.MaxRepeat) throw new ArgumentException(L.T($"A group can play 1 to {StepGroups.MaxRepeat:N0} times."));
+                copy.Repeat = runs == 1 ? 0 : runs; copy.ForMs = 0;
+            }
             copy.GapMs = Time(GroupGapTextBox.Text, L.T("Wait between steps"));
             var check = _steps.ToList(); check[_groupStart] = copy;
             StepGroups.Validate(check);
@@ -230,9 +250,26 @@ public partial class MacroEditorView
             _committing = true;
             _steps[_groupStart] = copy;
             if (headerPicked) ActionsListBox.SelectedItem = copy;
+            GroupIconPath.Data = (System.Windows.Media.Geometry)FindResource(copy.Repeats ? "IconRepeat" : "IconGroup");
+            GroupTitleText.Text = copy.Repeats ? L.T("Repeat") : L.T("Group");
             ShowGroupHint("");
         }
         catch (ArgumentException ex) { ShowGroupHint(ex.Message); }
         finally { _committing = false; }
+    }
+    /// <summary>Switches the group between a number of times and a time. A time needs the steps to take time, so a group of
+    /// quick steps gets a short wait between them, shown in its field.</summary>
+    private void GroupRepeatMode_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loadingStep || !IsInitialized || _groupStart < 0 || _groupStart >= _steps.Count) return;
+        var g = _steps[_groupStart];
+        bool timed = GroupForRadio.IsChecked == true;
+        GroupRunsUnit.Text = timed ? "" : L.T("times");
+        if (timed && g.GapMs == 0 && StepGroups.PassMs(_steps, _groupStart) <= 0)
+        {
+            _loadingStep = true; GroupGapTextBox.Text = "50"; _loadingStep = false;
+        }
+        GroupRunsTextBox.Text = timed ? "10s" : "10";
+        GroupRunsTextBox.Focus(); GroupRunsTextBox.SelectAll();
     }
 }

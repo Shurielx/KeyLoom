@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using Keyloom.Engine;
 using Keyloom.Models;
+using Keyloom.Services;
 
 namespace Keyloom.Views;
 
@@ -184,7 +185,7 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         if (group != null) dot.Children.Add(new Ellipse { Width = 36, Height = 36, Margin = new(-3), Stroke = Brushes.White, StrokeThickness = 1.5, StrokeDashArray = [2, 2] });
         dot.Children.Add(new Ellipse { Fill = hold ? HoldFill : click ? ClickFill : MoveFill, Stroke = Brushes.White, StrokeThickness = 2 });
         dot.Children.Add(new TextBlock { Text = (k + 1).ToString(), Foreground = Brushes.White, FontWeight = FontWeights.Bold, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
-        if (group is { Runs: > 1 }) dot.Children.Add(Badge($"×{group.Runs}", MoveFill, new(0, -10, -16, 0), VerticalAlignment.Top));
+        if (group is { Repeats: true }) dot.Children.Add(Badge(group.RepeatText, MoveFill, new(0, -10, -16, 0), VerticalAlignment.Top));
         // Keys pressed at the point, like W or E, show under it.
         var keys = own.Where(a => a.ActionType is MacroActionType.KeyPress or MacroActionType.KeyDown).Select(a => a.KeyName).Distinct().ToList();
         if (own.Any(a => a.ActionType == MacroActionType.Text)) keys.Add("text");
@@ -744,8 +745,8 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         var row = RowGrid(start);
         row.Margin = new(depth * 14, 4, 0, 4);
         AddCell(row, 0, Muted(time, new()));
-        AddCell(row, 1, Glyph("IconGroup", 12));
-        var text = new TextBlock { Text = g.GroupName + (g.Runs > 1 ? L.T($" · repeats {g.Runs:N0}×") : "") + (g.GapMs > 0 ? L.T($" · +{g.GapMs:N0} ms between steps") : ""), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = L.T("Show its first point and the group's settings") };
+        AddCell(row, 1, Glyph(g.Repeats ? "IconRepeat" : "IconGroup", 12));
+        var text = new TextBlock { Text = g.GroupName + (g.Repeats ? L.T($" · repeats {g.RepeatText}") : "") + (g.GapMs > 0 ? L.T($" · +{g.GapMs:N0} ms between steps") : ""), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.Hand, ToolTip = L.T("Show its first point and the group's settings") };
         Grid.SetColumnSpan(text, 2);
         AddCell(row, 2, text);
         row.MouseLeftButtonUp += (_, _) =>
@@ -777,11 +778,13 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         settings.Children.Add(new StackPanel
         {
             Orientation = Orientation.Horizontal, Margin = new(0, 0, 14, 4),
-            ToolTip = L.N(count, "The group's {0} point plays this many times in a row before the macro goes on", "The group's {0} points play this many times in a row before the macro goes on"),
+            ToolTip = L.N(count, "The group's {0} point plays this many times in a row before the macro goes on. A time like 30s repeats it for that long.",
+                "The group's {0} points play this many times in a row before the macro goes on. A time like 30s repeats them for that long."),
             Children =
             {
                 new TextBlock { Text = L.T("Repeat"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 6, 0) },
-                Unit(Box(g.Runs.ToString(), 44, L.T("Times in a row"), text => RouteBuilder.Change(_steps, start, a => a.Repeat = Whole(text, "Repeat"))), "×")
+                Unit(Box(g.ForMs > 0 ? TimeText.Format(g.ForMs) + (g.ForMs % 1000 == 0 ? "" : "ms") : g.Runs.ToString(), 44, L.T("Times in a row, or a time like 30s"),
+                    text => RouteBuilder.Change(_steps, start, a => SetRepeat(a, text))), L.T("× or 30s"))
             }
         });
         settings.Children.Add(new StackPanel
@@ -1025,6 +1028,16 @@ public sealed partial class MacroBuilderWindow : OverlayWindow
         _status.Text = text; _statusSticky = true;
         _status.Visibility = Visibility.Visible;
         _status.SetResourceReference(TextBlock.ForegroundProperty, problem ? "DangerTextBrush" : "SuccessTextBrush");
+    }
+    /// <summary>A bare number repeats a group that many times; a time with its unit, like 30s, repeats it for that long.</summary>
+    private static void SetRepeat(MacroAction group, string text)
+    {
+        if (text.Trim().Length > 0 && char.IsLetter(text.Trim()[^1]))
+        {
+            group.ForMs = TimeText.TryParse(text, out int ms) && ms > 0 ? ms : throw new ArgumentException(L.T("Repeat: write how many times, like 10, or how long, like 30s or 2m."));
+            group.Repeat = 0;
+        }
+        else { group.Repeat = Whole(text, L.T("Repeat")); group.ForMs = 0; }
     }
     private static int Whole(string text, string label, bool negative = false)
     {

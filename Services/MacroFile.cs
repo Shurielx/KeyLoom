@@ -241,8 +241,8 @@ public static class MacroFile
             {
                 var group = new StepDto
                 {
-                    Do = "group", Name = NullIfEmpty(a.Name), Repeat = a.Repeat > 1 ? a.Repeat : null,
-                    GapMs = a.GapMs > 0 ? a.GapMs : null, Collapsed = a.Collapsed ? true : null, Steps = new()
+                    Do = "group", Name = NullIfEmpty(a.Name), Repeat = a.Repeat > 1 && a.ForMs == 0 ? a.Repeat : null,
+                    ForMs = a.ForMs > 0 ? a.ForMs : null, GapMs = a.GapMs > 0 ? a.GapMs : null, Collapsed = a.Collapsed ? true : null, Steps = new()
                 };
                 current.Add(group); open.Push(current); current = group.Steps;
                 continue;
@@ -327,7 +327,7 @@ public static class MacroFile
                     case "scroll": into.Add(new() { ActionType = MacroActionType.MouseScroll, ScrollAmount = Need(s.Notches, "notches", L.T("3 (or -3 to scroll down)")) }); break;
                     case "type": into.Add(new() { ActionType = MacroActionType.Text, Text = Need(s.Text, "text", "\"Hello\"") }); break;
                     case "group":
-                        into.Add(new() { ActionType = MacroActionType.GroupStart, Name = NullIfEmpty(s.Name), Repeat = s.Repeat ?? 0, GapMs = s.GapMs ?? 0, Collapsed = s.Collapsed ?? false });
+                        into.Add(new() { ActionType = MacroActionType.GroupStart, Name = NullIfEmpty(s.Name), Repeat = s.Repeat ?? 0, ForMs = s.ForMs ?? 0, GapMs = s.GapMs ?? 0, Collapsed = s.Collapsed ?? false });
                         AddSteps(into, s.Steps ?? new(), path);
                         into.Add(new() { ActionType = MacroActionType.GroupEnd });
                         break;
@@ -531,6 +531,7 @@ public static class MacroFile
         public string? Text { get; set; }
         public string? Name { get; set; }
         public int? Repeat { get; set; }
+        public int? ForMs { get; set; }
         public int? GapMs { get; set; }
         public bool? Collapsed { get; set; }
         public string? Target { get; set; }

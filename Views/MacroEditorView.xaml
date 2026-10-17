@@ -175,6 +175,7 @@
                     <MenuItem Header="Drag a matching pair in a grid..." Tag="DragPair" Click="AddGridStep_Click" ToolTip="Reads the numbers in a grid and drags one of two equal numbers onto the other, lowest first"><MenuItem.Icon><Path Data="{StaticResource IconGrid}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="If something is on the screen..." Click="AddIf_Click" ToolTip="Plays the picked steps only when a picture or a color is on the screen, with an Else for when it is not"><MenuItem.Icon><Path Data="{StaticResource IconTarget}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem x:Name="AddAiIfItem" Header="If the AI says yes..." Click="AddAiIf_Click" Visibility="Collapsed" ToolTip="Experimental: plays the picked steps only when the AI, looking at the screen, answers yes to your question"><MenuItem.Icon><Path Data="{StaticResource IconAi}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="Repeat" Click="AddRepeat_Click" ToolTip="Plays the picked steps again and again: a number of times, or for a time like 30s"><MenuItem.Icon><Path Data="{StaticResource IconRepeat}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                     <MenuItem Header="Group" Click="AddGroup_Click" InputGestureText="Ctrl+G" ToolTip="Groups the picked steps, or adds an empty group"><MenuItem.Icon><Path Data="{StaticResource IconGroup}" Style="{StaticResource MenuIcon}"/></MenuItem.Icon></MenuItem>
                   </ContextMenu>
                 </Button.ContextMenu>
@@ -655,10 +656,16 @@
               <TextBox x:Name="GroupNameTextBox" MaxLength="80" TextChanged="GroupField_Changed" AutomationProperties.Name="Group name"/>
               <WrapPanel x:Name="GroupTimingPanel">
                 <StackPanel Margin="0,0,20,0">
-                  <TextBlock Text="Play" Style="{StaticResource StackLabel}"/>
+                  <TextBlock Text="Repeat" Style="{StaticResource StackLabel}"/>
                   <StackPanel Orientation="Horizontal">
-                    <TextBox x:Name="GroupRunsTextBox" Width="64" TextChanged="GroupField_Changed" AutomationProperties.Name="Times the group plays"/>
-                    <TextBlock Text="times" Style="{StaticResource Unit}"/>
+                    <Border Style="{StaticResource SegmentBar}" Margin="0,0,8,0">
+                      <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="GroupTimesRadio" GroupName="GroupRepeat" Style="{StaticResource Segment}" Content="Times" IsChecked="True" Checked="GroupRepeatMode_Changed" ToolTip="Plays the steps a number of times"/>
+                        <RadioButton x:Name="GroupForRadio" GroupName="GroupRepeat" Style="{StaticResource Segment}" Content="For a time" Checked="GroupRepeatMode_Changed" ToolTip="Plays the steps again and again until the time is up, like 30s or 2m"/>
+                      </StackPanel>
+                    </Border>
+                    <TextBox x:Name="GroupRunsTextBox" Width="64" TextChanged="GroupField_Changed" AutomationProperties.Name="How often the group plays" ToolTip="A number of times, or with For a time: 30s, 2m or 1h"/>
+                    <TextBlock x:Name="GroupRunsUnit" Text="times" Style="{StaticResource Unit}"/>
                   </StackPanel>
                 </StackPanel>
                 <StackPanel>

@@ -28,6 +28,22 @@ internal static partial class Program
         var huge = new List<MacroAction> { Start("A", 10000) };
         huge.AddRange(Enumerable.Range(0, 200).Select(_ => KeyStep("A"))); huge.Add(End());
         Check(Throws(() => StepGroups.Validate(huge)), "groups cannot expand past the played-step limit");
+        // A group can repeat for a time: in the preview passes take what their steps take, playing reads the clock.
+        MacroAction For(int ms, int gap = 0) { var g = Start("Spam", 0, gap); g.ForMs = ms; return g; }
+        var wait = new MacroAction { ActionType = MacroActionType.Delay, DelayMs = 100 };
+        var timed = new List<MacroAction> { For(1000), KeyStep("A"), wait, End(), KeyStep("W") };
+        Check(StepGroups.Expand(timed).Count(a => a.KeyName == "A") == 10 && StepGroups.PassesOf(timed, 0) == 10 && StepGroups.PlayedCount(timed) == 21
+            && StepGroups.StartTimes(timed)[4] == 1000, "a group repeats for its time in the preview and the timing");
+        double now = 0;
+        int real = StepGroups.Expand([For(1000), KeyStep("A"), End()], null, () => now).Count(a => { now += 250; return true; });
+        Check(real == 4, "playing, a timed group starts passes until its time is up on the clock");
+        Check(Throws(() => StepGroups.Validate([For(1000), KeyStep("A"), End()])) && !Throws(() => StepGroups.Validate([For(1000, 30), KeyStep("A"), KeyStep("B"), End()]))
+            && Throws(() => StepGroups.Validate([For(StepGroups.MaxForMs + 1), wait, End()])), "a timed group needs steps that take time and at most 1h");
+        Check(For(30000).RepeatText == "for 30s" && Start("X", 5).RepeatText == "×5" && Start("X").RepeatText == "", "groups say how often they repeat");
+        Check(SequenceScript.From(timed).Contains("Date.now() + 1000") && MacroScript.Check(SequenceScript.From(timed)) == null, "a timed group turns into a loop that checks the time");
+        var file = Profile(MacroBehaviorType.Sequence); file.Actions = new(timed);
+        Check(MacroFile.Read(MacroFile.Write([file]))[0].Actions[0] is { ForMs: 1000, Repeat: 0 } && MacroFile.Write([file]).Contains("\"forMs\": 1000"), "a timed group keeps its time in .keyloom files");
+
         Check(StepGroups.DepthAt(nested, 3) == 2 && StepGroups.DepthAt(nested, 0) == 0 && StepGroups.EndOf(nested, 0) == 5 && StepGroups.StartOf(nested, 4) == 2, "group structure is found in the flat list");
 
         // The executor plays groups as expanded.
@@ -111,6 +127,20 @@ internal static partial class Program
         Check(Items().Length == 7 && Items()[1].Name == "Combo", "undo brings the group back");
         Save(editor);
         Check(p.Actions.Count == 7 && p.Actions[1] is { ActionType: MacroActionType.GroupStart, Repeat: 3 }, "saving keeps groups");
+
+        // Add step, Repeat: the picked step plays 10 times, or for a time; quick steps get a short wait so the time can pass.
+        steps.SelectedItems.Clear(); steps.SelectedItem = Items()[0];
+        Invoke(editor, "RepeatSteps", (List<int>)Call(editor, "PickedBlock")!);
+        var repeat = Items()[0];
+        Check(repeat is { ActionType: MacroActionType.GroupStart, Name: "Repeat", Repeat: 10, ForMs: 0 } && Items()[1].KeyName == "A" && Items()[2].ActionType == MacroActionType.GroupEnd
+            && StepView.From(repeat).Detail == "×10", "Repeat puts the picked step in a group that plays 10 times");
+        ((RadioButton)editor.FindName("GroupForRadio")).IsChecked = true;
+        ((TextBox)editor.FindName("GroupRunsTextBox")).Text = "30s";
+        repeat = Items()[0];
+        Check(repeat is { ForMs: 30000, Repeat: 0, GapMs: 50 } && StepView.From(repeat).Detail == "for 30s · 50 ms between steps"
+            && ((TextBlock)editor.FindName("GroupSummaryText")).Text.StartsWith("Plays its 1 step again and again for 30s, about 601 times"), "a repeat can play for a time, with its pace shown");
+        ((RadioButton)editor.FindName("GroupTimesRadio")).IsChecked = true;
+        Check(Items()[0] is { ForMs: 0, Repeat: 10 }, "switching back repeats a number of times");
     }
     private static object? Call(object instance, string name, params object[] args) =>
         instance.GetType().GetMethod(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(instance, args);

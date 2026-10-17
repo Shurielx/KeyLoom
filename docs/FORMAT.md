@@ -95,12 +95,19 @@ Every step has `"do"`, which says what it does.
 
 ### Groups
 
-A group plays its steps `repeat` times, with `gapMs` between its steps and between its runs. Groups can hold other groups, up to 8 deep.
+A group plays its steps `repeat` times, with `gapMs` between its steps and between its runs. With `forMs` instead, it plays them again and again until that many milliseconds have passed (up to 1 hour); a pass that has begun finishes. Groups can hold other groups, up to 8 deep.
 
 ```json
 { "do": "group", "name": "Burst", "repeat": 5, "gapMs": 30, "steps": [
   { "do": "click" },
   { "do": "moveBy", "x": 10, "y": 0 }
+] }
+```
+
+```json
+{ "do": "group", "name": "Spam", "forMs": 30000, "steps": [
+  { "do": "click" },
+  { "do": "wait", "ms": 30 }
 ] }
 ```
 

@@ -2,12 +2,26 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-19 · 2026-10-18
+
+### Added
+- Add step, Repeat: plays the picked steps again and again
+- Repeat them a number of times, or for a time like 30s
+- Spam a click for 30s at your pace, with no counting
+- Repeats show in the list with their icon: ×10 or for 30s
+- The repeat says how often it plays in its time
+- Quick steps get a 50 ms wait so the time can pass
+- On screen and .keyloom files keep the time too
+
 ## 0.3-dev-18 · 2026-10-18
 
 ### Added
 - Time fields take 10s, 2m, 1h or 1h 30m, not only ms
 - A plain number still means ms
 - Whole times show short, like 2m
+- Works in Wait steps, Pause between runs and Start after
+- Also in group waits, glides and how long to look
+- Limits read in plain time too, like up to 1h
 
 ## 0.3-dev-17 · 2026-10-17
 

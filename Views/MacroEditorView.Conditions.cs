@@ -42,7 +42,7 @@ public partial class MacroEditorView
     {
         var kind = head.Block;
         bool group = kind == BlockKind.Group;
-        GroupTitleText.Text = kind switch { BlockKind.If => L.T("If"), BlockKind.Else => L.T("Else"), _ => L.T("Group") };
+        GroupTitleText.Text = kind switch { BlockKind.If => L.T("If"), BlockKind.Else => L.T("Else"), _ => head.Repeats ? L.T("Repeat") : L.T("Group") };
         GroupIconPath.Data = (System.Windows.Media.Geometry)FindResource(kind == BlockKind.If ? "IconTarget" : "IconGroup");
         UngroupText.Text = group ? L.T("Ungroup") : $"Remove {GroupTitleText.Text}";
         UngroupButton.ToolTip = group ? L.T("Keep the steps and remove the group (Ctrl+Shift+G)") : L.T($"Keep the steps and remove the {GroupTitleText.Text}; they then always play");
@@ -53,7 +53,7 @@ public partial class MacroEditorView
         PlaceTargetOptions(kind == BlockKind.If);
         IfTargetHost.Visibility = kind == BlockKind.If && !head.AsksAi ? Visibility.Visible : Visibility.Collapsed;
         IfAskPanel.Visibility = kind == BlockKind.If && head.AsksAi ? Visibility.Visible : Visibility.Collapsed;
-        GroupIconPath.Data = (System.Windows.Media.Geometry)FindResource(kind == BlockKind.If ? head.AsksAi ? "IconAi" : "IconTarget" : "IconGroup");
+        GroupIconPath.Data = (System.Windows.Media.Geometry)FindResource(kind == BlockKind.If ? head.AsksAi ? "IconAi" : "IconTarget" : head.Repeats ? "IconRepeat" : "IconGroup");
         if (kind != BlockKind.If) return;
         bool loading = _loadingStep;
         _loadingStep = true;

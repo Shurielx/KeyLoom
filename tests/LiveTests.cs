@@ -116,6 +116,22 @@ internal static partial class Program
         RealClick((FrameworkElement)steps.ItemContainerGenerator.ContainerFromIndex(2), 0.25); Pump(500);
         Capture(window, "live-if-inner-step.png");
         editor.Cancel(); Pump(300);
+
+        // A Repeat that spams a click for 30 seconds, picked in the real editor.
+        var spam = Profile(MacroBehaviorType.Sequence);
+        spam.Actions = new([
+            new() { ActionType = MacroActionType.KeyPress, KeyName = "E" },
+            new() { ActionType = MacroActionType.GroupStart, Name = "Repeat", ForMs = 30000 },
+            new() { ActionType = MacroActionType.MouseClick },
+            new() { ActionType = MacroActionType.Delay, DelayMs = 30 },
+            new() { ActionType = MacroActionType.GroupEnd },
+            new() { ActionType = MacroActionType.KeyPress, KeyName = "R" }]);
+        Invoke(window, "OpenEditor", spam, false, (Action)(() => { })); Pump(600);
+        editor = (MacroEditorView)Field(window, "_activeEditor")!;
+        steps = (System.Windows.Controls.ListBox)editor.FindName("ActionsListBox");
+        RealClick((FrameworkElement)steps.ItemContainerGenerator.ContainerFromIndex(1), 0.2); Pump(500);
+        Capture(window, "live-repeat.png");
+        editor.Cancel(); Pump(300);
     }
     /// <summary>Turn into script with real clicks, asked in a sheet, then the script's settings beside it. Only Keyloom's window is saved.</summary>
     private static void LiveScript(MainWindow window)
