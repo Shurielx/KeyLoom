@@ -60,6 +60,7 @@ internal static partial class Program
         Capture(window, "live-route-click.png");
         ((SheetLayer)window.FindName("Sheets")).CloseTop(false); Pump(400);
         LiveVision(window);
+        LiveScript(window);
         LiveBuilder();
         window.Close();
     }
@@ -112,6 +113,42 @@ internal static partial class Program
         RealClick((FrameworkElement)steps.ItemContainerGenerator.ContainerFromIndex(2), 0.25); Pump(500);
         Capture(window, "live-if-inner-step.png");
         editor.Cancel(); Pump(300);
+    }
+    /// <summary>Turn into script with real clicks, asked in a sheet, then the script's settings beside it. Only Keyloom's window is saved.</summary>
+    private static void LiveScript(MainWindow window)
+    {
+        bool scripts = AppSettings.Current.Scripts;
+        try
+        {
+            AppSettings.Current.Scripts = true;
+            var p = Profile(MacroBehaviorType.Sequence);
+            p.Targets.Add(new ScreenTarget { Name = "Play", Picture = Keyloom.Engine.TargetPicture.Encode(Button(48, 28)) });
+            p.Grids.Add(new ScreenGrid { Name = "Board", Area = new(100, 100, 400, 400), Rows = 4, Columns = 4 });
+            p.Actions = new([
+                new() { ActionType = MacroActionType.GroupStart, Name = "Merge", Repeat = 5, GapMs = 80 },
+                new() { ActionType = MacroActionType.DragPair, Grid = "Board", GlideMs = 120 },
+                new() { ActionType = MacroActionType.GroupEnd },
+                new() { ActionType = MacroActionType.GroupStart, Block = BlockKind.If, Target = "Play", TimeoutMs = 500 },
+                new() { ActionType = MacroActionType.ClickTarget, Target = "Play" },
+                new() { ActionType = MacroActionType.GroupEnd },
+                new() { ActionType = MacroActionType.Delay, DelayMs = 300 }]);
+            Invoke(window, "Back_Click", window, new RoutedEventArgs()); Pump(300);
+            Invoke(window, "OpenEditor", p, false, (Action)(() => { })); Pump(600);
+            var editor = (MacroEditorView)Field(window, "_activeEditor")!;
+            RealClick((FrameworkElement)editor.FindName("ToScriptButton")); Pump(700);
+            Capture(window, "live-to-script-ask.png");
+            var sheets = (SheetLayer)window.FindName("Sheets");
+            var confirm = Descendants<System.Windows.Controls.Button>(sheets).FirstOrDefault(b => b.Content as string == "Turn into script");
+            if (confirm != null) { RealClick(confirm); Pump(800); }
+            var box = (ICSharpCode.AvalonEdit.TextEditor)editor.FindName("ScriptBox");
+            Console.WriteLine($"turned into a script: {((System.Windows.Controls.RadioButton)editor.FindName("ScriptRadio")).IsChecked == true}, {box.Document.LineCount} lines");
+            Capture(window, "live-to-script.png");
+            box.Document.Insert(0, "const SPEED = 80 // setting: How fast\nconst SELL = false // setting: Sell the rest\nconst MODE = \"merge\" // setting: Mode, merge | sell\n\n");
+            Invoke(editor, "CheckScript"); Pump(400);
+            Capture(window, "live-script-settings.png");
+            editor.Cancel(); Pump(300);
+        }
+        finally { AppSettings.Current.Scripts = scripts; }
     }
     /// <summary>
     /// The builder on the real screen finds a picture shown in a Keyloom test window. Nothing is captured: the builder covers

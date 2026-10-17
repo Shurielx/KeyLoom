@@ -40,6 +40,7 @@ Points are on the screen, in pixels. Anything with an `x` and a `y` is a point: 
 | `scroll(notches)` | Positive scrolls up, negative down. |
 | `mouse()` | Where the pointer is, as `{ x, y }`. |
 | `inWindow(x, y)` | A point inside the macro's target window, as a point on the screen. |
+| `fromStart(x, y)` | A point measured from where the pointer was when the macro started. |
 | `wait(ms)` | Pauses. 1000 is one second. |
 | `waitFor(target, ms?)` | Waits until the target shows. `true`, or `false` when the time ran out. No time waits as long as it takes. |
 | `waitUntilGone(target, ms?)` | Waits until the target is no longer on the screen. |
@@ -93,6 +94,27 @@ if (askYesNo("Is a reward window open?")) {
 Each cell has `row`, `column`, `value` (a number or `null`), and `x` and `y` in its middle, so `click(board.highest())` and `drag(pair.from, pair.to)` work as they are.
 
 A grid set to **Moves with** a picture is read where that picture has moved it, and its cells' `x` and `y` are where they are now. When the picture is not on the screen, `readGrid` stops the macro and says so.
+
+## Settings
+
+A script can show some of its values beside it, as fields to change without reading the code. Mark a `const` (or `let`) with `// setting:` and a name:
+
+```js
+const SPEED = 80              // setting: How fast
+const NAME = "Bob"            // setting: Who to greet
+const SELL = false            // setting: Sell the rest
+const MODE = "merge"          // setting: Mode, merge | sell
+```
+
+- A number gets a box, text in quotes a text box, and `true` or `false` a checkbox.
+- Choices go after a comma, split by `|`, and show as a list.
+- Without a name after `setting:`, the field is named after the const.
+- Changing a field writes the new value into the script, on that line; typing in the script changes the field. Ctrl+Z in the script undoes either.
+- The mark is a comment, so the script stays plain JavaScript and runs as it is.
+
+## Turning steps into a script
+
+A sequence can become a script: **Turn into script** above its steps (with Scripts on) writes a script that plays the same, every kind of step included. Groups that repeat become `for` loops, an If and its Else become `if` and `else`, grid steps use `readGrid`, and the macro keeps its targets, grids, Runs, start delay and click delay. Saving replaces the steps; until then Ctrl+Z or Cancel brings them back. A script is not turned back into steps.
 
 ## When something goes wrong
 

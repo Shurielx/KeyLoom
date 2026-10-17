@@ -280,6 +280,13 @@ public partial class MacroEditorView
     public bool UndoShortcut(ModifierKeys mods, Key key)
     {
         if (Keyboard.FocusedElement is TextBoxBase or ComboBox || _dragging) return false;
+        if (Mode == 3)
+        {
+            // In a script made from steps, Ctrl+Z outside the script goes back to them; inside, the script has its own undo.
+            if (key != Key.Z || mods != ModifierKeys.Control || _turnedFrom == null || ScriptBox.TextArea.IsKeyboardFocusWithin) return false;
+            BackToSteps();
+            return true;
+        }
         Action? action = (mods, key) switch
         {
             (ModifierKeys.Control, Key.Z) => Undo,

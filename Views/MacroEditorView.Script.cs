@@ -37,6 +37,7 @@ public partial class MacroEditorView
     private void InitializeScript()
     {
         ScriptRadio.Visibility = AppSettings.Current.Scripts || Profile.Behavior == MacroBehaviorType.Script ? Visibility.Visible : Visibility.Collapsed;
+        ToScriptButton.Visibility = AppSettings.Current.Scripts ? Visibility.Visible : Visibility.Collapsed;
         AddAiIfItem.Visibility = AppSettings.Current.Ai ? Visibility.Visible : Visibility.Collapsed;
         ScriptBox.Text = Profile.Script;
         ScriptBox.Options.ConvertTabsToSpaces = true;
@@ -78,6 +79,7 @@ public partial class MacroEditorView
         ScriptStatus.Text = _scriptProblem is { } p ? L.T($"{p}  ·  click to go there") : L.T($"Reads fine · {L.N(lines, "{0} line", "{0} lines")}");
         ScriptStatus.Cursor = _scriptProblem is { Line: > 0 } ? Cursors.Hand : null;
         ScriptStatus.SetResourceReference(TextBlock.ForegroundProperty, _scriptProblem != null ? "DangerTextBrush" : "MutedBrush");
+        RefreshScriptSettings();
     }
     private void ScriptStatus_Click(object sender, MouseButtonEventArgs e)
     {
@@ -133,7 +135,9 @@ public partial class MacroEditorView
 
     private void ScriptKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.F1) { e.Handled = true; ScriptHelp_Click(sender, e); }
+        // Undoing past the start of a script made from steps brings the steps back.
+        if (e.Key == Key.Z && Keyboard.Modifiers == ModifierKeys.Control && _turnedFrom != null && !ScriptBox.Document.UndoStack.CanUndo) { e.Handled = true; BackToSteps(); }
+        else if (e.Key == Key.F1) { e.Handled = true; ScriptHelp_Click(sender, e); }
         else if (e.Key == Key.Space && Keyboard.Modifiers == ModifierKeys.Control) { e.Handled = true; Suggest(force: true); }
     }
     private void ScriptTyped(object sender, TextCompositionEventArgs e)
@@ -343,5 +347,120 @@ public partial class MacroEditorView
     {
         _output.Clear();
         ScriptOutput.Text = "";
+    }
+
+    // ---- Turning steps into a script ----
+
+    /// <summary>What the script box held before the steps were turned into a script, while Ctrl+Z can still go back.</summary>
+    private string? _turnedFrom;
+    private async void ToScript_Click(object sender, RoutedEventArgs e) => await TurnIntoScriptAsync();
+    /// <summary>Writes the steps as a script that plays the same, after asking. The steps stay until the macro is saved.</summary>
+    public async Task TurnIntoScriptAsync(bool ask = true)
+    {
+        if (!AppSettings.Current.Scripts || Mode != 2) return;
+        try { StepGroups.Validate(_steps); }
+        catch (ArgumentException ex) { Say(ex.Message, true); return; }
+        if (ask && SheetLayer.For(this) is { } sheets && !await sheets.ConfirmAsync(L.T("Turn the steps into a script?"),
+                L.T("The macro becomes a script that plays the same, with its targets, grids and run settings. Saving replaces the steps; Ctrl+Z or Cancel brings them back. A script cannot be turned back into steps."),
+                L.T("Turn into script")))
+            return;
+        _turnedFrom = ScriptBox.Text;
+        ScriptBox.Document.Text = SequenceScript.From(_steps);
+        ScriptBox.Document.UndoStack.ClearAll();
+        SetMode(3);
+        CheckScript();
+        Say(L.T("The steps are now a script. Ctrl+Z goes back to them."));
+    }
+    private void BackToSteps()
+    {
+        if (_turnedFrom == null) return;
+        ScriptBox.Document.Text = _turnedFrom;
+        ScriptBox.Document.UndoStack.ClearAll();
+        _turnedFrom = null;
+        SetMode(2);
+        Say(L.T("Back to the steps."));
+    }
+
+    // ---- Settings the script shows beside it ----
+
+    private string _settingsShape = "";
+    private readonly Dictionary<string, Control> _settingFields = [];
+    private bool _showingSettings;
+    /// <summary>
+    /// The script's settings as fields. Typing in the script updates the fields; the same settings keep their fields,
+    /// so the one being typed in is not rebuilt under the caret.
+    /// </summary>
+    private void RefreshScriptSettings()
+    {
+        if (ScriptSettingList == null) return;
+        var settings = ScriptSettings.Read(ScriptBox.Text);
+        string shape = string.Join("\n", settings.Select(s => s.Shape));
+        _showingSettings = true;
+        try
+        {
+            if (shape != _settingsShape)
+            {
+                _settingsShape = shape;
+                _settingFields.Clear();
+                ScriptSettingList.Children.Clear();
+                foreach (var s in settings) ScriptSettingList.Children.Add(SettingRow(s));
+            }
+            else foreach (var s in settings) ShowSettingValue(_settingFields[s.Name], s.Value);
+        }
+        finally { _showingSettings = false; }
+        ScriptSettingsHint.Visibility = settings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+    private static void ShowSettingValue(Control field, string value)
+    {
+        switch (field)
+        {
+            case CheckBox box: box.IsChecked = value == "true"; break;
+            case ComboBox list: list.SelectedItem = value; break;
+            case TextBox text when !text.IsKeyboardFocusWithin && text.Text != value: text.Text = value; break;
+        }
+    }
+    private FrameworkElement SettingRow(ScriptSetting s)
+    {
+        var row = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+        Control field;
+        switch (s.Kind)
+        {
+            case ScriptSettingKind.Switch:
+                var box = new CheckBox { Content = s.Label, IsChecked = s.Value == "true" };
+                box.Checked += (_, _) => WriteSetting(s.Name, "true");
+                box.Unchecked += (_, _) => WriteSetting(s.Name, "false");
+                field = box;
+                break;
+            case ScriptSettingKind.Choice:
+                var list = new ComboBox { ItemsSource = s.Choices, SelectedItem = s.Value, MinWidth = 140, HorizontalAlignment = HorizontalAlignment.Left };
+                list.SelectionChanged += (_, _) => { if (list.SelectedItem is string chosen) WriteSetting(s.Name, chosen); };
+                field = list;
+                break;
+            default:
+                var text = new TextBox { Text = s.Value };
+                if (s.Kind == ScriptSettingKind.Number) { text.Width = 100; text.HorizontalAlignment = HorizontalAlignment.Left; }
+                text.TextChanged += (_, _) => WriteSetting(s.Name, text.Text);
+                field = text;
+                break;
+        }
+        if (s.Kind != ScriptSettingKind.Switch) row.Children.Add(new TextBlock { Text = s.Label, Style = (Style)FindResource("StackLabel") });
+        field.ToolTip = L.T($"{s.Name} on line {s.Line} of the script");
+        AutomationName(field, s.Label);
+        row.Children.Add(field);
+        _settingFields[s.Name] = field;
+        return row;
+    }
+    /// <summary>Writes a field's value into the script, where the setting is, so Ctrl+Z in the script undoes it.</summary>
+    private void WriteSetting(string name, string value)
+    {
+        if (_showingSettings) return;
+        if (ScriptSettings.Read(ScriptBox.Text).FirstOrDefault(s => s.Name == name) is not { } setting) return;
+        try
+        {
+            string literal = ScriptSettings.Literal(setting, value);
+            if (ScriptBox.Document.GetText(setting.Offset, setting.Length) != literal) ScriptBox.Document.Replace(setting.Offset, setting.Length, literal);
+            Say("");
+        }
+        catch (ArgumentException ex) { Say(ex.Message, true); }
     }
 }

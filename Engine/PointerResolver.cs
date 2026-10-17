@@ -13,7 +13,8 @@ public sealed class PointerResolver
     public PointerResolver(IWindowSystem windows, IntPtr window, MacroProfile profile)
     {
         _windows = windows; _window = window; _target = profile.Window; _scale = profile.ScaleWithWindow;
-        _start = profile.Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Start) ? windows.Cursor() : (0, 0);
+        _start = profile.Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Start)
+            || profile.Behavior == MacroBehaviorType.Script && profile.Script.Contains("fromStart", StringComparison.Ordinal) ? windows.Cursor() : (0, 0);
     }
     public void EnsureAlive()
     {

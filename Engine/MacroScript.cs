@@ -173,6 +173,11 @@ public sealed partial class MacroScript
             var (x, y) = _pointer.Resolve(CoordinateSpace.Window, Whole(a, 0, "inWindow", L.T("x inside the window")), Whole(a, 1, "inWindow", L.T("y inside the window")));
             return PointObject(x, y);
         });
+        Function("fromStart", a =>
+        {
+            var (x, y) = _pointer.Resolve(CoordinateSpace.Start, Whole(a, 0, "fromStart", L.T("how far right, such as fromStart(20, 0)")), Whole(a, 1, "fromStart", L.T("how far down, such as fromStart(0, -10)")));
+            return PointObject(x, y);
+        });
         Function("find", a => Found(_targets.Locate(Target(a, "find"))));
         Function("onScreen", a => _targets.Locate(Target(a, "onScreen")) != null);
         Function("clickOn", a =>
@@ -397,6 +402,7 @@ public sealed partial class MacroScript
         new(L.T("Mouse"), "scroll", "scroll(notches)", L.T("Scrolls the wheel. Positive scrolls up, negative down."), "scroll(-3)"),
         new(L.T("Mouse"), "mouse", "mouse()", L.T("Where the pointer is now, as { x, y }."), "const at = mouse()\nlog(at.x, at.y)"),
         new(L.T("Mouse"), "inWindow", "inWindow(x, y)", L.T("Turns a point inside the target window into a point on the screen, so it follows the window."), "click(inWindow(200, 150))"),
+        new(L.T("Mouse"), "fromStart", "fromStart(x, y)", L.T("A point measured from where the pointer was when the macro started. Negative goes left or up."), "moveTo(fromStart(40, -20))"),
         new(L.T("Waiting"), "wait", "wait(ms)", L.T("Pauses the script. 1000 ms is one second."), "wait(500)"),
         new(L.T("Waiting"), "waitFor", "waitFor(target, ms?)", L.T("Waits until a target shows on the screen. Gives true, or false if the time ran out. Without a time it waits as long as it takes."), "if (!waitFor(\"Ready\", 5000)) stop(\"Not ready\")"),
         new(L.T("Waiting"), "waitUntilGone", "waitUntilGone(target, ms?)", L.T("Waits until a target is no longer on the screen."), "waitUntilGone(\"Loading\")"),
@@ -412,7 +418,8 @@ public sealed partial class MacroScript
         new(L.T("Other"), "stop", "stop(message?)", L.T("Ends the macro. With a message, Keyloom shows it."), "stop(\"Out of energy\")"),
         new(L.T("Other"), "random", "random(min, max)", L.T("A whole number from min to max, both included."), "wait(random(200, 400))"),
         new(L.T("Other"), "memory", "memory", L.T("An object that keeps what you put in it from one run to the next, until the macro stops."), "memory.count = (memory.count || 0) + 1"),
-        new(L.T("Other"), "run", "run", L.T("Which run this is, counting from 1."), "if (run % 10 === 0) press(\"R\")")
+        new(L.T("Other"), "run", "run", L.T("Which run this is, counting from 1."), "if (run % 10 === 0) press(\"R\")"),
+        new(L.T("Other"), "setting", "const NAME = value // setting: Label", L.T("Shows a const beside the script as a field, so it can be changed without touching the code. A number gets a box, text in quotes a text box, true or false a checkbox. Choices go after a comma, split by |."), "const SPEED = 80 // setting: How fast\nconst MODE = \"merge\" // setting: Mode, merge | sell")
     ];
 
     /// <summary>Ready-made scripts for the Examples menu: a name and the code.</summary>

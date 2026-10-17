@@ -147,6 +147,9 @@
               <Button x:Name="BuilderButton" Click="Builder_Click" Margin="0,0,6,0" Padding="11,4" Visibility="Collapsed" ToolTip="Experimental: see the steps on the screen and move their points">
                 <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconFlask}" Style="{StaticResource AccentIcon}" Width="10" Height="11" Margin="0,0,7,0"/><TextBlock Text="On screen"/></StackPanel>
               </Button>
+              <Button x:Name="ToScriptButton" Click="ToScript_Click" Margin="0,0,6,0" Padding="11,4" Visibility="Collapsed" ToolTip="Experimental: write these steps as a script that plays the same">
+                <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconCode}" Style="{StaticResource AccentIcon}" Width="13" Height="12" Margin="0,0,7,0"/><TextBlock Text="Turn into script"/></StackPanel>
+              </Button>
               <Button x:Name="AddStepButton" Click="AddStepMenu_Click" Style="{StaticResource PrimaryButton}" Padding="11,4">
                 <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconPlus}" Fill="White" Width="10" Height="10" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/><TextBlock Text="Add step"/><Path Data="M0 0L4 4L8 0" Stroke="White" StrokeThickness="1.4" Width="8" Height="4" Stretch="Uniform" Margin="8,1,0,0" VerticalAlignment="Center"/></StackPanel>
                 <Button.ContextMenu>
@@ -742,6 +745,9 @@
 
             <!-- Script: what it can find on the screen, and what it wrote on the last test run -->
             <StackPanel x:Name="ScriptSide" Visibility="Collapsed" Margin="0,0,0,16">
+              <TextBlock Text="Settings" Style="{StaticResource InspectorTitle}"/>
+              <TextBlock x:Name="ScriptSettingsHint" Style="{StaticResource Hint}" TextWrapping="Wrap" Text="Mark a const in the script with // setting: and a name, like const SPEED = 80 // setting: How fast, to change it here."/>
+              <StackPanel x:Name="ScriptSettingList" Margin="0,8,0,8"/>
               <TextBlock Text="Targets and grids" Style="{StaticResource InspectorTitle}"/>
               <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Text="Things on the screen the script can use by name, like clickOn(&quot;Play&quot;). Click a name to put it in the script."/>
               <StackPanel x:Name="ScriptAssetList" Margin="0,8,0,0"/>

@@ -2,6 +2,18 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-13 · 2026-10-17
+
+### Added
+- Turn into script makes steps a script that plays the same
+- Groups turn into loops, If and Else into if and else
+- Targets, grids and run settings stay with the script
+- Ctrl+Z or Cancel brings the steps back until you save
+- Script settings: mark a const with // setting: and a name
+- They show beside the script as boxes, checks or lists
+- Change a setting there and the script changes with it
+- Scripts: fromStart(x, y) for points from where you started
+
 ## 0.3-dev-12 · 2026-10-17
 
 ### Added

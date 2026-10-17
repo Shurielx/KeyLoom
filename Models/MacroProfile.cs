@@ -144,6 +144,7 @@ public class MacroProfile : INotifyPropertyChanged
     [JsonIgnore] public bool NeedsWindow => ExecutionMode != ExecutionMode.Standard ||
         (UsePoint && !LooksAtScreen && TargetType == TargetInputType.Mouse) ||
         (Behavior == MacroBehaviorType.Sequence && Actions.Any(a => a.ActionType == MacroActionType.MousePosition && a.Space == CoordinateSpace.Window)) ||
+        (Behavior == MacroBehaviorType.Script && Window != null && Script.Contains("inWindow", StringComparison.Ordinal)) ||
         (LooksAtScreen && Targets.Any(t => t.Area?.Space == CoordinateSpace.Window)) ||
         (LooksAtScreen && Grids.Any(g => g.Area.Space == CoordinateSpace.Window));
     public event PropertyChangedEventHandler? PropertyChanged;
