@@ -140,7 +140,7 @@ A grid is a part of the screen split into equal cells, each holding a number or 
 | `name` | Up to 60 characters, unique in the macro. |
 | `area` | The whole grid, edge to edge: `x`, `y`, `width`, `height`, and `from`: `screen` (default) or `window`. |
 | `rows`, `columns` | How many cells across and down, up to 400 cells in all. |
-| `follow` | Optional. A target the grid moves with: `{ "target": "Board title", "x": 2388, "y": 456 }`, where `x` and `y` are where the target's middle was when the grid was marked, counted like `area`. While the macro runs, the grid moves as far as the target has moved, so a board a game shifts around is still read in the right place. Set it in Keyloom with **Moves with** on the grid. |
+| `follow` | Optional. A target the grid moves with: `{ "target": "Board title", "x": 2388, "y": 456 }`, where `x` and `y` are where the target's middle was when the grid was marked, counted like `area`. While the macro runs, the grid moves as far as the target has moved, so a board a game shifts around is still read in the right place. When the camera zooms and the target shows a little smaller or larger (80 to 120 percent), the grid shrinks or grows around it by as much. Set it in Keyloom with **Moves with** on the grid. |
 
 Numbers are read with the text recognition built into Windows. `1,024`, `1.5K` and `2M` count as numbers; other text in a cell is left out.
 

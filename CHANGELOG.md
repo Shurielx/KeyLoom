@@ -2,6 +2,13 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-15 · 2026-10-17
+
+### Added
+- A picture is also found 80 to 120 percent of its size
+- A grid that moves with a picture grows and shrinks with it
+- So a board stays read right when the game camera zooms
+
 ## 0.3-dev-14 · 2026-10-17
 
 ### Added

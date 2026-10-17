@@ -45,6 +45,26 @@ internal static partial class Program
         return new(bitmap.PixelWidth, bitmap.PixelHeight, pixels);
     }
 
+    /// <summary>A board title the way a game draws it at a zoom: "GRID" on a bar, drawn at that size, not stretched afterwards.</summary>
+    private static PixelImage DrawTitle(double scale)
+    {
+        int w = (int)Math.Round(140 * scale), h = (int)Math.Round(44 * scale);
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(40, 44, 52)), null, new Rect(0, 0, w, h));
+            dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(230, 140, 30)), new Pen(Brushes.White, 3 * scale), new Rect(2 * scale, 2 * scale, w - 4 * scale, h - 4 * scale), 8 * scale, 8 * scale);
+            var text = new FormattedText("GRID", CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 26 * scale, new SolidColorBrush(Color.FromRgb(30, 30, 40)), 1);
+            dc.DrawText(text, new Point((w - text.Width) / 2, (h - text.Height) / 2));
+        }
+        var bitmap = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var pixels = new uint[w * h];
+        bitmap.CopyPixels(pixels, w * 4, 0);
+        return new(w, h, pixels);
+    }
+
     private static async Task GridEngineTests()
     {
         Check(WindowsOcrReader.Number("32") == 32 && WindowsOcrReader.Number("1,024") == 1024 && WindowsOcrReader.Number("1.024") == 1024
@@ -143,6 +163,28 @@ internal static partial class Program
             var read = WindowsOcrReader.Instance.Read(DrawGrid(values, 4, 4, cell), 4, 4);
             Check(read.SequenceEqual(values), $"Windows reads every number in a 4 by 4 grid of {cell} px cells ({string.Join(" ", read.Select(v => v?.ToString() ?? "."))})");
         }
+        // The game zoomed: the board and its title drew 10 percent smaller, then larger. The grid was marked at full size
+        // under the title, and still covers the board and reads every number.
+        var title = DrawTitle(1);
+        long?[] board = [16, 128, 32, 64, 256, 512];
+        var mark = new ScreenTarget { Name = "Title", Picture = TargetPicture.Encode(title) };
+        var grid = new ScreenGrid { Name = "Board", Area = new(100, 80, 300, 200), Rows = 2, Columns = 3, Follow = "Title", FollowX = 100 + title.Width / 2, FollowY = 20 + title.Height / 2 };
+        foreach (var (scale, x, y) in new[] { (0.9, 400, 150), (1.1, 60, 300) })
+        {
+            var screen = new FakeScreen(1280, 720);
+            var zoomed = DrawTitle(scale);
+            int cell = (int)Math.Round(100 * scale), gx = x, gy = y + (int)Math.Round(60 * scale);
+            screen.Paint(x, y, zoomed);
+            screen.Paint(gx, gy, DrawGrid(board, 2, 3, cell));
+            var windows = new FakeWindows();
+            var targets = new TargetLocator(screen, windows, IntPtr.Zero, [mark]);
+            var grids = new GridLocator(screen, windows, IntPtr.Zero, [grid], WindowsOcrReader.Instance, targets);
+            var area = grids.Area("Board");
+            var read = grids.Read("Board");
+            Check(targets.Locate("Title") == null && Math.Abs(area.X - gx) <= 3 && Math.Abs(area.Y - gy) <= 3 && Math.Abs(area.Width - 3 * cell) <= 4 && Math.Abs(area.Height - 2 * cell) <= 4
+                && read.Values.SequenceEqual(board), $"a grid moving with a title {scale * 100:0} percent of its size grows or shrinks with it ({area}, {string.Join(" ", read.Values)})");
+        }
+
         var clock = System.Diagnostics.Stopwatch.StartNew();
         WindowsOcrReader.Instance.Read(DrawGrid(Enumerable.Range(1, 64).Select(i => (long?)i).ToArray(), 8, 8, 60), 8, 8);
         Check(clock.ElapsedMilliseconds < 1500, $"an 8 by 8 grid is read quickly ({clock.ElapsedMilliseconds} ms)");

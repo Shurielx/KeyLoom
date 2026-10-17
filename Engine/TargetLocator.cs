@@ -52,8 +52,11 @@ public sealed class TargetLocator(IScreen screen, IWindowSystem windows, IntPtr 
     private readonly Dictionary<string, PixelImage> _pictures = new(StringComparer.OrdinalIgnoreCase);
     public ScreenTarget Get(string? name) => _targets.TryGetValue(name ?? "", out var t) ? t : throw new ArgumentException(L.T($"There is no target called '{name}'."));
 
-    /// <summary>Where the target is on the screen right now, in screen pixels, or null when it isn't there.</summary>
-    public Match? Locate(string? name)
+    /// <summary>
+    /// Where the target is on the screen right now, in screen pixels, or null when it isn't there. With anySize a picture
+    /// is also found a little smaller or larger than captured, and the match says how much.
+    /// </summary>
+    public Match? Locate(string? name, bool anySize = false)
     {
         var target = Get(name);
         var (x, y, width, height) = SearchArea(target);
@@ -61,6 +64,7 @@ public sealed class TargetLocator(IScreen screen, IWindowSystem windows, IntPtr 
         var shot = screen.Capture(x, y, width, height);
         Match? found = target.Kind == ScreenTargetKind.Color
             ? TargetFinder.FindColor(shot, TargetPicture.ParseColor(target.Color), target.Tolerance)
+            : anySize ? TargetFinder.FindPictureAnySize(shot, Picture(target), target.Tolerance)
             : TargetFinder.FindPicture(shot, Picture(target), target.Tolerance);
         return found is { } m ? m with { X = m.X + x, Y = m.Y + y } : null;
     }

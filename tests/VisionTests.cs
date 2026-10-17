@@ -61,6 +61,35 @@ internal static partial class Program
         clock.Stop();
         Check(far?.X == 1700 && clock.ElapsedMilliseconds < 400, $"a full HD screen is searched quickly ({clock.ElapsedMilliseconds} ms)");
 
+        // A game camera that zooms draws a picture a little smaller or larger. It is still found, with how much it changed.
+        var title = DrawTitle(1);
+        foreach (var (scale, x, y) in new[] { (0.9, 1500, 820), (1.1, 240, 130) })
+        {
+            var zoomed = new FakeScreen(1920, 1080);
+            zoomed.Paint(x, y, DrawTitle(scale));
+            var zoomedShot = zoomed.Snapshot();
+            clock.Restart();
+            var sized = TargetFinder.FindPictureAnySize(zoomedShot, title, 10);
+            clock.Stop();
+            Check(TargetFinder.FindPicture(zoomedShot, title, 10) == null && sized is { } z && Math.Abs(z.X - x) <= 2 && Math.Abs(z.Y - y) <= 2
+                && Math.Abs(z.Scale - scale) <= 0.02 && Math.Abs(z.Width - title.Width * scale) <= 3 && clock.ElapsedMilliseconds < 400,
+                $"a picture drawn at {scale * 100:0} percent is found on a full HD screen, with its size, quickly ({sized}, {clock.ElapsedMilliseconds} ms)");
+        }
+        // At 4K and 150 percent display scale, the way many players run, the title is larger and so is the screen.
+        var large = new FakeScreen(3840, 2160);
+        large.Paint(2600, 1500, DrawTitle(1.5 * 0.95));
+        var largeShot = large.Snapshot();
+        clock.Restart();
+        var zoomedLarge = TargetFinder.FindPictureAnySize(largeShot, DrawTitle(1.5), 10);
+        clock.Stop();
+        Check(zoomedLarge is { } l && Math.Abs(l.X - 2600) <= 2 && Math.Abs(l.Scale - 0.95) <= 0.02 && clock.ElapsedMilliseconds < 800,
+            $"a larger picture zoomed out a little is found on a 4K screen quickly ({zoomedLarge}, {clock.ElapsedMilliseconds} ms)");
+        clock.Restart();
+        var nowhere = TargetFinder.FindPictureAnySize(shot, title, 10);
+        clock.Stop();
+        Check(nowhere == null && clock.ElapsedMilliseconds < 600, $"a picture at no size is not found, and looking at every size stays quick ({clock.ElapsedMilliseconds} ms)");
+        Check(TargetFinder.FindPictureAnySize(screen.Snapshot(), button, 10) == new Match(300, 200, 24, 14), "a picture at its own size is found as it was, at scale 1");
+
         screen.Fill(100, 50, 40, 20, 0xFFFF8800);
         var orange = TargetFinder.FindColor(screen.Snapshot(), 0xFFFF8800, 4);
         Check(orange?.Center == (119, 59) && orange.Value.Width == 40 && orange.Value.Height == 20, "a color is found, and clicked in the middle of its patch");

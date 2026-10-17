@@ -159,13 +159,21 @@ public sealed class GridLocator(IScreen screen, IWindowSystem windows, IntPtr wi
     /// <summary>Where the grid is on the screen now.</summary>
     public (int X, int Y, int Width, int Height) Area(string? name) { var g = Get(name); return ScreenAreas.Resolve(screen, windows, window, Placed(g), g.Name); }
     public ScreenGrid Get(string? name) => _grids.TryGetValue(name ?? "", out var g) ? g : throw new ArgumentException(L.T($"There is no grid called '{name}'."));
-    /// <summary>The grid's area, moved as far as the target it moves with has moved since the grid was marked.</summary>
+    /// <summary>
+    /// The grid's area, moved as far as the target it moves with has moved since the grid was marked. When a game zooms,
+    /// the target shows smaller or larger, and the area shrinks or grows around it by as much.
+    /// </summary>
     private ScreenArea Placed(ScreenGrid g)
     {
         if (string.IsNullOrEmpty(g.Follow)) return g.Area;
-        var found = targets?.Locate(g.Follow) ?? throw new InvalidOperationException(L.T($"'{g.Name}' moves with '{g.Follow}', which is not on the screen now."));
+        var found = targets?.Locate(g.Follow, anySize: true) ?? throw new InvalidOperationException(L.T($"'{g.Name}' moves with '{g.Follow}', which is not on the screen now."));
         var (x, y) = InSpace(windows, window, g.Area.Space, found.Center);
-        return g.Area with { X = g.Area.X + x - g.FollowX, Y = g.Area.Y + y - g.FollowY };
+        double s = found.Scale;
+        return g.Area with
+        {
+            X = x + (int)Math.Round((g.Area.X - g.FollowX) * s), Y = y + (int)Math.Round((g.Area.Y - g.FollowY) * s),
+            Width = (int)Math.Round(g.Area.Width * s), Height = (int)Math.Round(g.Area.Height * s)
+        };
     }
     /// <summary>A point on the screen, counted the way an area in that space is: from the screen, or from inside the window.</summary>
     public static (int X, int Y) InSpace(IWindowSystem windows, IntPtr window, CoordinateSpace space, (int X, int Y) point)
