@@ -83,7 +83,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             Wait(p.StartDelayMs, token);
             var pointer = new PointerResolver(_windows, window, p);
             var targets = new TargetLocator(_screen, _windows, window, p.Targets);
-            var grids = new GridLocator(_screen, _windows, window, p.Grids, _gridReader);
+            var grids = new GridLocator(_screen, _windows, window, p.Grids, _gridReader, targets);
             var eyes = new AiEyes(_ai, _screen, _windows, window);
             var script = p.Behavior == MacroBehaviorType.Script
                 ? new MacroScript(p.Script, input, pointer, targets, grids, eyes, _windows, _screen, window, line => ScriptLogged?.Invoke(line), token) : null;

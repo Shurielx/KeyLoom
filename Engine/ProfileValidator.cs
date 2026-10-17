@@ -54,6 +54,9 @@ public static class ProfileValidator
         if (p.Grids.Count > MaxGrids) throw new ArgumentException(L.T($"A macro can have up to {MaxGrids} grids."));
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var g in p.Grids) ValidateGrid(g, names);
+        var targets = (p.Targets ?? []).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in p.Grids.Where(g => !string.IsNullOrEmpty(g.Follow)))
+            if (!targets.Contains(g.Follow!)) throw new ArgumentException(L.T($"'{g.Name}' moves with '{g.Follow}', but the macro has no target with that name."));
         foreach (var a in p.Actions.Where(a => a.ActionType is MacroActionType.ClickCell or MacroActionType.DragPair))
             if (!names.Contains(a.Grid ?? ""))
                 throw new ArgumentException(string.IsNullOrWhiteSpace(a.Grid) ? L.T("A step that reads a grid needs one. Mark the grid on the screen.") : L.T($"A step reads '{a.Grid}', but the macro has no grid with that name."));
@@ -66,6 +69,8 @@ public static class ProfileValidator
         if (g.Area is not { } a || a.Width < g.Columns * 4 || a.Height < g.Rows * 4 || a.Width > 100000 || a.Height > 100000
             || Math.Abs((long)a.X) > 1000000 || Math.Abs((long)a.Y) > 1000000 || a.Space is not (CoordinateSpace.Screen or CoordinateSpace.Window))
             throw new ArgumentException(L.T($"'{g.Name}': the grid's area is invalid or too small for its cells. Mark it again."));
+        if (g.Follow is { } follow && (follow.Trim().Length == 0 || follow.Length > 60 || Math.Abs((long)g.FollowX) > 1000000 || Math.Abs((long)g.FollowY) > 1000000))
+            throw new ArgumentException(L.T($"'{g.Name}': what it moves with needs a target's name and where that target was."));
     }
     public static void ValidateScreenTarget(ScreenTarget t, HashSet<string>? names = null)
     {

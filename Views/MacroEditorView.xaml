@@ -572,6 +572,9 @@
                         <TextBlock Text="columns" Style="{StaticResource Unit}"/>
                       </StackPanel>
                     </WrapPanel>
+                    <TextBlock Text="Moves with" Style="{StaticResource StackLabel}"/>
+                    <ComboBox x:Name="GridFollowBox" SelectionChanged="GridFollow_Changed" AutomationProperties.Name="Moves with"
+                              ToolTip="When the game moves its board, the grid moves as far as this picture did. Keep the picture where it is now while you pick it."/>
                     <Button Click="ReadGrid_Click" Padding="10,4" Margin="0,6,0,0" HorizontalAlignment="Left" ToolTip="Reads the numbers on the screen now, with Keyloom out of the way">
                       <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IconGrid}" Style="{StaticResource Icon}" Width="12" Height="12" Margin="0,0,7,0"/><TextBlock Text="Read it now"/></StackPanel>
                     </Button>

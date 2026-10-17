@@ -67,19 +67,42 @@ public sealed class WindowsOcrReader : IGridReader
     private const int CellHeightWanted = 60;
     private OcrEngine? _engine;
 
+    /// <summary>
+    /// Reads the grid twice: as it is, and in grey where each pixel is as bright as its darkest color. The second one keeps
+    /// white numbers white but darkens a colored glow around them, which games like to add; the first one keeps numbers
+    /// that are colored themselves. Each cell takes the grey reading when it has one.
+    /// </summary>
     public long?[] Read(PixelImage image, int rows, int columns)
     {
-        var values = new long?[rows * columns];
-        if (image.Width == 0 || image.Height == 0) return values;
+        if (image.Width == 0 || image.Height == 0) return new long?[rows * columns];
         _engine ??= OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US")) ?? OcrEngine.TryCreateFromUserProfileLanguages()
             ?? throw new InvalidOperationException(L.T("Windows has no text recognition installed. Add a language with OCR in Windows Settings, Time & language."));
+        var plain = Recognize(image, rows, columns);
+        var pale = Recognize(Darkest(image), rows, columns);
+        return pale.Zip(plain, (p, q) => p ?? q).ToArray();
+    }
+    /// <summary>Each pixel in grey, as bright as its darkest color: white stays white, red or blue turns dark.</summary>
+    private static PixelImage Darkest(PixelImage image)
+    {
+        var pixels = new uint[image.Pixels.Length];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            uint c = image.Pixels[i];
+            uint v = Math.Min(c & 0xFF, Math.Min(c >> 8 & 0xFF, c >> 16 & 0xFF));
+            pixels[i] = 0xFF000000 | v << 16 | v << 8 | v;
+        }
+        return new(image.Width, image.Height, pixels);
+    }
+    private long?[] Recognize(PixelImage image, int rows, int columns)
+    {
+        var values = new long?[rows * columns];
         int scale = Math.Clamp((int)Math.Ceiling(CellHeightWanted / Math.Max(1.0, (double)image.Height / rows)), 1, 4);
         while (scale > 1 && Math.Max(image.Width, image.Height) * scale > OcrEngine.MaxImageDimension) scale--;
         var big = Enlarge(image, scale);
         var bytes = new byte[big.Pixels.Length * 4];
         Buffer.BlockCopy(big.Pixels, 0, bytes, 0, bytes.Length);
         using var bitmap = SoftwareBitmap.CreateCopyFromBuffer(CryptographicBuffer.CreateFromByteArray(bytes), BitmapPixelFormat.Bgra8, big.Width, big.Height, BitmapAlphaMode.Ignore);
-        var result = _engine.RecognizeAsync(bitmap).AsTask().GetAwaiter().GetResult();
+        var result = _engine!.RecognizeAsync(bitmap).AsTask().GetAwaiter().GetResult();
         double cellWidth = (double)big.Width / columns, cellHeight = (double)big.Height / rows;
         foreach (var word in result.Lines.SelectMany(l => l.Words))
         {
@@ -128,18 +151,33 @@ public sealed class WindowsOcrReader : IGridReader
     }
 }
 
-/// <summary>Reads a macro's grids from the screen while it runs.</summary>
-public sealed class GridLocator(IScreen screen, IWindowSystem windows, IntPtr window, IEnumerable<ScreenGrid> grids, IGridReader reader)
+/// <summary>Reads a macro's grids from the screen while it runs. A grid that moves with a target is looked for there first.</summary>
+public sealed class GridLocator(IScreen screen, IWindowSystem windows, IntPtr window, IEnumerable<ScreenGrid> grids, IGridReader reader, TargetLocator? targets = null)
 {
     private readonly Dictionary<string, ScreenGrid> _grids = grids.ToDictionary(g => g.Name, StringComparer.OrdinalIgnoreCase);
     public bool Has(string? name) => _grids.ContainsKey(name ?? "");
     /// <summary>Where the grid is on the screen now.</summary>
-    public (int X, int Y, int Width, int Height) Area(string? name) { var g = Get(name); return ScreenAreas.Resolve(screen, windows, window, g.Area, g.Name); }
+    public (int X, int Y, int Width, int Height) Area(string? name) { var g = Get(name); return ScreenAreas.Resolve(screen, windows, window, Placed(g), g.Name); }
     public ScreenGrid Get(string? name) => _grids.TryGetValue(name ?? "", out var g) ? g : throw new ArgumentException(L.T($"There is no grid called '{name}'."));
+    /// <summary>The grid's area, moved as far as the target it moves with has moved since the grid was marked.</summary>
+    private ScreenArea Placed(ScreenGrid g)
+    {
+        if (string.IsNullOrEmpty(g.Follow)) return g.Area;
+        var found = targets?.Locate(g.Follow) ?? throw new InvalidOperationException(L.T($"'{g.Name}' moves with '{g.Follow}', which is not on the screen now."));
+        var (x, y) = InSpace(windows, window, g.Area.Space, found.Center);
+        return g.Area with { X = g.Area.X + x - g.FollowX, Y = g.Area.Y + y - g.FollowY };
+    }
+    /// <summary>A point on the screen, counted the way an area in that space is: from the screen, or from inside the window.</summary>
+    public static (int X, int Y) InSpace(IWindowSystem windows, IntPtr window, CoordinateSpace space, (int X, int Y) point)
+    {
+        if (space != CoordinateSpace.Window || window == IntPtr.Zero) return point;
+        var (left, top) = windows.ClientToScreen(window, 0, 0);
+        return (point.X - left, point.Y - top);
+    }
     public GridReading Read(string? name)
     {
         var grid = Get(name);
-        var (x, y, width, height) = ScreenAreas.Resolve(screen, windows, window, grid.Area, grid.Name);
+        var (x, y, width, height) = ScreenAreas.Resolve(screen, windows, window, Placed(grid), grid.Name);
         var shot = screen.Capture(x, y, width, height);
         var values = reader.Read(shot, grid.Rows, grid.Columns);
         var centers = new (int X, int Y)[grid.Rows * grid.Columns];

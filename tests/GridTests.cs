@@ -89,6 +89,26 @@ internal static partial class Program
         await executor.ToggleAsync(p); await Until(() => executor.ActiveProfile == null);
         Check(driver.Events.IsEmpty && failure.Contains("no two cells with the same number"), "a step set to stop ends the macro when there is no pair");
 
+        // A grid that moves with a picture: the game moved its board 30 right and 40 down, and the picture with it.
+        var mark = Button();
+        screen.Paint(500, 300, mark);
+        p.Targets.Add(new ScreenTarget { Name = "Mark", Picture = TargetPicture.Encode(mark) });
+        p.Grids[0].Follow = "Mark"; p.Grids[0].FollowX = 512; p.Grids[0].FollowY = 307;
+        screen.Fill(500, 300, mark.Width, mark.Height, Grey(20));
+        screen.Paint(530, 340, mark);
+        reader.Values = [4, 2, null, 8, 2, 4];
+        p.Actions = [new() { ActionType = MacroActionType.ClickCell, Grid = "Board", Pick = CellPick.Highest }];
+        driver.Events.Clear(); failure = "";
+        await executor.ToggleAsync(p); await Until(() => executor.ActiveProfile == null);
+        Check(driver.Events.FirstOrDefault() == "position:180,240" && reader.Last == (300, 200, 2, 3) && failure == "",
+            "a grid that moves with a picture is read and clicked where the picture moved it");
+        screen.Fill(530, 340, mark.Width, mark.Height, Grey(20));
+        driver.Events.Clear();
+        await executor.ToggleAsync(p); await Until(() => executor.ActiveProfile == null);
+        Check(driver.Events.IsEmpty && failure.Contains("moves with 'Mark', which is not on the screen now"), "without its picture on the screen the grid stops the macro and says why");
+        p.Grids[0].Follow = null;
+        p.Targets.Clear();
+
         // The grids and their steps in the macro file.
         p.Actions = [new() { ActionType = MacroActionType.ClickCell, Grid = "Board", Pick = CellPick.Equals, CellValue = 32, StopIfMissing = true },
             new() { ActionType = MacroActionType.DragPair, Grid = "Board", GlideMs = 150, MouseButton = "Right" }];
@@ -104,6 +124,14 @@ internal static partial class Program
         Check(Fails(() => MacroFile.Read(json.Replace("\"pick\": \"equals\"", "\"pick\": \"middle\"")), "unknown \"pick\""), "an unknown pick says what to use");
         Check(Fails(() => MacroFile.Read(json.Replace("\"value\": 32,", "")), "needs a \"value\""), "picking a number needs the number");
         Check(Fails(() => MacroFile.Read(json.Replace("\"rows\": 2", "\"rows\": 500")), "up to 400 cells"), "a grid has a limit on its cells");
+        p.Targets.Add(new ScreenTarget { Name = "Board title", Kind = ScreenTargetKind.Color, Color = "#FF8800" });
+        p.Grids[0].Follow = "Board title"; p.Grids[0].FollowX = 2388; p.Grids[0].FollowY = 456;
+        json = MacroFile.Write([p]);
+        Check(json.Contains("\"follow\": {") && json.Contains("\"target\": \"Board title\"") && MacroFile.Read(json).Single().Grids[0] is { Follow: "Board title", FollowX: 2388, FollowY: 456 },
+            "what a grid moves with is written in the file and reads back the same");
+        Check(Fails(() => MacroFile.Read(json.Replace("\"target\": \"Board title\"", "\"target\": \"Nope\"")), "moves with 'Nope', but the macro has no target"),
+            "a grid moving with a target the macro lacks is refused");
+        p.Grids[0].Follow = null; p.Targets.Clear();
     }
 
     /// <summary>The real Windows text recognition on a drawn grid, small and large.</summary>
@@ -147,11 +175,31 @@ internal static partial class Program
         name.Text = "Field";
         Invoke(editor, "RenameGrid");
         Check(((MacroAction)list.Items[0]).Grid == "Field", "renaming a grid renames it in the steps that read it");
+        var follow = (ComboBox)editor.FindName("GridFollowBox");
+        Check(follow.IsVisible && follow.SelectedIndex == 0 && follow.Items.Count == 1 && (string)follow.Items[0] == "Stays put", "a grid stays put until it is set to move with a target");
         ((ComboBox)editor.FindName("StepTypeBox")).SelectedValue = MacroActionType.DragPair; Pump(50);
         Check(((StackPanel)editor.FindName("DragTimePanel")).IsVisible && !((StackPanel)editor.FindName("CellPickPanel")).IsVisible, "turning the step into a drag asks how long it takes");
         var read = (MacroProfile)editor.GetType().GetMethod("ReadForm", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(editor, [p.Snapshot()])!;
         Check(read.Grids.Single() is { Name: "Field", Rows: 4 } && read.Actions[0] is { ActionType: MacroActionType.DragPair, Grid: "Field", GlideMs: 150 },
             "saving keeps the grids the steps read and drops the rest");
+        host.Close();
+
+        // A grid that moves with a picture keeps that picture, even when no step looks for it, and follows its renames.
+        p.Grids[0].Follow = "Board title"; p.Grids[0].FollowX = 400; p.Grids[0].FollowY = 30;
+        p.Targets.Add(new ScreenTarget { Name = "Board title", Kind = ScreenTargetKind.Color, Color = "#FF8800" });
+        editor = new MacroEditorView(p) { GridReader = new FakeGridReader() };
+        host = new Window { Content = editor, Width = 1100, Height = 760, Left = -20000, Top = -20000, ShowActivated = false };
+        host.Show(); Pump(200);
+        list = (ListBox)editor.FindName("ActionsListBox");
+        list.SelectedIndex = 0; Pump(100);
+        follow = (ComboBox)editor.FindName("GridFollowBox");
+        Check(follow.Items.Count == 2 && (string)follow.SelectedItem == "Board title", "the grid card shows what the grid moves with");
+        Render(editor, 1100, 760, "grid-follow.png");
+        Invoke(editor, "RetargetGrids", "Board title", "Title");
+        ((List<ScreenTarget>)editor.GetType().GetField("_targets", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(editor)!)[0].Name = "Title";
+        read = (MacroProfile)editor.GetType().GetMethod("ReadForm", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(editor, [p.Snapshot()])!;
+        Check(read.Targets.SingleOrDefault()?.Name == "Title" && read.Grids.Single() is { Follow: "Title", FollowX: 400, FollowY: 30 },
+            "saving keeps the picture a grid moves with, under its new name");
         host.Close();
     }
 }

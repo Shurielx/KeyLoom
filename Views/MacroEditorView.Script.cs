@@ -237,7 +237,7 @@ public partial class MacroEditorView
         if (ScriptAssetList == null || Mode != 3) return;
         ScriptAssetList.Children.Clear();
         foreach (var t in _targets) ScriptAssetList.Children.Add(AssetRow(t.Name, t.Kind == ScreenTargetKind.Color ? L.T($"Color {t.Color}") : L.T("Picture"),
-            t.Kind == ScreenTargetKind.Color ? "IconTarget" : "IconImage", name => RenameAsset(t.Name, name, n => t.Name = n), () => { _targets.Remove(t); RefreshTargetBox(null); }, null));
+            t.Kind == ScreenTargetKind.Color ? "IconTarget" : "IconImage", name => RenameAsset(t.Name, name, n => { RetargetGrids(t.Name, n); t.Name = n; }), () => { _targets.Remove(t); RetargetGrids(t.Name, null); RefreshTargetBox(null); }, null));
         foreach (var g in _grids) ScriptAssetList.Children.Add(AssetRow(g.Name, L.T("Grid"), "IconGrid", name => RenameAsset(g.Name, name, n => g.Name = n), () => { _grids.Remove(g); RefreshGridBox(null); }, g));
         if (_targets.Count + _grids.Count == 0)
             ScriptAssetList.Children.Add(new TextBlock { Text = L.T("None yet."), Style = (Style)FindResource("Muted"), FontSize = 12 });
@@ -289,6 +289,18 @@ public partial class MacroEditorView
             size.Children.Add(columns);
             Grid.SetColumn(size, 2);
             row.Children.Add(size);
+            // What the grid moves with, on a line of its own under the name.
+            row.RowDefinitions.Add(new RowDefinition());
+            row.RowDefinitions.Add(new RowDefinition());
+            var follow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+            follow.Children.Add(new TextBlock { Text = L.T("Moves with"), Style = (Style)FindResource("Unit"), Margin = new Thickness(0, 0, 8, 0) });
+            var followBox = new ComboBox { MinWidth = 140, ToolTip = L.T("When the game moves its board, the grid moves as far as this picture did. Keep the picture where it is now while you pick it.") };
+            AutomationName(followBox, L.T($"{name} moves with"));
+            FillFollowBox(followBox, grid);
+            followBox.SelectionChanged += (_, _) => _ = FollowAsync(grid, followBox.SelectedIndex > 0 ? followBox.SelectedItem as string : null);
+            follow.Children.Add(followBox);
+            Grid.SetRow(follow, 1); Grid.SetColumn(follow, 1); Grid.SetColumnSpan(follow, 3);
+            row.Children.Add(follow);
         }
         var delete = new Button { Style = (Style)FindResource("IconButton"), Width = 28, Height = 28, MinHeight = 0, Margin = new Thickness(4, 0, 0, 0), ToolTip = $"Remove {name}" };
         delete.Content = new System.Windows.Shapes.Path { Data = (Geometry)FindResource("IconTrash"), Fill = (Brush)FindResource("DangerIconBrush"), Width = 11, Height = 11, Stretch = Stretch.Uniform };

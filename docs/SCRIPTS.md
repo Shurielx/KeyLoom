@@ -92,6 +92,8 @@ if (askYesNo("Is a reward window open?")) {
 
 Each cell has `row`, `column`, `value` (a number or `null`), and `x` and `y` in its middle, so `click(board.highest())` and `drag(pair.from, pair.to)` work as they are.
 
+A grid set to **Moves with** a picture is read where that picture has moved it, and its cells' `x` and `y` are where they are now. When the picture is not on the screen, `readGrid` stops the macro and says so.
+
 ## When something goes wrong
 
 Keyloom names the line and says what it expected, for example `Line 3: press() needs a key, such as press("E") or press("Ctrl+S").` A script can catch these itself with `try` and `catch`. A misspelled name says so: `'pres' is not something Keyloom knows.`

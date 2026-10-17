@@ -2,6 +2,16 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-12 · 2026-10-17
+
+### Added
+- Grids can move with a picture on the screen
+- Set Moves with on a grid, in steps or in a script
+- When a game shifts its board, the grid follows it
+
+### Changed
+- Grids read white numbers on glowing cells far better
+
 ## 0.3-dev-11 · 2026-10-17
 
 ### Featured

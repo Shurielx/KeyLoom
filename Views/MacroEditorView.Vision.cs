@@ -79,7 +79,7 @@ public partial class MacroEditorView
     {
         if (Mode == 3) { p.Targets = _targets.Select(t => t.Clone()).ToList(); return; }
         var used = _steps.Where(a => a.ActionType is MacroActionType.ClickTarget or MacroActionType.WaitUntil || a.Block == BlockKind.If)
-            .Select(a => a.Target ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .Select(a => a.Target ?? "").Concat(UsedGrids().Select(g => g.Follow ?? "")).ToHashSet(StringComparer.OrdinalIgnoreCase);
         p.Targets = _targets.Where(t => used.Contains(t.Name)).Select(t => t.Clone()).ToList();
     }
 
@@ -163,6 +163,7 @@ public partial class MacroEditorView
         }
         var picked = SelectedIndices();
         t.Name = name;
+        RetargetGrids(old, name);
         _selecting = true;
         try
         {

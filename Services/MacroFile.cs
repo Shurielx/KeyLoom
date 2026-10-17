@@ -103,7 +103,8 @@ public static class MacroFile
         if (p.Grids.Count > 0) d.Grids = p.Grids.Select(g => new GridDto
         {
             Name = g.Name, Rows = g.Rows, Columns = g.Columns,
-            Area = new AreaDto { X = g.Area.X, Y = g.Area.Y, Width = g.Area.Width, Height = g.Area.Height, From = g.Area.Space == CoordinateSpace.Window ? "window" : null }
+            Area = new AreaDto { X = g.Area.X, Y = g.Area.Y, Width = g.Area.Width, Height = g.Area.Height, From = g.Area.Space == CoordinateSpace.Window ? "window" : null },
+            Follow = string.IsNullOrEmpty(g.Follow) ? null : new FollowDto { Target = g.Follow, X = g.FollowX, Y = g.FollowY }
         }).ToList();
         if (p.Actions.Count > 0) d.Steps = ToSteps(p.Actions);
         if (p.PointerSettleMs != MacroProfile.DefaultPointerSettleMs) d.ClickDelayAfterMoveMs = p.PointerSettleMs;
@@ -198,7 +199,9 @@ public static class MacroFile
                     "screen" => CoordinateSpace.Screen,
                     "window" => CoordinateSpace.Window,
                     _ => throw new ArgumentException(L.T($"{label}: unknown area \"from\" \"{a.From}\". Use \"screen\" or \"window\"."))
-                })
+                }),
+                Follow = g.Follow is { } f ? (string.IsNullOrWhiteSpace(f.Target) ? throw new ArgumentException(L.T($"{label}: \"follow\" needs a \"target\", such as \"Board title\".")) : f.Target.Trim()) : null,
+                FollowX = g.Follow?.X ?? 0, FollowY = g.Follow?.Y ?? 0
             });
         }
         if (d.Steps != null)
@@ -466,6 +469,13 @@ public static class MacroFile
         public AreaDto? Area { get; set; }
         public int? Rows { get; set; }
         public int? Columns { get; set; }
+        public FollowDto? Follow { get; set; }
+    }
+    private sealed class FollowDto
+    {
+        public string? Target { get; set; }
+        public int X { get; set; }
+        public int Y { get; set; }
     }
     private sealed class TargetDto
     {
