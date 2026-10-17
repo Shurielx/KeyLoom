@@ -85,6 +85,7 @@ public partial class MacroEditorView : UserControl
     {
         ShortcutTextBox.Text = Shortcut.Format(_modifiers, _key);
         ClearShortcutButton.Visibility = _key == 0 ? Visibility.Collapsed : Visibility.Visible;
+        RefreshScriptControls();
     }
     private void Shortcut_Focused(object sender, KeyboardFocusChangedEventArgs e) => ShortcutTextBox.Text = L.T("Press a shortcut...");
     private void Shortcut_Unfocused(object sender, KeyboardFocusChangedEventArgs e) => UpdateShortcut();

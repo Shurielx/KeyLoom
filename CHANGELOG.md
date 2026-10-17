@@ -2,6 +2,19 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-14 · 2026-10-17
+
+### Added
+- Scripts listen for keys while they run: on("1", ...)
+- Keys can be combinations like Ctrl+1, kept from the game
+- { pass: true } lets the game get the key too
+- Change a key or its pass beside the script, or try it
+- button("Label", ...) adds a button beside the script
+- A script with keys keeps listening after its last run
+- Settings: a point { x, y } with Pick on the screen
+- Settings: a color with Pick, or a grid or target list
+- Script Help starts with a guide to a small program
+
 ## 0.3-dev-13 · 2026-10-17
 
 ### Added

@@ -29,7 +29,7 @@ internal static partial class Program
                 var only = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
                 only.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Icons.xaml", UriKind.Relative) });
                 only.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Keyloom;component/Assets/Theme.xaml", UriKind.Relative) });
-                ScriptEngineTests().GetAwaiter().GetResult(); SequenceScriptTests().GetAwaiter().GetResult(); ScriptSettingsTests(); AiEngineTests().GetAwaiter().GetResult(); ScriptUiTests(); SequenceScriptUiTests(); AiUiTests(); Console.WriteLine($"PASS: {_checks} checks"); only.Shutdown(); return 0;
+                ScriptEngineTests().GetAwaiter().GetResult(); SequenceScriptTests().GetAwaiter().GetResult(); ScriptSettingsTests(); ScriptKeysTests().GetAwaiter().GetResult(); AiEngineTests().GetAwaiter().GetResult(); ScriptUiTests(); SequenceScriptUiTests(); ScriptKeysUiTests(); AiUiTests(); Console.WriteLine($"PASS: {_checks} checks"); only.Shutdown(); return 0;
             }
             if (args.Contains("--only-builder-targets"))
             {
@@ -56,6 +56,7 @@ internal static partial class Program
             ScriptEngineTests().GetAwaiter().GetResult();
             SequenceScriptTests().GetAwaiter().GetResult();
             ScriptSettingsTests();
+            ScriptKeysTests().GetAwaiter().GetResult();
             AiEngineTests().GetAwaiter().GetResult();
             LanguageEngineTests();
             StorageTests();
@@ -81,6 +82,7 @@ internal static partial class Program
             GridUiTests();
             ScriptUiTests();
             SequenceScriptUiTests();
+            ScriptKeysUiTests();
             AiUiTests();
             LanguageUiTests();
             BuilderTargetTests();

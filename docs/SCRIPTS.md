@@ -56,6 +56,8 @@ Points are on the screen, in pixels. Anything with an `x` and a `y` is a point: 
 | `stop(message?)` | Ends the macro, showing the message if there is one. |
 | `random(min, max)` | A whole number from min to max, both included. |
 | `memory`, `run` | What carries over between runs, and the run number. |
+| `on(key, label?, function, { pass }?)` | Runs the function when you press the key while the macro runs. See below. |
+| `button(label, function)` | A button beside the script that tries the function. See below. |
 
 Targets and grids are the ones listed beside the script; add them there with **New picture**, **New color** and **New grid**, and use them by name in quotes.
 
@@ -100,17 +102,59 @@ A grid set to **Moves with** a picture is read where that picture has moved it, 
 A script can show some of its values beside it, as fields to change without reading the code. Mark a `const` (or `let`) with `// setting:` and a name:
 
 ```js
-const SPEED = 80              // setting: How fast
-const NAME = "Bob"            // setting: Who to greet
-const SELL = false            // setting: Sell the rest
-const MODE = "merge"          // setting: Mode, merge | sell
+const SPEED = 80                  // setting: How fast
+const NAME = "Bob"                // setting: Who to greet
+const SELL = false                // setting: Sell the rest
+const MODE = "merge"              // setting: Mode, merge | sell
+const HOME = { x: 400, y: 300 }   // setting: Where the pointer rests
+const GLOW = "#FFD200"            // setting: Glow, color
+const BOARD = "Board"             // setting: Board, grid
+const PLAY = "Play"               // setting: Play button, target
 ```
 
 - A number gets a box, text in quotes a text box, and `true` or `false` a checkbox.
 - Choices go after a comma, split by `|`, and show as a list.
+- A point `{ x, y }` gets two boxes and **Pick**, to click the spot on the screen.
+- Text with `, color` after the name gets a swatch and **Pick**, to click a color on the screen. `, grid` and `, target` show a list of this macro's grids or targets; renaming one renames it in the script too.
 - Without a name after `setting:`, the field is named after the const.
 - Changing a field writes the new value into the script, on that line; typing in the script changes the field. Ctrl+Z in the script undoes either.
 - The mark is a comment, so the script stays plain JavaScript and runs as it is.
+
+## Keys and buttons: a script as a small program
+
+A script can do nothing on its own and wait for your keys, with settings and buttons beside it, so someone else can use it without reading the code. **Help** in the script starts with this guide, and **Examples** has the program below.
+
+```js
+// Set Runs to 0. Press 1 to start or pause, 2 to park the pointer.
+const SPEED = 300 // setting: Pause after each merge (ms)
+const BOARD = "Board" // setting: Board, grid
+const HOME = { x: 400, y: 300 } // setting: Where the pointer rests
+
+on("1", "Start or pause", () => {
+  memory.working = !memory.working
+  log(memory.working ? "started" : "paused")
+})
+on("2", "Park the pointer", () => moveTo(HOME))
+button("Show the board", () => log(readGrid(BOARD).toString()))
+
+// Nothing to do until 1 is pressed.
+if (!memory.working) { wait(100); return }
+const pair = readGrid(BOARD).pair()
+if (pair) drag(pair.from, pair.to)
+wait(SPEED)
+```
+
+**`on(key, label?, function, { pass }?)`** listens for a key while the macro runs.
+
+- The key is named as in `press()`: `"1"`, `"F9"`, `"Ctrl+1"`. Modifiers must match, so `"Ctrl+1"` leaves a plain 1 to the game.
+- The function runs at the script's next `wait()` (or while `waitFor` and `waitUntilGone` wait), or between runs. It never starts inside itself: pressing its key again while it runs waits until it ends. Other keys can still run during its `wait()`.
+- Keyloom keeps the key from the app in front while the macro runs. `{ pass: true }` lets the app get it too.
+- A script with keys keeps listening after its last run, until you stop it. So with **Runs** 1 the script sets up and then only reacts to keys; with **Runs** 0 it can work in a loop that keys switch on and off, as above. Keep what keys change in `memory`.
+- Keys the script itself presses are not heard, and holding a key down counts once.
+- The macro's own shortcut and Ctrl+Shift+F12 cannot be used: saving says so, and so does the script when it runs.
+- The label names the key beside the script. There each key has a box to press a new key in, **Game gets it too** for `{ pass: true }`, and a play button that tries it. All of them change the script itself.
+
+**`button(label, function)`** puts a button beside the script. Clicking it is a test run: the script's first run plays, then the button's function, and the macro ends. Let the top of the script return early while there is nothing to do, as above, so a button does only its own work.
 
 ## Turning steps into a script
 

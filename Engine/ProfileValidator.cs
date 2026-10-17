@@ -26,6 +26,9 @@ public static class ProfileValidator
             p.Script ??= "";
             if (p.Script.Trim().Length == 0) throw new ArgumentException(L.T("Write a script, or start from one of the Examples."));
             if (MacroScript.Check(p.Script) is { } problem) throw new ArgumentException("Script " + char.ToLowerInvariant(problem.ToString()[0]) + problem.ToString()[1..]);
+            KeyChord? own = p.PrimaryVk is > 0 and <= 0xFF ? new KeyChord(p.PrimaryModifiers, (ushort)p.PrimaryVk) : null;
+            if (ScriptControls.Read(p.Script, own).Keys.FirstOrDefault(k => k.Blocks) is { } key)
+                throw new ArgumentException(L.T($"Script line {key.Line}: {key.Problem}"));
         }
         else if (p.TargetType == TargetInputType.Keyboard) KeyResolver.Resolve(p.TargetKey);
         else ValidateButton(p.TargetMouseButton);

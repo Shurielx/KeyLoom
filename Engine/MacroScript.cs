@@ -30,7 +30,7 @@ public sealed class ScriptStoppedException(string message) : Exception(message);
 /// clickOn("Play") and wait(200). Scripts reach the keyboard, the mouse and the screen through Keyloom only: there is no
 /// file, network or system access.
 /// </summary>
-public sealed partial class MacroScript
+public sealed partial class MacroScript : IDisposable
 {
     public const int MaxLength = 100_000;
     private const string Source = "script", PreludeSource = "keyloom";
@@ -46,14 +46,16 @@ public sealed partial class MacroScript
     private readonly IScreen _screen;
     private readonly IntPtr _window;
     private readonly Action<string> _log;
+    private readonly Func<IKeyListener> _newListener;
+    private readonly KeyChord? _own;
     private readonly CancellationToken _token;
     private readonly Dictionary<string, ushort[]> _keys = new(StringComparer.OrdinalIgnoreCase);
     private readonly Random _random = new();
 
     internal MacroScript(string code, ExecutionInput input, PointerResolver pointer, TargetLocator targets, GridLocator grids,
-        AiEyes eyes, IWindowSystem windows, IScreen screen, IntPtr window, Action<string> log, CancellationToken token)
+        AiEyes eyes, IWindowSystem windows, IScreen screen, IntPtr window, Action<string> log, Func<IKeyListener> keys, KeyChord? own, CancellationToken token)
     {
-        _input = input; _pointer = pointer; _targets = targets; _grids = grids; _eyes = eyes; _windows = windows; _screen = screen; _window = window; _log = log; _token = token;
+        _input = input; _pointer = pointer; _targets = targets; _grids = grids; _eyes = eyes; _windows = windows; _screen = screen; _window = window; _log = log; _newListener = keys; _own = own; _token = token;
         _engine = new Jint.Engine(o =>
         {
             o.CancellationToken(token);
@@ -73,7 +75,13 @@ public sealed partial class MacroScript
     public bool Run(long run)
     {
         _engine.SetValue("run", run);
-        try { _engine.Invoke("__run"); return true; }
+        return Guard(() => _engine.Invoke("__run"));
+    }
+    /// <summary>Plays part of the script and turns how it ended into what Keyloom shows.</summary>
+    /// <returns>False when the script called stop() without a message, which ends the macro quietly.</returns>
+    private bool Guard(Action play)
+    {
+        try { play(); return true; }
         catch (ExecutionCanceledException) { throw new OperationCanceledException(_token); }
         catch (JavaScriptException ex) when (ex.InnerException is OperationCanceledException) { throw new OperationCanceledException(_token); }
         catch (JavaScriptException ex) when (ex.InnerException is ScriptStoppedException stop)
@@ -165,7 +173,7 @@ public sealed partial class MacroScript
             return JsValue.Undefined;
         });
         Function("scroll", a => { _input.Scroll(Whole(a, 0, "scroll", L.T("how many notches, such as scroll(-3) to scroll down"))); return JsValue.Undefined; });
-        Function("wait", a => { _input.Settle(); Wait(Whole(a, 0, "wait", L.T("the time in ms, such as wait(500)"), 0, 86_400_000)); return JsValue.Undefined; });
+        Function("wait", a => { _input.Settle(); Listen(Whole(a, 0, "wait", L.T("the time in ms, such as wait(500)"), 0, 86_400_000)); return JsValue.Undefined; });
         Function("mouse", _ => { var (x, y) = _windows.Cursor(); return PointObject(x, y); });
         Function("inWindow", a =>
         {
@@ -219,6 +227,7 @@ public sealed partial class MacroScript
             return JsValue.Undefined;
         });
         Function("stop", a => throw new ScriptStoppedException(a.Length > 0 && !a[0].IsUndefined() ? Show(a[0]) : ""));
+        DefineKeys();
         Function("random", a =>
         {
             int min = Whole(a, 0, "random", L.T("the lowest number, such as random(1, 6)")), max = Whole(a, 1, "random", L.T("the highest number, such as random(1, 6)"));
@@ -276,7 +285,7 @@ public sealed partial class MacroScript
         {
             if ((_targets.Locate(target) == null) == gone) return true;
             if (timeout >= 0 && clock.ElapsedMilliseconds >= timeout) return false;
-            Wait(timeout < 0 ? MacroExecutor.LookEveryMs : (int)Math.Clamp(timeout - clock.ElapsedMilliseconds, 1, MacroExecutor.LookEveryMs));
+            Listen(timeout < 0 ? MacroExecutor.LookEveryMs : (int)Math.Clamp(timeout - clock.ElapsedMilliseconds, 1, MacroExecutor.LookEveryMs));
         }
     }
     private string Target(JsValue[] a, string name)
@@ -419,8 +428,39 @@ public sealed partial class MacroScript
         new(L.T("Other"), "random", "random(min, max)", L.T("A whole number from min to max, both included."), "wait(random(200, 400))"),
         new(L.T("Other"), "memory", "memory", L.T("An object that keeps what you put in it from one run to the next, until the macro stops."), "memory.count = (memory.count || 0) + 1"),
         new(L.T("Other"), "run", "run", L.T("Which run this is, counting from 1."), "if (run % 10 === 0) press(\"R\")"),
-        new(L.T("Other"), "setting", "const NAME = value // setting: Label", L.T("Shows a const beside the script as a field, so it can be changed without touching the code. A number gets a box, text in quotes a text box, true or false a checkbox. Choices go after a comma, split by |."), "const SPEED = 80 // setting: How fast\nconst MODE = \"merge\" // setting: Mode, merge | sell")
+        new(L.T("Settings, keys and buttons"), "on", "on(key, label?, function, { pass }?)", L.T("While the macro runs, pressing the key runs the function, at the script's next wait() or between runs. Keyloom keeps the key from the app in front unless you add { pass: true }. A script with keys keeps listening after its last run, until you stop it. The key and pass can be changed beside the script."), "on(\"1\", \"Start or pause\", () => memory.working = !memory.working)\non(\"Ctrl+2\", \"Read again\", () => log(readGrid(\"Board\").toString()), { pass: true })"),
+        new(L.T("Settings, keys and buttons"), "button", "button(label, function)", L.T("Puts a button beside the script. Clicking it plays the script's first run as a test, then the function."), "button(\"Park the pointer\", () => moveTo(HOME))"),
+        new(L.T("Settings, keys and buttons"), "setting", "const NAME = value // setting: Label", L.T("Shows a const beside the script as a field, so it can be changed without touching the code. A number gets a box, text in quotes a text box, true or false a checkbox, and { x, y } a point with Pick. Choices go after a comma, split by |. Text can ask for a picker after a comma: color, grid or target."), "const SPEED = 80 // setting: How fast\nconst MODE = \"merge\" // setting: Mode, merge | sell\nconst HOME = { x: 400, y: 300 } // setting: Where the pointer rests\nconst GLOW = \"#FFD200\" // setting: Glow, color\nconst BOARD = \"Board\" // setting: Board, grid")
     ];
+
+    /// <summary>How to build a script that works like a small program, for the top of Help.</summary>
+    public static readonly IReadOnlyList<(string Title, string Text)> Guide =
+    [
+        (L.T("Settings beside the script"), L.T("End a const with // setting: and a name, and it shows beside the script as a field. Numbers, text, true or false and choices get a box, a check or a list. A point { x, y } gets Pick, to click the spot on the screen. Add color, grid or target after a comma, as in // setting: Glow, color, for a color you pick on the screen or a list of this macro's grids or targets.")),
+        (L.T("Keys while it runs"), L.T("on(\"1\", \"Start\", () => ...) runs the function when you press 1 while the macro runs. It runs at the script's next wait() or between runs, and a key's function never starts inside itself. Keyloom keeps the key from the game; { pass: true } lets the game get it too. Use a combination like \"Ctrl+1\" to keep plain keys free. The macro's own shortcut and Ctrl+Shift+F12 cannot be used.")),
+        (L.T("Buttons in the editor"), L.T("button(\"Park\", () => ...) puts a button beside the script. Clicking it is a test run: the script's first run plays, then the button's function. Each key has a play button too.")),
+        (L.T("Waiting for your keys"), L.T("A script with keys keeps listening after its last run, until you stop it. Keep what keys change in memory, set Runs to 0, and let the top of the script wait and return while there is nothing to do. The example below works that way."))
+    ];
+    /// <summary>The guide's example: a script that waits for keys and does its work when told to.</summary>
+    public const string ProgramExample = """
+        // Set Runs to 0. Press 1 to start or pause, 2 to park the pointer.
+        const SPEED = 300 // setting: Pause after each merge (ms)
+        const BOARD = "Board" // setting: Board, grid
+        const HOME = { x: 400, y: 300 } // setting: Where the pointer rests
+
+        on("1", "Start or pause", () => {
+          memory.working = !memory.working
+          log(memory.working ? "started" : "paused")
+        })
+        on("2", "Park the pointer", () => moveTo(HOME))
+        button("Show the board", () => log(readGrid(BOARD).toString()))
+
+        // Nothing to do until 1 is pressed.
+        if (!memory.working) { wait(100); return }
+        const pair = readGrid(BOARD).pair()
+        if (pair) drag(pair.from, pair.to)
+        wait(SPEED)
+        """;
 
     /// <summary>Ready-made scripts for the Examples menu: a name and the code.</summary>
     public static readonly IReadOnlyList<(string Name, string Code)> Examples =
@@ -460,6 +500,7 @@ public sealed partial class MacroScript
               stop("No two cells match")
             }
             """),
+        (L.T("A small program with keys and buttons"), ProgramExample),
         (L.T("Count and stop"), """
             memory.clicks = (memory.clicks || 0) + 1
             click()

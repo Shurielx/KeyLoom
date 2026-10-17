@@ -54,6 +54,8 @@ public class MacroProfile : INotifyPropertyChanged
     public List<ScreenGrid> Grids { get; set; } = new();
     /// <summary>A script macro's JavaScript. Experimental.</summary>
     public string Script { get; set; } = "";
+    /// <summary>A test run from the editor that tries one of the script's buttons or keys: its label or key. Never saved.</summary>
+    [JsonIgnore] public string? ScriptTrigger { get; set; }
     /// <summary>Sequences and scripts look at the screen; repeat and hold do not.</summary>
     [JsonIgnore] public bool LooksAtScreen => Behavior is MacroBehaviorType.Sequence or MacroBehaviorType.Script;
     public MacroIconKind IconKind { get; set; }
@@ -138,7 +140,7 @@ public class MacroProfile : INotifyPropertyChanged
         TargetKey = TargetKey, SpamIntervalMs = SpamIntervalMs, StartDelayMs = StartDelayMs,
         RepeatCount = RepeatCount, PointerSettleMs = PointerSettleMs, Actions = new(Actions.Select(a => a.Clone())),
         ExecutionMode = ExecutionMode, RestoreCursor = RestoreCursor, Window = Window, UsePoint = UsePoint, PointX = PointX, PointY = PointY,
-        ScaleWithWindow = ScaleWithWindow, Targets = Targets.Select(t => t.Clone()).ToList(), Grids = Grids.Select(g => g.Clone()).ToList(), Script = Script, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
+        ScaleWithWindow = ScaleWithWindow, Targets = Targets.Select(t => t.Clone()).ToList(), Grids = Grids.Select(g => g.Clone()).ToList(), Script = Script, ScriptTrigger = ScriptTrigger, IconKind = IconKind, IconGlyph = IconGlyph, IconImage = IconImage
     };
     /// <summary>True when execution needs the target window to be found first.</summary>
     [JsonIgnore] public bool NeedsWindow => ExecutionMode != ExecutionMode.Standard ||

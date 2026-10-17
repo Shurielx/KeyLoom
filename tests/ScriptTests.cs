@@ -296,6 +296,182 @@ internal static partial class Program
         Check(Fails(() => ScriptSettings.Write(code, settings[0], "fast"), "must be a number") && Fails(() => ScriptSettings.Write(code, settings[2], "yes"), "on or off"),
             "a value that does not suit the setting is refused");
         Check(MacroScript.Check(written) == null && MacroScript.Functions.Any(f => f.Name == "setting"), "a script with settings is still plain JavaScript, and Help explains settings");
+
+        code = "const HOME = { x: 10, y: -20 } // setting: Home\nconst GLOW = '#ffd200' // setting: Glow, color\nconst BOARD = \"Board\" // setting: Board, grid\nconst PLAY = \"Play\" // setting: Play button, target\nconst NOTE = \"a\" // setting: Speed, in ms";
+        settings = ScriptSettings.Read(code);
+        Check(settings.Select(s => (s.Label, s.Kind, s.Value)).SequenceEqual([("Home", ScriptSettingKind.Point, "10, -20"), ("Glow", ScriptSettingKind.Color, "#ffd200"), ("Board", ScriptSettingKind.Grid, "Board"),
+            ("Play button", ScriptSettingKind.Target, "Play"), ("Speed, in ms", ScriptSettingKind.Text, "a")]),
+            "a point is { x, y }, and color, grid or target after a comma ask for a picker");
+        written = ScriptSettings.Write(code, settings[0], "300, 400");
+        written = ScriptSettings.Write(written, ScriptSettings.Read(written)[1], "#3fbf3f");
+        Check(written.StartsWith("const HOME = { x: 300, y: 400 } // setting: Home\nconst GLOW = '#3FBF3F' // setting: Glow, color\n") && MacroScript.Check(written) == null,
+            "a picked point and color are written back as JavaScript");
+        Check(Fails(() => ScriptSettings.Write(code, settings[0], "300"), "is a point") && Fails(() => ScriptSettings.Write(code, settings[1], "red"), "is a color like"),
+            "a point needs two numbers and a color a #RRGGBB");
+    }
+
+    /// <summary>Keys a test presses by hand, in place of the keyboard hook.</summary>
+    private sealed class FakeKeys : IKeyListener
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<KeyChord> _queue = new();
+        private readonly AutoResetEvent _signal = new(false);
+        public volatile IReadOnlyDictionary<KeyChord, bool> Passes = new Dictionary<KeyChord, bool>();
+        public volatile bool Disposed;
+        public void Listen(IReadOnlyDictionary<KeyChord, bool> passes) => Passes = new Dictionary<KeyChord, bool>(passes);
+        public WaitHandle Pressed => _signal;
+        public bool TryTake(out KeyChord chord) => _queue.TryDequeue(out chord);
+        public void Press(string key) { _queue.Enqueue(KeyChord.Parse(key)); _signal.Set(); }
+        public void Dispose() => Disposed = true;
+    }
+
+    private static async Task ScriptKeysTests()
+    {
+        Check(KeyChord.Parse("Ctrl+1") == new KeyChord(Shortcut.Control, 0x31) && KeyChord.Parse("f9").ToString() == "F9" && KeyChord.Parse("Shift+Alt+E").ToString() == "Alt+Shift+E"
+            && Fails(() => KeyChord.Parse("Ctrl"), "no key besides") && Fails(() => KeyChord.Parse("A+B"), "more than one key"),
+            "a script key is one key with Ctrl, Alt, Shift or Win before it, named as in press()");
+
+        string code = "on(\"1\", \"Start\", () => log(1))\non('Ctrl+2', () => {}, { pass: true })\nbutton(\"Park\", () => moveTo(1, 1))\non(\"F7\", \"Own\", () => {})\n"
+            + "on(\"1\", \"Again\", () => {})\non(\"Ctrl+Shift+F12\", \"Stop\", () => {})\nconst k = \"3\"\non(k, () => {})";
+        var (keys, buttons) = ScriptControls.Read(code, KeyChord.Parse("F7"));
+        Check(keys.Select(k => (k.Key, k.Label, k.Pass, k.Line)).SequenceEqual([("1", "Start", false, 1), ("Ctrl+2", "", true, 2), ("F7", "Own", false, 4), ("1", "Again", false, 5), ("Ctrl+Shift+F12", "Stop", false, 6)])
+            && buttons.Single() is { Label: "Park", Line: 3 },
+            "the editor finds each on() and button() written with its key and label in quotes");
+        Check(keys[0].Problem == null && keys[2] is { Blocks: true, Problem: var own } && own!.Contains("starts and stops this macro") && keys[3] is { Blocks: false, Problem: var twice } && twice!.Contains("twice")
+            && keys[4].Blocks && ScriptControls.Read("on(\"1\", () => {}").Keys.Count == 0,
+            "the macro's own shortcut and Ctrl+Shift+F12 are refused, a key used twice only warns, and a script that does not read has no keys");
+        string changed = ScriptControls.KeyEdit(keys[0], KeyChord.Parse("Ctrl+3")).ApplyTo(code);
+        changed = ScriptControls.PassEdit(ScriptControls.Read(changed).Keys[0], true).ApplyTo(changed);
+        changed = ScriptControls.PassEdit(ScriptControls.Read(changed).Keys[1], false).ApplyTo(changed);
+        Check(changed.StartsWith("on(\"Ctrl+3\", \"Start\", () => log(1), { pass: true })\non('Ctrl+2', () => {}, { pass: false })\n") && MacroScript.Check(changed) == null,
+            "changing a key or whether the game gets it rewrites only that part of the script");
+        var mine = ScriptMacro("on(\"F7\", \"Start\", () => {})");
+        mine.PrimaryVk = 0x76;
+        Check(Fails(() => ProfileValidator.Validate(mine), "Script line 1: F7 starts and stops this macro"), "a script cannot be saved with a key that is its own shortcut");
+
+        var driver = new FakeDriver();
+        FakeKeys current = new();
+        int made = 0;
+        await using var executor = new MacroExecutor(driver, keys: () => { made++; return current = new FakeKeys(); });
+        string failure = "";
+        var logged = new List<string>();
+        executor.ExecutionFailed += m => failure = m;
+        executor.ScriptLogged += line => { lock (logged) logged.Add(line); };
+        string[] Logged() { lock (logged) return [.. logged]; }
+        void Clear() { failure = ""; lock (logged) logged.Clear(); }
+        async Task Play(MacroProfile p) { Clear(); await executor.ToggleAsync(p); await Until(() => executor.ActiveProfile == null); }
+
+        await Play(ScriptMacro("log(\"plain\")"));
+        Check(made == 0, "a script without keys does not listen to the keyboard");
+
+        const string program = "log(\"set up\", run)\non(\"1\", \"Say\", () => log(\"one\"))\non(\"2\", () => { log(\"two\"); stop() }, { pass: true })\nbutton(\"Park\", () => log(\"parked\"))";
+        Clear();
+        await executor.ToggleAsync(ScriptMacro(program));
+        await Until(() => Logged().Length == 1);
+        await Task.Delay(60);
+        Check(executor.ActiveProfile != null && made == 1 && current.Passes[KeyChord.Parse("1")] == false && current.Passes[KeyChord.Parse("2")],
+            "a script with keys keeps running after its last run, listening for them, and says which the game still gets");
+        current.Press("1");
+        await Until(() => Logged().Length == 2);
+        current.Press("2");
+        await Until(() => executor.ActiveProfile == null);
+        Check(Logged().SequenceEqual(["set up 1", "one", "two"]) && failure == "" && current.Disposed, "a key runs its function, stop() in one ends the macro quietly, and the keys are let go");
+
+        Clear();
+        await executor.ToggleAsync(ScriptMacro("on(\"1\", () => { log(\"in\"); wait(150); log(\"out\") })\nfor (let i = 0; i < 3; i++) { log(\"work\", i); wait(100) }"));
+        await Until(() => Logged().Contains("work 0"));
+        current.Press("1"); current.Press("1");
+        await Until(() => Logged().Contains("work 2"));
+        await executor.StopAsync();
+        Check(Logged().SequenceEqual(["work 0", "in", "out", "in", "out", "work 1", "work 2"]), "a key's function runs at the script's next wait(), and pressing it again while it runs waits until it ends");
+
+        var looping = ScriptMacro("on(\"1\", \"Start\", () => memory.on = !memory.on)\nif (!memory.on) { wait(10); return }\nlog(\"working\")", 0);
+        Clear();
+        await executor.ToggleAsync(looping);
+        await Task.Delay(80);
+        bool idle = Logged().Length == 0;
+        current.Press("1");
+        await Until(() => Logged().Length >= 3);
+        await executor.StopAsync();
+        Check(idle && failure == "", "with Runs 0, a script can wait for a key before it does any work");
+
+        await Play(ScriptMacroWithShortcut("const k = \"F7\"\non(k, () => {})", 0x76));
+        Check(failure.Contains("Line 2") && failure.Contains("F7 starts and stops this macro"), "a key in a variable that is the macro's own shortcut stops the script with its line");
+        await Play(ScriptMacro("const k = \"Ctrl+Shift+F12\"\non(k, () => {})"));
+        Check(failure.Contains("Ctrl+Shift+F12 stops every macro"), "no script can take Ctrl+Shift+F12");
+        await Play(ScriptMacro("on(\"1\", () => {}, { pass: 1 })"));
+        Check(failure.Contains("{ pass: true }"), "on() says how to write its options");
+        await Play(ScriptMacro("on(\"1\", \"Start\")"));
+        Check(failure.Contains("on() needs a function to run"), "on() without a function says what it needs");
+
+        var trying = ScriptMacro(program);
+        trying.ScriptTrigger = "Park";
+        await Play(trying);
+        Check(Logged().SequenceEqual(["set up 1", "parked"]) && failure == "", "trying a button plays the first run, then the button, and ends");
+        trying.ScriptTrigger = "1";
+        await Play(trying);
+        Check(Logged().SequenceEqual(["set up 1", "one"]), "trying a key from the editor runs its function as if it was pressed");
+        trying.ScriptTrigger = "Nope";
+        await Play(trying);
+        Check(failure.Contains("did not set up 'Nope'"), "trying something the script did not set up says so");
+    }
+    private static MacroProfile ScriptMacroWithShortcut(string code, uint vk)
+    {
+        var p = ScriptMacro(code);
+        p.PrimaryVk = vk;
+        return p;
+    }
+
+    private static void ScriptKeysUiTests()
+    {
+        var p = ScriptMacro("const HOME = { x: 10, y: 20 } // setting: Home\nconst GLOW = \"#FFD200\" // setting: Glow, color\nconst BOARD = \"Board\" // setting: Board, grid\n"
+            + "on(\"1\", \"Start or pause\", () => memory.on = !memory.on)\non(\"F7\", \"Own key\", () => {})\nbutton(\"Show the board\", () => log(readGrid(BOARD).toString()))\n", 0);
+        p.PrimaryVk = 0x76;
+        p.Grids.Add(new ScreenGrid { Name = "Board", Area = new(100, 50, 300, 200), Rows = 2, Columns = 3 });
+        p.Grids.Add(new ScreenGrid { Name = "Shop", Area = new(100, 300, 300, 100), Rows = 1, Columns = 3 });
+        var editor = new MacroEditorView(p);
+        var host = new System.Windows.Window { Content = editor, Width = 1100, Height = 900, Left = -20000, Top = -20000, ShowActivated = false };
+        host.Show(); Pump(250);
+        T Get<T>(string name) => (T)editor.FindName(name);
+        var box = Get<ICSharpCode.AvalonEdit.TextEditor>("ScriptBox");
+        var settings = Get<System.Windows.Controls.StackPanel>("ScriptSettingList");
+        var keys = Get<System.Windows.Controls.StackPanel>("ScriptKeyList");
+        var texts = Descendants<System.Windows.Controls.TextBox>(settings).ToList();
+        var board = Descendants<System.Windows.Controls.ComboBox>(settings).Single();
+        Check(texts.Select(t => t.Text).SequenceEqual(["10", "20", "#FFD200"]) && Descendants<System.Windows.Controls.Button>(settings).Count(b => System.Windows.Automation.AutomationProperties.GetName(b).StartsWith("Pick")) == 2
+            && ((IEnumerable<string>)board.ItemsSource).SequenceEqual(["Board", "Shop"]) && (string)board.SelectedItem == "Board",
+            "a point setting has x, y and Pick, a color its hex and Pick, and a grid setting lists this macro's grids");
+        texts[0].Text = "300";
+        board.SelectedItem = "Shop";
+        Check(box.Text.StartsWith("const HOME = { x: 300, y: 20 } // setting: Home\nconst GLOW = \"#FFD200\" // setting: Glow, color\nconst BOARD = \"Shop\" // setting: Board, grid\n"),
+            "changing a point or picking another grid rewrites the script");
+
+        var keyBoxes = Descendants<System.Windows.Controls.TextBox>(keys).ToList();
+        Check(keyBoxes.Select(b => b.Text).SequenceEqual(["1", "F7"]) && Descendants<System.Windows.Controls.TextBlock>(keys).Any(t => t.Text == "Start or pause")
+            && Descendants<System.Windows.Controls.TextBlock>(keys).Any(t => t.Text.Contains("F7 starts and stops this macro"))
+            && Descendants<System.Windows.Controls.Button>(keys).Any(b => System.Windows.Automation.AutomationProperties.GetName(b) == "Show the board")
+            && !Get<System.Windows.Controls.TextBlock>("ScriptKeysHint").IsVisible,
+            "the script's keys show beside it with their labels, a key that is the macro's shortcut says so, and its buttons show too");
+        Render(editor, 1100, 900, "script-keys.png");
+        keyBoxes[0].Focus(); Pump(20);
+        keyBoxes[0].RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, System.Windows.PresentationSource.FromVisual(keyBoxes[0])!, 0, System.Windows.Input.Key.F9)
+            { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+        Pump(20);
+        Check(box.Text.Contains("on(\"F9\", \"Start or pause\""), "pressing a key in a key's box writes it into the script");
+        var pass = Descendants<System.Windows.Controls.CheckBox>(keys).First();
+        pass.IsChecked = true; Pump(20);
+        Check(box.Text.Contains("on(\"F9\", \"Start or pause\", () => memory.on = !memory.on, { pass: true })"), "Game gets it too adds { pass: true } to that key");
+        box.Document.UndoStack.Undo(); Invoke(editor, "CheckScript");
+        Check(box.Text.Contains("memory.on = !memory.on)\n"), "Ctrl+Z in the script takes it back");
+        host.Close();
+
+        var help = new ScriptHelpView([], ["Board"]);
+        var sheetHost = new System.Windows.Window { Content = help, Width = 720, Height = 760, Left = -20000, Top = -20000, ShowActivated = false };
+        sheetHost.Show(); Pump(150);
+        Check(Descendants<System.Windows.Controls.TextBlock>(help).Any(t => t.Text == "Make a small program") && Descendants<System.Windows.Controls.TextBlock>(help).Any(t => t.Text == "2. Keys while it runs")
+            && MacroScript.Examples.Any(e => e.Code == MacroScript.ProgramExample) && MacroScript.Check(MacroScript.ProgramExample) == null,
+            "Help starts with a guide to making a small program, with an example that reads fine");
+        Render(help, 720, 760, "script-guide.png");
+        sheetHost.Close();
     }
 
     private static void SequenceScriptUiTests()

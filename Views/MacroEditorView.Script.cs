@@ -245,6 +245,9 @@ public partial class MacroEditorView
         foreach (var g in _grids) ScriptAssetList.Children.Add(AssetRow(g.Name, L.T("Grid"), "IconGrid", name => RenameAsset(g.Name, name, n => g.Name = n), () => { _grids.Remove(g); RefreshGridBox(null); }, g));
         if (_targets.Count + _grids.Count == 0)
             ScriptAssetList.Children.Add(new TextBlock { Text = L.T("None yet."), Style = (Style)FindResource("Muted"), FontSize = 12 });
+        // Settings that pick a grid or a target list them.
+        _settingsShape = "";
+        RefreshScriptSettings();
     }
     private FrameworkElement AssetRow(string name, string kind, string icon, Func<string, bool> rename, Action remove, ScreenGrid? grid)
     {
@@ -409,11 +412,17 @@ public partial class MacroEditorView
         }
         finally { _showingSettings = false; }
         ScriptSettingsHint.Visibility = settings.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        RefreshScriptControls();
     }
     private static void ShowSettingValue(Control field, string value)
     {
         switch (field)
         {
+            case TextBox { Tag: TextBox y } x:
+                var xy = value.Split(',', StringSplitOptions.TrimEntries);
+                if (!x.IsKeyboardFocusWithin && x.Text != xy[0]) x.Text = xy[0];
+                if (!y.IsKeyboardFocusWithin && y.Text != xy[^1]) y.Text = xy[^1];
+                break;
             case CheckBox box: box.IsChecked = value == "true"; break;
             case ComboBox list: list.SelectedItem = value; break;
             case TextBox text when !text.IsKeyboardFocusWithin && text.Text != value: text.Text = value; break;
@@ -436,6 +445,52 @@ public partial class MacroEditorView
                 list.SelectionChanged += (_, _) => { if (list.SelectedItem is string chosen) WriteSetting(s.Name, chosen); };
                 field = list;
                 break;
+            case ScriptSettingKind.Point:
+            {
+                var xy = s.Value.Split(',', StringSplitOptions.TrimEntries);
+                var y = new TextBox { Text = xy[1], Width = 70, ToolTip = L.T($"{s.Name} y") };
+                var x = new TextBox { Text = xy[0], Width = 70, Tag = y, Margin = new Thickness(0, 0, 6, 0) };
+                AutomationName(y, L.T($"{s.Label} y"));
+                x.TextChanged += (_, _) => WriteSetting(s.Name, $"{x.Text}, {y.Text}");
+                y.TextChanged += (_, _) => WriteSetting(s.Name, $"{x.Text}, {y.Text}");
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                line.Children.Add(x); line.Children.Add(y);
+                line.Children.Add(SpotButton(L.T($"Click the spot for {s.Label} on the screen. Esc cancels."), L.T($"Pick {s.Label} on the screen"), async () =>
+                {
+                    if (await OutOfTheWay(() => ScreenSnipWindow.TakeAsync(true, hint: L.T($"Click the spot for {s.Label}"))) is { } snip)
+                        WriteSetting(s.Name, $"{snip.Bounds.X}, {snip.Bounds.Y}");
+                }));
+                return Labeled(s, x, line);
+            }
+            case ScriptSettingKind.Color:
+            {
+                var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(5), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 6, 0) };
+                swatch.SetResourceReference(Border.BorderBrushProperty, "FieldBorderBrush");
+                var hex = new TextBox { Text = s.Value, Width = 90, FontFamily = new FontFamily("Cascadia Mono, Consolas") };
+                void Paint()
+                {
+                    try { swatch.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex.Text.Trim())); }
+                    catch (FormatException) { swatch.Background = Brushes.Transparent; }
+                }
+                hex.TextChanged += (_, _) => { Paint(); WriteSetting(s.Name, hex.Text); };
+                Paint();
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                line.Children.Add(swatch); line.Children.Add(hex);
+                line.Children.Add(SpotButton(L.T($"Click a color on the screen for {s.Label}. Esc cancels."), L.T($"Pick {s.Label} on the screen"), async () =>
+                {
+                    if (await OutOfTheWay(() => ScreenSnipWindow.TakeAsync(true, hint: L.T($"Click the color for {s.Label}"))) is { } snip)
+                        WriteSetting(s.Name, TargetPicture.ColorText(snip.Color));
+                }));
+                return Labeled(s, hex, line);
+            }
+            case ScriptSettingKind.Grid:
+            case ScriptSettingKind.Target:
+                var names = (s.Kind == ScriptSettingKind.Grid ? _grids.Select(g => g.Name) : _targets.Select(t => t.Name)).ToList();
+                if (!names.Contains(s.Value)) names.Insert(0, s.Value);
+                var pick = new ComboBox { ItemsSource = names, SelectedItem = s.Value, MinWidth = 140, HorizontalAlignment = HorizontalAlignment.Left };
+                pick.SelectionChanged += (_, _) => { if (pick.SelectedItem is string chosen) WriteSetting(s.Name, chosen); };
+                field = pick;
+                break;
             default:
                 var text = new TextBox { Text = s.Value };
                 if (s.Kind == ScriptSettingKind.Number) { text.Width = 100; text.HorizontalAlignment = HorizontalAlignment.Left; }
@@ -449,6 +504,28 @@ public partial class MacroEditorView
         row.Children.Add(field);
         _settingFields[s.Name] = field;
         return row;
+    }
+    /// <summary>A setting with more than one control on its line: the label above, then the line.</summary>
+    private StackPanel Labeled(ScriptSetting s, Control field, FrameworkElement line)
+    {
+        var row = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+        row.Children.Add(new TextBlock { Text = s.Label, Style = (Style)FindResource("StackLabel") });
+        field.ToolTip = L.T($"{s.Name} on line {s.Line} of the script");
+        AutomationName(field, s.Label);
+        row.Children.Add(line);
+        _settingFields[s.Name] = field;
+        return row;
+    }
+    private Button SpotButton(string tip, string name, Func<Task> pick)
+    {
+        var button = new Button { Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), ToolTip = tip };
+        var content = new StackPanel { Orientation = Orientation.Horizontal };
+        content.Children.Add(new System.Windows.Shapes.Path { Data = (Geometry)FindResource("IconTarget"), Style = (Style)FindResource("Icon"), Width = 12, Height = 12, Margin = new Thickness(0, 0, 6, 0) });
+        content.Children.Add(new TextBlock { Text = L.T("Pick") });
+        button.Content = content;
+        AutomationName(button, name);
+        button.Click += async (_, _) => await pick();
+        return button;
     }
     /// <summary>Writes a field's value into the script, where the setting is, so Ctrl+Z in the script undoes it.</summary>
     private void WriteSetting(string name, string value)

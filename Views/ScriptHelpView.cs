@@ -66,6 +66,7 @@ public sealed class ScriptHelpView : UserControl
         string query = _search.Text.Trim();
         bool Matches(ScriptFunction f) => query.Length == 0 || f.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
             || f.About.Contains(query, StringComparison.OrdinalIgnoreCase) || f.Group.Contains(query, StringComparison.OrdinalIgnoreCase);
+        if (query.Length == 0) Guide();
         if (query.Length == 0 && _targets.Count + _grids.Count > 0)
         {
             Group(L.T("In this macro"));
@@ -81,6 +82,21 @@ public sealed class ScriptHelpView : UserControl
         }
         if (_list.Children.Count == 0)
             _list.Children.Add(new TextBlock { Text = L.T($"No function matches \"{query}\"."), Style = Find<Style>("Muted"), Margin = new Thickness(0, 8, 0, 0) });
+    }
+    /// <summary>How to make a script that works like a small program, with an example to start from.</summary>
+    private void Guide()
+    {
+        Group(L.T("Make a small program"));
+        _list.Children.Add(new TextBlock { Text = L.T("A script can do nothing on its own and wait for your keys, with settings and buttons beside it, so others can use it without reading the code."), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) });
+        int n = 1;
+        foreach (var (title, text) in MacroScript.Guide)
+        {
+            var step = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+            step.Children.Add(new TextBlock { Text = $"{n++}. {title}", FontWeight = FontWeights.SemiBold });
+            step.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+            _list.Children.Add(step);
+        }
+        _list.Children.Add(Entry(new ScriptFunction("", L.T("program example"), L.T("A small program with keys and buttons"), L.T("Mark a grid named \"Board\" first, or pick another one in the Board setting."), MacroScript.ProgramExample)));
     }
     private void Group(string name) =>
         _list.Children.Add(new TextBlock { Text = name, Style = Find<Style>("SectionTitle"), FontSize = 12.5, Margin = new Thickness(0, _list.Children.Count == 0 ? 2 : 16, 0, 6) });

@@ -748,6 +748,9 @@
               <TextBlock Text="Settings" Style="{StaticResource InspectorTitle}"/>
               <TextBlock x:Name="ScriptSettingsHint" Style="{StaticResource Hint}" TextWrapping="Wrap" Text="Mark a const in the script with // setting: and a name, like const SPEED = 80 // setting: How fast, to change it here."/>
               <StackPanel x:Name="ScriptSettingList" Margin="0,8,0,8"/>
+              <TextBlock Text="Keys and buttons" Style="{StaticResource InspectorTitle}"/>
+              <TextBlock x:Name="ScriptKeysHint" Style="{StaticResource Hint}" TextWrapping="Wrap" Text="Write on(&quot;1&quot;, &quot;Start&quot;, () =&gt; ...) to react to a key while the macro runs, or button(&quot;Reset&quot;, () =&gt; ...) for a button here. Help shows how."/>
+              <StackPanel x:Name="ScriptKeyList" Margin="0,8,0,8"/>
               <TextBlock Text="Targets and grids" Style="{StaticResource InspectorTitle}"/>
               <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Text="Things on the screen the script can use by name, like clickOn(&quot;Play&quot;). Click a name to put it in the script."/>
               <StackPanel x:Name="ScriptAssetList" Margin="0,8,0,0"/>

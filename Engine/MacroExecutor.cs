@@ -3,7 +3,7 @@ using Keyloom.Models;
 
 namespace Keyloom.Engine;
 
-public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null, IGridReader? gridReader = null, Func<IAiVision?>? ai = null) : IAsyncDisposable
+public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? windows = null, Func<IntPtr, IInputDriver>? backgroundDriver = null, Func<IntPtr, IInputDriver>? switchDriver = null, IScreen? screen = null, IGridReader? gridReader = null, Func<IAiVision?>? ai = null, Func<IKeyListener>? keys = null) : IAsyncDisposable
 {
     private readonly IInputDriver _driver = driver ?? new InputSimulator();
     private readonly IWindowSystem _windows = windows ?? WindowSystem.Instance;
@@ -13,6 +13,8 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
     private readonly IGridReader _gridReader = gridReader ?? WindowsOcrReader.Instance;
     /// <summary>The AI, made when a macro first asks it; null while AI is off in Settings.</summary>
     private readonly Func<IAiVision?> _ai = ai ?? (() => Services.AppSettings.Current.AiSetup is { } setup ? new AiVision(setup) : null);
+    /// <summary>Hears the keys a script listens for, made when a script first calls on().</summary>
+    private readonly Func<IKeyListener> _keys = keys ?? (() => new KeyHook());
     /// <summary>How often a step that looks for a target checks the screen again.</summary>
     public const int LookEveryMs = 50;
     /// <summary>A drag holds the button this long before it moves and after it arrives.</summary>
@@ -70,6 +72,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
     private void Run(MacroProfile p, MacroProfile original, ushort[] keys, Dictionary<MacroAction, ushort[]> stepKeys, IntPtr window, CancellationToken token)
     {
         ExecutionInput? input = null;
+        MacroScript? script = null;
         long count = 0;
         var progressClock = Stopwatch.StartNew();
         try
@@ -85,8 +88,10 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
             var targets = new TargetLocator(_screen, _windows, window, p.Targets);
             var grids = new GridLocator(_screen, _windows, window, p.Grids, _gridReader, targets);
             var eyes = new AiEyes(_ai, _screen, _windows, window);
-            var script = p.Behavior == MacroBehaviorType.Script
-                ? new MacroScript(p.Script, input, pointer, targets, grids, eyes, _windows, _screen, window, line => ScriptLogged?.Invoke(line), token) : null;
+            KeyChord? own = p.PrimaryVk is > 0 and <= 0xFF ? new KeyChord(p.PrimaryModifiers, (ushort)p.PrimaryVk) : null;
+            script = p.Behavior == MacroBehaviorType.Script
+                ? new MacroScript(p.Script, input, pointer, targets, grids, eyes, _windows, _screen, window, line => ScriptLogged?.Invoke(line), _keys, own, token) : null;
+            bool ended = false;
             using var timer = new TimerResolution(p.Behavior == MacroBehaviorType.Script || p.Behavior != MacroBehaviorType.PressAndHold &&
                 (p.SpamIntervalMs <= 16 || p.Actions.Any(a => a.ActionType == MacroActionType.Delay && a.DelayMs <= 16 || a.GlideMs > 0 || a.ActionType == MacroActionType.GroupStart && a.GapMs is > 0 and <= 16)));
             if (p.Behavior == MacroBehaviorType.PressAndHold)
@@ -119,7 +124,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                     }
                     else if (script != null)
                     {
-                        if (!script.Run(count + 1)) { count++; break; }
+                        if (!script.Run(count + 1)) { count++; ended = true; break; }
                     }
                     else foreach (var step in StepGroups.Expand(p.Actions, block => block.AsksAi ? eyes.Holds(block, token) : Holds(block, targets, token)))
                     {
@@ -133,8 +138,20 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
                         ProgressChanged?.Invoke(original, count); progressClock.Restart();
                     }
                     if (p.RepeatCount != 0 && count == p.RepeatCount) break;
+                    if (script != null)
+                    {
+                        if (!script.Idle(p.SpamIntervalMs)) { ended = true; break; }
+                        continue;
+                    }
                     input.Settle();
                     Wait(p.SpamIntervalMs, token);
+                }
+                // Trying a button or key from the editor runs it after the first run. Otherwise a script with keys
+                // keeps listening after its last run, until it is stopped.
+                if (script != null && !ended)
+                {
+                    if (p.ScriptTrigger is { } trigger) script.Press(trigger);
+                    else if (script.Listening) script.Idle(-1);
                 }
             }
         }
@@ -142,6 +159,7 @@ public sealed class MacroExecutor(IInputDriver? driver = null, IWindowSystem? wi
         catch (Exception ex) { ExecutionFailed?.Invoke(ex.Message); }
         finally
         {
+            script?.Dispose();
             try { input?.ReleaseOwned(); }
             catch (Exception ex) { ExecutionFailed?.Invoke(ex.Message); }
             Volatile.Write(ref _activeProfile, null);

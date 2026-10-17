@@ -146,6 +146,27 @@ internal static partial class Program
             box.Document.Insert(0, "const SPEED = 80 // setting: How fast\nconst SELL = false // setting: Sell the rest\nconst MODE = \"merge\" // setting: Mode, merge | sell\n\n");
             Invoke(editor, "CheckScript"); Pump(400);
             Capture(window, "live-script-settings.png");
+
+            // A small program: keys and buttons beside it, a key changed with a real click and key press.
+            box.Document.Text = Keyloom.Engine.MacroScript.ProgramExample;
+            Invoke(editor, "CheckScript"); Pump(400);
+            Capture(window, "live-script-keys.png");
+            var keyList = (System.Windows.Controls.StackPanel)editor.FindName("ScriptKeyList");
+            var keyBox = Descendants<System.Windows.Controls.TextBox>(keyList).First();
+            RealClick(keyBox); Pump(200);
+            var keyboard = new Keyloom.Engine.InputSimulator();
+            keyboard.Key(0x78, true); keyboard.Key(0x78, false); Pump(300);
+            RealClick(Descendants<System.Windows.Controls.CheckBox>(keyList).First()); Pump(300);
+            Console.WriteLine($"key changed with a real key press: {box.Text.Contains("on(\"F9\", \"Start or pause\"")}, game gets it too: {box.Text.Contains("{ pass: true }")}");
+            Capture(window, "live-script-keys-changed.png");
+
+            // The hook a running script listens with: keys a program sends are not heard and still reach the app.
+            using (var hook = new Keyloom.Engine.KeyHook())
+            {
+                hook.Listen(new Dictionary<Keyloom.Engine.KeyChord, bool> { [Keyloom.Engine.KeyChord.Parse("F9")] = false });
+                keyboard.Key(0x78, true); keyboard.Key(0x78, false); Pump(200);
+                Console.WriteLine($"script key hook ignores sent keys: {!hook.TryTake(out _)}");
+            }
             editor.Cancel(); Pump(300);
         }
         finally { AppSettings.Current.Scripts = scripts; }

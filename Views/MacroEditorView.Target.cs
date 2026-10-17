@@ -156,14 +156,18 @@ public partial class MacroEditorView
         Select([index]); FocusStep(index);
     }
     private async void TestRun_Click(object sender, RoutedEventArgs e) => await RunTestAsync();
-    /// <summary>Plays what is in the editor once, for real. Nothing is saved.</summary>
-    private async Task RunTestAsync()
+    /// <summary>
+    /// Plays what is in the editor once, for real. Nothing is saved. With a trigger, a script plays its first run and
+    /// then what that button or key does.
+    /// </summary>
+    private async Task RunTestAsync(string? trigger = null)
     {
         if (TestRun == null) return;
         MacroProfile test;
         try { Say(""); test = ReadForm(new MacroProfile { Id = Profile.Id }); }
         catch (ArgumentException ex) { Say(ex.Message, true); return; }
         test.RepeatCount = 1;
+        test.ScriptTrigger = Mode == 3 ? trigger : null;
         if (Mode == 3) ClearOutput_Click(this, new RoutedEventArgs());
         try { await TestRun(test); if (IsLoaded) Say(L.T("Test run finished. Nothing was saved.")); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { Say(ex.Message, true); }
@@ -215,7 +219,7 @@ public partial class MacroEditorView
         Say("");
         var p = new MacroProfile { Name = MacroNameTextBox.Text.Trim().Length > 0 ? MacroNameTextBox.Text.Trim() : L.T("Macro"), Actions = new(_steps.Select(a => a.Clone())) };
         ApplyTarget(p);
-        if (SheetLayer.For(this) is { } sheets) await sheets.ShowAsync(new PreviewView(p, null, TestRun == null ? null : RunTestAsync), 680);
+        if (SheetLayer.For(this) is { } sheets) await sheets.ShowAsync(new PreviewView(p, null, TestRun == null ? null : () => RunTestAsync()), 680);
     }
     private List<MacroAction> _played = [];
     /// <summary>Rings the spots of the picked steps on the route, every time a group plays them.</summary>

@@ -4,7 +4,8 @@ using System.Text.RegularExpressions;
 
 namespace Keyloom.Engine;
 
-public enum ScriptSettingKind { Number, Text, Switch, Choice }
+/// <summary>Point is { x, y } with a Pick on the screen; Color, Grid and Target are text with a picker, asked for after a comma.</summary>
+public enum ScriptSettingKind { Number, Text, Switch, Choice, Point, Color, Grid, Target }
 
 /// <summary>
 /// One constant a script shows as a field beside it, marked with a comment so the script stays plain JavaScript:
@@ -13,15 +14,17 @@ public enum ScriptSettingKind { Number, Text, Switch, Choice }
 /// </summary>
 public sealed record ScriptSetting(string Name, string Label, ScriptSettingKind Kind, string Value, IReadOnlyList<string> Choices, int Line, int Offset, int Length, char Quote)
 {
-    /// <summary>What decides the fields: the same shape keeps the fields and only their values change.</summary>
-    public string Shape => $"{Name}\u001f{Label}\u001f{Kind}\u001f{string.Join("\u001e", Choices)}";
+    /// <summary>What decides the fields: the same shape keeps the fields and only their values change.
+    /// Grids and targets also keep their value in it, so a name the list does not have yet rebuilds it.</summary>
+    public string Shape => $"{Name}\u001f{Label}\u001f{Kind}\u001f{string.Join("\u001e", Choices)}" + (Kind is ScriptSettingKind.Grid or ScriptSettingKind.Target ? "\u001f" + Value : "");
 }
 
 /// <summary>Finds a script's settings, and writes a new value back into the script where the setting is.</summary>
 public static partial class ScriptSettings
 {
-    /// <summary>Every line like <c>const NAME = value // setting: Label</c>, in order. A value is a number, text in quotes, or true or false.
-    /// Choices follow the label after a comma, split by |: <c>// setting: Mode, fast | slow</c>.</summary>
+    /// <summary>Every line like <c>const NAME = value // setting: Label</c>, in order. A value is a number, text in quotes, true or false,
+    /// or a point <c>{ x: 10, y: 20 }</c>. Choices follow the label after a comma, split by |: <c>// setting: Mode, fast | slow</c>.
+    /// Text can ask for a picker the same way: <c>// setting: Glow, color</c>, <c>, grid</c> or <c>, target</c>.</summary>
     public static IReadOnlyList<ScriptSetting> Read(string code)
     {
         var found = new List<ScriptSetting>();
@@ -43,17 +46,25 @@ public static partial class ScriptSettings
         var literal = m.Groups["value"];
         string text = literal.Value, label = m.Groups["label"].Value.Trim();
         List<string> choices = [];
+        ScriptSettingKind? picker = null;
         int comma = label.IndexOf(',');
         if (comma >= 0 && label[(comma + 1)..].Contains('|'))
         {
             choices = label[(comma + 1)..].Split('|').Select(c => c.Trim()).Where(c => c.Length > 0).Distinct().ToList();
             label = label[..comma].Trim();
         }
+        else if (label.LastIndexOf(',') is var last and >= 0 && label[(last + 1)..].Trim().ToLowerInvariant() is "color" or "grid" or "target" && text[0] is '"' or '\'')
+        {
+            picker = Enum.Parse<ScriptSettingKind>(label[(last + 1)..].Trim(), ignoreCase: true);
+            label = label[..last].Trim();
+        }
         if (label.Length == 0) label = m.Groups["name"].Value;
         char quote = text[0] is '"' or '\'' ? text[0] : '\0';
+        if (Point().Match(text) is { Success: true } point)
+            return new(m.Groups["name"].Value, label, ScriptSettingKind.Point, $"{point.Groups["x"].Value}, {point.Groups["y"].Value}", [], line, lineStart + literal.Index, literal.Length, quote);
         string value = quote != '\0' ? Unquote(text) : text;
-        var kind = text is "true" or "false" ? ScriptSettingKind.Switch : choices.Count > 0 ? ScriptSettingKind.Choice
-            : quote != '\0' ? ScriptSettingKind.Text : ScriptSettingKind.Number;
+        var kind = picker ?? (text is "true" or "false" ? ScriptSettingKind.Switch : choices.Count > 0 ? ScriptSettingKind.Choice
+            : quote != '\0' ? ScriptSettingKind.Text : ScriptSettingKind.Number);
         if (kind != ScriptSettingKind.Choice) choices = [];
         else if (!choices.Contains(value)) choices.Insert(0, value);
         return new(m.Groups["name"].Value, label, kind, value, choices, line, lineStart + literal.Index, literal.Length, quote);
@@ -67,6 +78,15 @@ public static partial class ScriptSettings
         {
             case ScriptSettingKind.Switch:
                 return value is "true" or "false" ? value : throw new ArgumentException(L.T($"{setting.Label} is on or off."));
+            case ScriptSettingKind.Point:
+                var parts = value.Split(',', StringSplitOptions.TrimEntries);
+                if (parts.Length != 2 || !parts.All(p => int.TryParse(p, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _)))
+                    throw new ArgumentException(L.T($"{setting.Label} is a point: two whole numbers, x and y."));
+                return $"{{ x: {int.Parse(parts[0], CultureInfo.InvariantCulture)}, y: {int.Parse(parts[1], CultureInfo.InvariantCulture)} }}";
+            case ScriptSettingKind.Color:
+                value = value.Trim();
+                if (!ColorText().IsMatch(value)) throw new ArgumentException(L.T($"{setting.Label} is a color like #3FBF3F."));
+                return Quote(value.ToUpperInvariant(), setting.Quote);
             case ScriptSettingKind.Number:
             case ScriptSettingKind.Choice when setting.Quote == '\0':
                 value = value.Trim();
@@ -111,7 +131,9 @@ public static partial class ScriptSettings
         return s.ToString();
     }
 
-    [GeneratedRegex("""^\s*(?:const|let|var)\s+(?<name>[A-Za-z_$][\w$]*)\s*=\s*(?<value>-?\d+(?:\.\d+)?|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|true|false)\s*;?\s*//\s*(?i:setting)\b\s*:?(?<label>.*)$""")]
+    [GeneratedRegex("""^\s*(?:const|let|var)\s+(?<name>[A-Za-z_$][\w$]*)\s*=\s*(?<value>-?\d+(?:\.\d+)?|\{\s*x\s*:\s*-?\d+\s*,\s*y\s*:\s*-?\d+\s*\}|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|true|false)\s*;?\s*//\s*(?i:setting)\b\s*:?(?<label>.*)$""")]
     private static partial Regex Marked();
     [GeneratedRegex(@"^-?\d+(\.\d+)?$")] private static partial Regex NumberText();
+    [GeneratedRegex(@"^\{\s*x\s*:\s*(?<x>-?\d+)\s*,\s*y\s*:\s*(?<y>-?\d+)\s*\}$")] private static partial Regex Point();
+    [GeneratedRegex("^#[0-9A-Fa-f]{6}$")] private static partial Regex ColorText();
 }
