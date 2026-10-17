@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -17,22 +18,26 @@ public sealed record ChangelogEntryView(string Version, string Date, IReadOnlyLi
 /// <summary>
 /// About Keyloom: this version, whether a newer one is out, and the changelog. The bundled changelog shows at once;
 /// the page then asks GitHub for the newest changelog and releases, and keeps the bundled copy when offline.
+/// A newer version installs from here: it downloads, then Keyloom restarts into it.
 /// </summary>
 public partial class AboutView : UserControl
 {
-    private static readonly Lazy<HttpClient> SharedHttp = new(() => UpdateService.CreateClient());
     private readonly HttpClient _http;
+    private readonly Func<string, Task>? _restart;
     private readonly string _current;
     private CancellationTokenSource? _cts;
-    private ReleaseInfo? _newer;
+    /// <summary>The release the main button installs: a newer one, or the current one when Keyloom is not installed yet.</summary>
+    private ReleaseInfo? _offer;
     /// <summary>Finishes when the latest check has finished; lets tests wait for it.</summary>
     public Task Checking { get; private set; } = Task.CompletedTask;
 
-    public AboutView(HttpClient? http = null, string? currentVersion = null)
+    /// <param name="restart">Installs the downloaded Keyloom.exe and restarts into it. Without it, the button opens the release page.</param>
+    public AboutView(HttpClient? http = null, string? currentVersion = null, Func<string, Task>? restart = null)
     {
         InitializeComponent();
         L.Apply(this);
-        _http = http ?? SharedHttp.Value;
+        _http = http ?? UpdateService.Shared;
+        _restart = restart;
         _current = currentVersion ?? AppVersion.Display;
         VersionText.Text = _current;
         ShowChangelog(UpdateService.BundledChangelog(), ChangelogSource.Bundled);
@@ -67,13 +72,49 @@ public partial class AboutView : UserControl
             SetStatus(L.T("Couldn't reach GitHub. The changelog below came with this version."), StatusKind.Offline);
             return;
         }
-        _newer = UpdateService.NewerThan(found, _current);
-        if (_newer == null) SetStatus(L.T("You have the latest version."), StatusKind.Latest);
-        else
+        var newer = UpdateService.NewerThan(found, _current);
+        bool canInstall = _restart != null;
+        if (newer != null)
         {
-            SetStatus((_newer.IsPrerelease ? L.T($"Keyloom {_newer.Version} is out (development build).") : L.T($"Keyloom {_newer.Version} is out.")), StatusKind.Available);
-            DownloadText.Text = $"Get {_newer.Version}";
+            _offer = newer;
+            SetStatus(newer.IsPrerelease ? L.T($"Keyloom {newer.Version} is out (development build).") : L.T($"Keyloom {newer.Version} is out."), StatusKind.Available);
+            DownloadText.Text = canInstall && newer.DownloadUrl != null ? L.T($"Update to {newer.Version}") : L.T($"Get {newer.Version}");
         }
+        else if (canInstall && !UpdateService.IsInstalled && found.FirstOrDefault(r => r.Version == _current && r.DownloadUrl != null) is { } same)
+        {
+            // Started from a ZIP or a build folder: offer the same version in its own folder, found by the Start menu and updated from here.
+            _offer = same;
+            SetStatus(L.T("You have the latest version. Install it to open Keyloom from the Start menu and update it with one click."), StatusKind.Available);
+            DownloadText.Text = L.T("Install");
+        }
+        else { _offer = null; SetStatus(L.T("You have the latest version."), StatusKind.Latest); }
+    }
+
+    /// <summary>Downloads the offered release and hands it to the restart, which closes this Keyloom and opens the new one.</summary>
+    public async Task UpdateAsync()
+    {
+        if (_offer is not { DownloadUrl: not null } offer || _restart == null) { Open(_offer?.Url ?? UpdateService.ReleasesUrl); return; }
+        _cts?.Cancel();
+        var cts = _cts = new CancellationTokenSource();
+        CheckButton.IsEnabled = DownloadButton.IsEnabled = false;
+        string downloading = L.T($"Downloading Keyloom {offer.Version}...");
+        SetStatus(downloading, StatusKind.Working);
+        DownloadButton.Visibility = Visibility.Visible;
+        var progress = new Progress<double>(f => { if (!cts.IsCancellationRequested) StatusText.Text = $"{downloading} {(int)(f * 100)}%"; });
+        try
+        {
+            string exe = await UpdateService.DownloadAsync(_http, offer, progress, token: cts.Token);
+            if (cts.IsCancellationRequested) return;
+            StatusText.Text = L.T("Restarting Keyloom...");
+            await _restart(exe);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            SetStatus(L.T($"The update didn't finish: {ex.Message}"), StatusKind.Offline);
+            DownloadButton.Visibility = Visibility.Visible;
+        }
+        catch (OperationCanceledException) { return; }
+        finally { CheckButton.IsEnabled = DownloadButton.IsEnabled = true; }
     }
 
     private enum StatusKind { Working, Latest, Available, Offline }
@@ -97,7 +138,7 @@ public partial class AboutView : UserControl
     }
 
     private void Check_Click(object sender, RoutedEventArgs e) => Checking = CheckAsync();
-    private void Download_Click(object sender, RoutedEventArgs e) => Open(_newer?.Url ?? UpdateService.ReleasesUrl);
+    private void Download_Click(object sender, RoutedEventArgs e) => Checking = UpdateAsync();
     private void Releases_Click(object sender, RoutedEventArgs e) => Open(UpdateService.ReleasesUrl);
     private void Open(string url)
     {

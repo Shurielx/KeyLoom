@@ -35,6 +35,7 @@ public partial class SettingsView : UserControl
         (settings.Theme switch { AppTheme.Light => LightThemeRadio, AppTheme.Dark => DarkThemeRadio, _ => SystemThemeRadio }).IsChecked = true;
         IndicatorBox.IsChecked = settings.ShowRunIndicator;
         SoundBox.IsChecked = settings.ClickSounds;
+        UpdatesBox.IsChecked = settings.CheckUpdates;
         LanguagePanel.Visibility = L.Available.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
         LanguageBox.ItemsSource = new[] { new KeyValuePair<string, string>("", L.T("Same as Windows")) }.Concat(L.Available.Select(c => new KeyValuePair<string, string>(c, L.NameOf(c)))).ToList();
         LanguageBox.SelectedValue = L.Available.Contains(settings.Language) ? settings.Language : "";
@@ -156,6 +157,10 @@ public partial class SettingsView : UserControl
     private void Sound_Changed(object sender, RoutedEventArgs e)
     {
         if (!_loading) Save(s => s.ClickSounds = SoundBox.IsChecked == true);
+    }
+    private void Updates_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_loading) Save(s => s.CheckUpdates = UpdatesBox.IsChecked == true);
     }
     private void Place_Checked(object sender, RoutedEventArgs e)
     {

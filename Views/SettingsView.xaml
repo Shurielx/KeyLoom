@@ -41,6 +41,17 @@
               </StackPanel>
             </Grid>
           </CheckBox>
+          <Rectangle Height="1" Fill="{DynamicResource DividerBrush}" Margin="0,14"/>
+          <CheckBox x:Name="UpdatesBox" Style="{StaticResource Switch}" Checked="Updates_Changed" Unchecked="Updates_Changed">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Border Style="{StaticResource IconTile}" Width="34" Height="34" CornerRadius="9" Margin="0,0,12,0" VerticalAlignment="Top"><Path Data="{StaticResource IconDownload}" Style="{StaticResource AccentIcon}"/></Border>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Tell me about updates" FontWeight="SemiBold"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,3,0,0" TextWrapping="Wrap" Text="Keyloom asks GitHub for a newer version when it starts and twice a day. Nothing downloads until you click Update."/>
+              </StackPanel>
+            </Grid>
+          </CheckBox>
         </StackPanel>
       </Border>
 

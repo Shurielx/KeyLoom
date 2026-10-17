@@ -1,0 +1,41 @@
+name: Release
+# Pushing a tag like v0.3-dev-16 publishes the ZIP that Keyloom's updater downloads.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet run --project tests/Keyloom.Tests.csproj -c Release
+      - run: dotnet publish Keyloom.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o artifacts/windows
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $zip = "Keyloom-$version-win-x64.zip"
+          Compress-Archive -Path artifacts/windows/Keyloom.exe -DestinationPath $zip
+          "$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower())  $zip" | Out-File SHA256SUMS.txt -Encoding ascii
+          # The notes are this version's changelog entry.
+          $notes = (Get-Content CHANGELOG.md -Raw) -split "(?m)^## " | Where-Object { $_ -match "^$([regex]::Escape($version)) " } | Select-Object -First 1
+          $body = "**Download:** ``$zip``, extract it and run ``Keyloom.exe``. Already have Keyloom? Update it from **About**.`n`n"
+          if ($notes) { $body += ($notes -replace "^[^\n]*\n", "").Trim() }
+          Set-Content notes.md $body
+          "ZIP=$zip" >> $env:GITHUB_ENV
+          "VERSION=$version" >> $env:GITHUB_ENV
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $extra = @(); if ($env:VERSION -match '-dev-') { $extra += '--prerelease' }
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) { gh release upload $tag $env:ZIP SHA256SUMS.txt --clobber }
+          else { gh release create $tag $env:ZIP SHA256SUMS.txt --title "Keyloom $env:VERSION" --notes-file notes.md @extra }

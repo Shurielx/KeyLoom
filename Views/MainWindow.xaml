@@ -183,11 +183,19 @@
                     <ControlTemplate TargetType="Button">
                       <Border x:Name="Chip" CornerRadius="9" Padding="7,1" Background="Transparent">
                         <StackPanel Orientation="Horizontal">
-                          <Path Data="{StaticResource IconInfo}" Fill="{DynamicResource MutedBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                          <Path x:Name="VersionIcon" Data="{StaticResource IconInfo}" Fill="{DynamicResource MutedBrush}" Width="10" Height="10" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center"/>
                           <TextBlock x:Name="VersionText" Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" Style="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                       </Border>
                       <ControlTemplate.Triggers>
+                        <!-- A newer version is out -->
+                        <Trigger Property="Tag" Value="update">
+                          <Setter TargetName="VersionIcon" Property="Data" Value="{StaticResource IconDownload}"/>
+                          <Setter TargetName="VersionIcon" Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                          <Setter TargetName="VersionText" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                          <Setter TargetName="VersionText" Property="FontWeight" Value="SemiBold"/>
+                          <Setter TargetName="Chip" Property="Background" Value="{DynamicResource PillBrush}"/>
+                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource HoverFillBrush}"/><Setter TargetName="VersionText" Property="Foreground" Value="{DynamicResource AccentBrush}"/></Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource HoverFillBrush}"/></Trigger>
                       </ControlTemplate.Triggers>

@@ -29,6 +29,9 @@ public partial class MainWindow : Window
     private readonly UsageStore _usage = UsageStore.Load();
     private readonly Dictionary<MacroProfile, Stopwatch> _running = new();
     private readonly DispatcherTimer _runClock = new() { Interval = TimeSpan.FromMilliseconds(500) };
+    /// <summary>Asks GitHub for a newer version soon after start, then twice a day.</summary>
+    private readonly DispatcherTimer _updateClock = new() { Interval = TimeSpan.FromSeconds(8) };
+    private string? _notifiedVersion;
     private readonly TrayService _tray;
     private HotkeyManager? _hotkeys;
     private MacroEditorView? _activeEditor;
@@ -67,6 +70,9 @@ public partial class MainWindow : Window
             _hotkeys.ProfileTriggered += p => { if (!_dialogOpen && !_exiting) Run(() => ToggleAsync(p)); };
             _hotkeys.StopTriggered += StopAll;
             RegisterShortcuts();
+            if (App.Updated) StatusText.Text = L.T($"Keyloom is updated to {AppVersion.Display}.");
+            _updateClock.Tick += (_, _) => { _updateClock.Interval = TimeSpan.FromHours(12); Run(CheckForUpdateAsync); };
+            _updateClock.Start();
         };
         Closing += OnClosing;
         Microsoft.Win32.SystemEvents.SessionEnding += SessionEnding;
@@ -175,7 +181,34 @@ public partial class MainWindow : Window
     }
     private void Settings_Click(object sender, RoutedEventArgs e) => ShowPage(new SettingsView(null, _profiles, _usage), L.T("Settings"), L.T("Appearance, usage and where your macros live."));
     private void Help_Click(object sender, RoutedEventArgs e) => ShowPage(new HelpView(), L.T("Help"), L.T("How Keyloom works, in a minute."));
-    private void About_Click(object sender, RoutedEventArgs e) => ShowPage(new AboutView(), L.T("About Keyloom"), L.T("What's new, and whether a newer version is out."));
+    private void About_Click(object sender, RoutedEventArgs e) => ShowAbout();
+    private void ShowAbout() => ShowPage(new AboutView(restart: InstallAndRestartAsync), L.T("About Keyloom"), L.T("What's new, and whether a newer version is out."));
+
+    // Updates
+    private async Task CheckForUpdateAsync()
+    {
+        if (!AppSettings.Current.CheckUpdates || _exiting) return;
+        var releases = await UpdateService.FetchReleasesAsync(UpdateService.Shared);
+        if (releases == null || UpdateService.NewerThan(releases, AppVersion.Display) is not { } newer || _exiting) return;
+        VersionButton.Content = L.T($"{AppVersion.Display} · Update available");
+        VersionButton.Tag = "update";
+        if (_notifiedVersion == newer.Version) return;
+        _notifiedVersion = newer.Version;
+        _tray.Notify(L.T($"Keyloom {newer.Version} is out"), L.T("Click to update. Keyloom restarts in a few seconds, with your macros."), () =>
+        {
+            ShowHud();
+            if (_activeEditor == null) ShowAbout();
+        });
+    }
+    /// <summary>Puts the downloaded Keyloom in its own folder and the Start menu, starts it, and closes this one.</summary>
+    private async Task InstallAndRestartAsync(string exe)
+    {
+        UpdateService.Install(exe, UpdateService.InstalledExe);
+        try { UpdateService.CreateShortcut(UpdateService.InstalledExe); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Runtime.InteropServices.COMException) { }
+        UpdateService.Launch(UpdateService.InstalledExe);
+        await ExitAsync();
+    }
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key == Key.Escape && !e.Handled)
@@ -387,6 +420,7 @@ public partial class MainWindow : Window
     {
         if (_exiting) return;
         _exiting = true;
+        _updateClock.Stop();
         _activeEditor?.StopRecording();
         _hotkeys?.Dispose();
         await _executor.DisposeAsync();

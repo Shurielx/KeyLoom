@@ -31,6 +31,8 @@ public sealed class AppSettings
     public IndicatorPlace IndicatorPlace { get; set; }
     /// <summary>A quiet sound when Keyloom's own buttons are clicked.</summary>
     public bool ClickSounds { get; set; } = true;
+    /// <summary>Asks GitHub for a newer version when Keyloom starts and twice a day. Nothing downloads until Update is clicked.</summary>
+    public bool CheckUpdates { get; set; } = true;
 
     public static AppSettings Current { get; private set; } = new();
     private static string DefaultPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Keyloom", "settings.json");
@@ -53,7 +55,7 @@ public sealed class AppSettings
     }
     public AppSettings With(Action<AppSettings> change)
     {
-        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Scripts = Scripts, Ai = Ai, AiProvider = AiProvider, AiModel = AiModel, OllamaUrl = OllamaUrl, OpenRouterKey = OpenRouterKey, Theme = Theme, Language = Language, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace, ClickSounds = ClickSounds };
+        var next = new AppSettings { ShowExperimental = ShowExperimental, MacroBuilder = MacroBuilder, Scripts = Scripts, Ai = Ai, AiProvider = AiProvider, AiModel = AiModel, OllamaUrl = OllamaUrl, OpenRouterKey = OpenRouterKey, Theme = Theme, Language = Language, ShowRunIndicator = ShowRunIndicator, IndicatorPlace = IndicatorPlace, ClickSounds = ClickSounds, CheckUpdates = CheckUpdates };
         change(next); return next;
     }
     public void Save(string? path = null)

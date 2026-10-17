@@ -2,6 +2,15 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-16 · 2026-10-17
+
+### Added
+- Update from About with one click: Keyloom restarts in it
+- Your macros and settings stay as they were
+- Install puts Keyloom in the Start menu, ready to search
+- The tray says when a newer version is out
+- Settings: Tell me about updates turns the check off
+
 ## 0.3-dev-15 · 2026-10-17
 
 ### Added

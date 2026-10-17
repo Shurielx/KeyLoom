@@ -41,11 +41,12 @@ Repeat a click, hold a key, or build a sequence of steps that finds things on th
 - Steps can find a picture or a color on the screen: click it wherever it is, wait until it shows up or goes away, or play some steps only if it is there.
 - **Experimental:** build a macro right on the screen, write macros as scripts, ask an AI about the screen, and run modes for games that keep your mouse free.
 - Light and dark themes, Windows 11 glass, and text that stays sharp on 1080p and 4K screens alike.
-- Everything stays on your PC. Keyloom only goes online to check for updates while the About page is open.
+- Everything stays on your PC. Keyloom only goes online to ask GitHub for a newer version, when it starts and twice a day, and you can turn that off in Settings.
+- Updates install from **About** with one click: Keyloom downloads the new version, restarts in it and keeps your macros.
 
 ## Get started
 
-1. Download the Windows x64 ZIP from [Releases](https://github.com/Shurielx/KeyLoom/releases), extract it and run `Keyloom.exe`. No installer, no admin rights, no .NET install.
+1. Download the Windows x64 ZIP from [Releases](https://github.com/Shurielx/KeyLoom/releases), extract it and run `Keyloom.exe`. No admin rights, no .NET install. Under **About**, **Install** moves Keyloom to its own folder and the Start menu, so typing *Keyloom* in Windows finds it, and later updates go there too.
 2. Click **New macro**, give it a name and pick **Repeat**, **Hold** or **Sequence**.
 3. Set a shortcut, then press **Start** or the shortcut. Press it again to stop.
 
@@ -212,6 +213,8 @@ Macros, settings, icons and usage live in `%APPDATA%\Keyloom`, with a backup of 
 ## Build
 
 Requires Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). For local use, double-click **Start Keyloom.bat**: it builds the current source and opens the app.
+
+Pushing a tag like `v0.3-dev-16` runs the release workflow: it builds, tests and publishes `Keyloom-<version>-win-x64.zip` with `SHA256SUMS.txt`, the files the in-app updater downloads.
 
 ```powershell
 dotnet build Keyloom.csproj -c Release
