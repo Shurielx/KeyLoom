@@ -32,6 +32,9 @@ internal static partial class Program
         Invoke(window, "Settings_Click", window, new RoutedEventArgs()); Pump(800);
         Capture(window, "live-settings.png");
         Invoke(window, "Back_Click", window, new RoutedEventArgs()); Pump(500);
+        Invoke(window, "About_Click", window, new RoutedEventArgs()); Pump(1500);
+        Capture(window, "live-about.png");
+        Invoke(window, "Back_Click", window, new RoutedEventArgs()); Pump(500);
         var p = Profile(MacroBehaviorType.Sequence);
         p.Actions.Add(new() { ActionType = MacroActionType.MousePosition, X = 200, Y = 150 });
         p.Actions.Add(new() { ActionType = MacroActionType.MouseClick });

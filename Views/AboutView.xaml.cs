@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -12,8 +13,30 @@ using Keyloom.Services;
 
 namespace Keyloom.Views;
 
-/// <summary>A changelog entry as the About page shows it.</summary>
-public sealed record ChangelogEntryView(string Version, string Date, IReadOnlyList<ChangelogSection> Sections, bool IsInstalled, bool IsNew);
+/// <summary>A changelog entry as the About page shows it. Folded, it shows only its tags.</summary>
+public sealed class ChangelogEntryView(string version, string date, IReadOnlyList<ChangelogSectionView> sections, bool isInstalled, bool isNew) : INotifyPropertyChanged
+{
+    public string Version { get; } = version;
+    public string Date { get; } = date;
+    public IReadOnlyList<ChangelogSectionView> Sections { get; } = sections;
+    public bool IsInstalled { get; } = isInstalled;
+    public bool IsNew { get; } = isNew;
+    public bool IsExpanded
+    {
+        get => _expanded;
+        set { if (_expanded == value) return; _expanded = value; PropertyChanged?.Invoke(this, new(nameof(IsExpanded))); }
+    }
+    private bool _expanded;
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+/// <summary>A changelog section with its tag color: Added for new things, Fixed for fixes, Other for the rest.</summary>
+public sealed record ChangelogSectionView(string Title, string Tone, IReadOnlyList<string> Items)
+{
+    public static ChangelogSectionView From(ChangelogSection section) => new(section.Title, section.Title.ToLowerInvariant() switch
+    {
+        "added" or "new" or "featured" => "Added", "fixed" => "Fixed", _ => "Other"
+    }, section.Items);
+}
 
 /// <summary>
 /// About Keyloom: this version, whether a newer one is out, and the changelog. The bundled changelog shows at once;
@@ -28,6 +51,9 @@ public partial class AboutView : UserControl
     private CancellationTokenSource? _cts;
     /// <summary>The release the main button installs: a newer one, or the current one when Keyloom is not installed yet.</summary>
     private ReleaseInfo? _offer;
+    private IReadOnlyList<ChangelogEntryView> _entries = [];
+    /// <summary>The release line the changelog shows, like 0.3. Starts at the installed one.</summary>
+    public string? Line { get; private set; }
     /// <summary>Finishes when the latest check has finished; lets tests wait for it.</summary>
     public Task Checking { get; private set; } = Task.CompletedTask;
 
@@ -47,10 +73,57 @@ public partial class AboutView : UserControl
 
     private void ShowChangelog(string markdown, ChangelogSource source)
     {
-        ChangelogList.ItemsSource = UpdateService.ParseChangelog(markdown)
-            .Select(e => new ChangelogEntryView(e.Version, e.Date, e.Sections, e.Version == _current, UpdateService.IsNewer(e.Version, _current)))
+        _entries = UpdateService.ParseChangelog(markdown)
+            .Select(e => new ChangelogEntryView(e.Version, e.Date, e.Sections.Select(ChangelogSectionView.From).ToList(), e.Version == _current, UpdateService.IsNewer(e.Version, _current)))
             .ToList();
+        // Newer and installed builds start open; in a line with neither, its newest build does.
+        foreach (var e in _entries) e.IsExpanded = e.IsInstalled || e.IsNew;
+        foreach (var group in _entries.GroupBy(e => UpdateService.ReleaseLine(e.Version)))
+            if (!group.Any(e => e.IsExpanded)) group.First().IsExpanded = true;
+        var lines = _entries.Select(e => UpdateService.ReleaseLine(e.Version)).Distinct().ToList();
+        string? line = Line != null && lines.Contains(Line) ? Line
+            : lines.FirstOrDefault(l => l == UpdateService.ReleaseLine(_current)) ?? lines.FirstOrDefault();
+        LinePanel.Children.Clear();
+        foreach (string l in lines)
+        {
+            int builds = _entries.Count(e => UpdateService.ReleaseLine(e.Version) == l);
+            var label = new StackPanel { Orientation = Orientation.Horizontal };
+            label.Children.Add(new TextBlock { Text = l });
+            var count = new TextBlock { Text = builds.ToString(), Margin = new Thickness(6, 0, 0, 0), Opacity = .6, FontWeight = FontWeights.Normal };
+            label.Children.Add(count);
+            var segment = new RadioButton { GroupName = "ReleaseLine", Content = label, Tag = l, Padding = new Thickness(12, 4, 12, 4),
+                ToolTip = L.N(builds, "{0} build", "{0} builds") };
+            segment.SetResourceReference(StyleProperty, "Segment");
+            segment.IsChecked = l == line;
+            segment.Checked += (_, _) => ShowLine(l);
+            LinePanel.Children.Add(segment);
+        }
+        ShowLine(line);
         SourceText.Text = source == ChangelogSource.GitHub ? L.T("Latest from GitHub") : L.T("Included with this version");
+    }
+
+    /// <summary>Shows the builds of one release line, newest first.</summary>
+    public void ShowLine(string? line)
+    {
+        Line = line;
+        foreach (var segment in LinePanel.Children.OfType<RadioButton>()) segment.IsChecked = (string)segment.Tag == line;
+        ChangelogList.ItemsSource = _entries.Where(e => UpdateService.ReleaseLine(e.Version) == line).ToList();
+        UpdateFoldButton();
+    }
+    private IEnumerable<ChangelogEntryView> Shown => ChangelogList.ItemsSource as IEnumerable<ChangelogEntryView> ?? [];
+    private void UpdateFoldButton()
+    {
+        var shown = Shown.ToList();
+        FoldButton.Visibility = shown.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        FoldButton.Content = shown.All(e => e.IsExpanded) ? L.T("Fold all") : L.T("Open all");
+    }
+    /// <summary>Opens every build in this line, or folds them all when they are all open.</summary>
+    private void Fold_Click(object sender, RoutedEventArgs e)
+    {
+        var shown = Shown.ToList();
+        bool open = !shown.All(x => x.IsExpanded);
+        foreach (var entry in shown) entry.IsExpanded = open;
+        UpdateFoldButton();
     }
 
     /// <summary>Fetches the newest changelog and releases together, then shows what it found.</summary>
@@ -137,6 +210,7 @@ public partial class AboutView : UserControl
         StatusPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(.2, 1, TimeSpan.FromMilliseconds(220)));
     }
 
+    private void Entry_Toggled(object sender, RoutedEventArgs e) => UpdateFoldButton();
     private void Check_Click(object sender, RoutedEventArgs e) => Checking = CheckAsync();
     private void Download_Click(object sender, RoutedEventArgs e) => Checking = UpdateAsync();
     private void Releases_Click(object sender, RoutedEventArgs e) => Open(UpdateService.ReleasesUrl);

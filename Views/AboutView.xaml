@@ -13,6 +13,43 @@
         <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Text" Property="TextDecorations" Value="Underline"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <!-- The kind of change: Added in blue, Fixed in green, the rest plain -->
+    <Style x:Key="Tag" TargetType="Border">
+      <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="7,1"/><Setter Property="Margin" Value="0,0,5,0"/><Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Background" Value="{DynamicResource KeycapBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource KeycapBorderBrush}"/><Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="TextElement.FontSize" Value="10.5"/><Setter Property="TextElement.FontWeight" Value="SemiBold"/><Setter Property="TextElement.Foreground" Value="{DynamicResource LabelBrush}"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding Tone}" Value="Added">
+          <Setter Property="Background" Value="{DynamicResource PillBrush}"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBrush}"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding Tone}" Value="Fixed">
+          <Setter Property="Background" Value="{DynamicResource RunningPillBrush}"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <!-- A build's header row: opens and folds its changes -->
+    <Style x:Key="EntryHeader" TargetType="ToggleButton">
+      <Setter Property="Cursor" Value="Hand"/><Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleButton">
+        <Border x:Name="Back" Background="Transparent" CornerRadius="10" Padding="16,10,14,10">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <ContentPresenter VerticalAlignment="Center"/>
+            <Path Grid.Column="1" Data="M0 0L4.5 4.5L9 0" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" Width="9" Height="5" Stretch="Uniform" VerticalAlignment="Center" Margin="12,1,0,0" RenderTransformOrigin=".5,.5">
+              <Path.RenderTransform><RotateTransform x:Name="Chevron" Angle="-90"/></Path.RenderTransform>
+            </Path>
+          </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Back" Property="Background" Value="{DynamicResource RowHoverBrush}"/></Trigger>
+          <Trigger Property="IsChecked" Value="True">
+            <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Chevron" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.2" EasingFunction="{StaticResource EaseOut}"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+            <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Chevron" Storyboard.TargetProperty="Angle" To="-90" Duration="0:0:0.2" EasingFunction="{StaticResource EaseOut}"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
   </UserControl.Resources>
   <ScrollViewer x:Name="Scroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="-4,0,-14,0" Padding="4,0,14,0">
     <StackPanel Margin="0,0,0,16">
@@ -45,7 +82,7 @@
         </Grid>
       </Border>
 
-      <!-- Changelog -->
+      <!-- Changelog: one release line at a time, each build folded to its tags until opened -->
       <Grid Margin="2,18,2,8">
         <TextBlock Text="What's new" Style="{StaticResource SectionTitle}" FontSize="14"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
@@ -53,22 +90,40 @@
           <Button Content="All releases on GitHub" Style="{StaticResource Link}" Click="Releases_Click"/>
         </StackPanel>
       </Grid>
+      <Grid Margin="0,0,0,10">
+        <Border Style="{StaticResource SegmentBar}"><StackPanel x:Name="LinePanel" Orientation="Horizontal"/></Border>
+        <Button x:Name="FoldButton" Content="Open all" Style="{StaticResource Link}" Click="Fold_Click" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0"/>
+      </Grid>
       <ItemsControl x:Name="ChangelogList" Focusable="False">
         <ItemsControl.ItemTemplate><DataTemplate>
-          <Border x:Name="EntryCard" Style="{StaticResource Card}" Padding="16,12" Margin="0,0,0,10">
+          <Border x:Name="EntryCard" Style="{StaticResource Card}" Padding="0" Margin="0,0,0,8">
             <StackPanel>
-              <Grid Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal">
-                  <TextBlock Text="{Binding Version}" Style="{StaticResource SectionTitle}" FontSize="14"/>
-                  <Border x:Name="InstalledPill" Style="{StaticResource Pill}" Visibility="Collapsed"><TextBlock Text="Installed"/></Border>
-                  <Border x:Name="NewPill" Style="{StaticResource Pill}" Background="{DynamicResource RunningPillBrush}" TextElement.Foreground="{DynamicResource SuccessTextBrush}" Visibility="Collapsed"><TextBlock Text="New"/></Border>
-                </StackPanel>
-                <TextBlock Text="{Binding Date}" Style="{StaticResource Hint}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-              </Grid>
-              <ItemsControl ItemsSource="{Binding Sections}" Focusable="False">
+              <ToggleButton x:Name="Header" Style="{StaticResource EntryHeader}" IsChecked="{Binding IsExpanded, Mode=TwoWay}" Click="Entry_Toggled">
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Version}" Style="{StaticResource SectionTitle}" FontSize="13.5"/>
+                    <Border x:Name="InstalledPill" Style="{StaticResource Pill}" Visibility="Collapsed"><TextBlock Text="Installed"/></Border>
+                    <Border x:Name="NewPill" Style="{StaticResource Pill}" Background="{DynamicResource RunningPillBrush}" TextElement.Foreground="{DynamicResource SuccessTextBrush}" Visibility="Collapsed"><TextBlock Text="New"/></Border>
+                  </StackPanel>
+                  <ItemsControl x:Name="Summary" Grid.Column="1" ItemsSource="{Binding Sections}" Focusable="False" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate>
+                      <Border Style="{StaticResource Tag}">
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding Title}"/>
+                          <TextBlock Text="{Binding Items.Count}" Margin="5,0,0,0" Opacity=".7"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Grid.Column="2" Text="{Binding Date}" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
+              </ToggleButton>
+              <ItemsControl x:Name="Body" ItemsSource="{Binding Sections}" Focusable="False" Margin="16,0,16,8" Visibility="Collapsed">
                 <ItemsControl.ItemTemplate><DataTemplate>
                   <StackPanel Margin="0,2,0,6">
-                    <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource LabelBrush}" Margin="0,0,0,5"/>
+                    <Border Style="{StaticResource Tag}" HorizontalAlignment="Left" Margin="0,0,0,6"><TextBlock Text="{Binding Title}"/></Border>
                     <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
                       <ItemsControl.ItemTemplate><DataTemplate>
                         <Grid Margin="0,0,0,5">
@@ -89,6 +144,11 @@
               <Setter TargetName="EntryCard" Property="Effect" Value="{DynamicResource CardShadow}"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding IsNew}" Value="True"><Setter TargetName="NewPill" Property="Visibility" Value="Visible"/></DataTrigger>
+            <DataTrigger Binding="{Binding IsChecked, ElementName=Header}" Value="True">
+              <Setter TargetName="Body" Property="Visibility" Value="Visible"/>
+              <Setter TargetName="Summary" Property="Visibility" Value="Hidden"/>
+              <DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Body" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions>
+            </DataTrigger>
           </DataTemplate.Triggers>
         </DataTemplate></ItemsControl.ItemTemplate>
       </ItemsControl>

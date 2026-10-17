@@ -25,17 +25,17 @@ internal static partial class Program
     private static HttpResponseMessage Text(string body, HttpStatusCode code = HttpStatusCode.OK) => new(code) { Content = new StringContent(body, Encoding.UTF8) };
     private const string ReleasesJson = """
         [
-          { "tag_name": "v0.3-dev-17", "name": "Draft", "html_url": "https://example.test/draft", "draft": true, "prerelease": true },
-          { "tag_name": "v0.3-dev-17", "name": "Keyloom 0.3-dev-17", "html_url": "https://github.com/Shurielx/KeyLoom/releases/tag/v0.3-dev-17", "draft": false, "prerelease": true,
+          { "tag_name": "v0.3-dev-18", "name": "Draft", "html_url": "https://example.test/draft", "draft": true, "prerelease": true },
+          { "tag_name": "v0.3-dev-18", "name": "Keyloom 0.3-dev-18", "html_url": "https://github.com/Shurielx/KeyLoom/releases/tag/v0.3-dev-18", "draft": false, "prerelease": true,
             "assets": [
               { "name": "SHA256SUMS.txt", "browser_download_url": "https://example.test/SHA256SUMS.txt", "size": 97 },
-              { "name": "Keyloom-0.3-dev-17-win-x64.zip", "browser_download_url": "https://example.test/Keyloom-0.3-dev-17-win-x64.zip", "size": 1234, "digest": "sha256:ABCDEF" }
+              { "name": "Keyloom-0.3-dev-18-win-x64.zip", "browser_download_url": "https://example.test/Keyloom-0.3-dev-18-win-x64.zip", "size": 1234, "digest": "sha256:ABCDEF" }
             ] },
           { "tag_name": "Alpha-01", "name": "Alpha", "html_url": "https://example.test/alpha", "draft": false, "prerelease": false },
           { "tag_name": "v0.1-dev-1", "name": "Keyloom 0.1-dev-1", "html_url": "https://example.test/1", "draft": false, "prerelease": true }
         ]
         """;
-    private static string OnlineChangelog => "## 0.3-dev-17 · 2026-11-01\n\n### Featured\n- **Something new**, with a long line\n  that wraps onto the next one\n\n" + UpdateService.BundledChangelog();
+    private static string OnlineChangelog => "## 0.3-dev-18 · 2026-11-01\n\n### Featured\n- **Something new**, with a long line\n  that wraps onto the next one\n\n" + UpdateService.BundledChangelog();
 
     /// <summary>Reports progress right away, unlike Progress, which posts to a context.</summary>
     private sealed class SyncProgress(Action<double> report) : IProgress<double> { public void Report(double value) => report(value); }
@@ -59,7 +59,7 @@ internal static partial class Program
     {
         // Versions order development builds before the finished release; other tags are not versions.
         Check(UpdateService.IsNewer("0.1-dev-5", "0.1-dev-3") && UpdateService.IsNewer("0.1", "0.1-dev-9") && UpdateService.IsNewer("v0.1.1", "0.1")
-            && !UpdateService.IsNewer("0.1-dev-3", "0.1-dev-3") && !UpdateService.IsNewer("0.1-dev-10", "0.3-dev-16") && UpdateService.ParseVersion("Alpha-01") == null,
+            && !UpdateService.IsNewer("0.1-dev-3", "0.1-dev-3") && !UpdateService.IsNewer("0.1-dev-10", "0.3-dev-17") && UpdateService.ParseVersion("Alpha-01") == null,
             "versions compare development builds, releases and patches");
 
         // The bundled changelog parses and starts with this very version, so it cannot be forgotten.
@@ -76,15 +76,15 @@ internal static partial class Program
         var online = new FakeHttp(r => r.RequestUri!.Host == "api.github.com" ? Text(ReleasesJson) : Text(OnlineChangelog));
         using var http = UpdateService.CreateClient(online);
         var releases = UpdateService.FetchReleasesAsync(http).GetAwaiter().GetResult()!;
-        Check(releases.Select(r => r.Version).SequenceEqual(new[] { "0.3-dev-17", "0.1-dev-1" }) && UpdateService.NewerThan(releases, "0.3-dev-16")?.Version == "0.3-dev-17"
-            && UpdateService.NewerThan(releases, "0.3-dev-17") == null && http.DefaultRequestHeaders.UserAgent.ToString().StartsWith("Keyloom/"),
+        Check(releases.Select(r => r.Version).SequenceEqual(new[] { "0.3-dev-18", "0.1-dev-1" }) && UpdateService.NewerThan(releases, "0.3-dev-17")?.Version == "0.3-dev-18"
+            && UpdateService.NewerThan(releases, "0.3-dev-18") == null && http.DefaultRequestHeaders.UserAgent.ToString().StartsWith("Keyloom/"),
             "update check finds the newest published release");
         using var down = UpdateService.CreateClient(new FakeHttp(_ => throw new HttpRequestException("offline")));
         Check(UpdateService.FetchReleasesAsync(down).GetAwaiter().GetResult() == null && UpdateService.FetchChangelogAsync(down).GetAwaiter().GetResult() == null,
             "being offline is reported as no answer, not an error");
         using var limited = UpdateService.CreateClient(new FakeHttp(_ => Text("{\"message\":\"rate limited\"}", HttpStatusCode.Forbidden)));
         Check(UpdateService.FetchReleasesAsync(limited).GetAwaiter().GetResult() == null, "GitHub errors are treated like being offline");
-        Check(releases[0] is { DownloadUrl: "https://example.test/Keyloom-0.3-dev-17-win-x64.zip", Size: 1234, Sha256: "ABCDEF" } && releases[1].DownloadUrl == null,
+        Check(releases[0] is { DownloadUrl: "https://example.test/Keyloom-0.3-dev-18-win-x64.zip", Size: 1234, Sha256: "ABCDEF" } && releases[1].DownloadUrl == null,
             "a release brings its Windows ZIP and checksum");
 
         // Updating: the ZIP downloads, is checked against its checksum, and Keyloom.exe comes out of it.
@@ -124,31 +124,43 @@ internal static partial class Program
 
         // About page: online it shows the newer version and the GitHub changelog; offline it keeps the bundled one.
         AboutView? about = null;
-        RunOnDispatcher(() => { about = new AboutView(http, "0.3-dev-16"); return about.CheckAsync(); });
+        RunOnDispatcher(() => { about = new AboutView(http, "0.3-dev-17"); return about.CheckAsync(); });
         var entries = ((IEnumerable<ChangelogEntryView>)((ItemsControl)about!.FindName("ChangelogList")).ItemsSource).ToList();
-        Check(((TextBlock)about.FindName("StatusText")).Text.Contains("0.3-dev-17 is out") && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Visible
+        Check(((TextBlock)about.FindName("StatusText")).Text.Contains("0.3-dev-18 is out") && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Visible
             && ((TextBlock)about.FindName("SourceText")).Text.Contains("GitHub"), "about shows a newer release with a download button");
-        Check(entries[0] is { Version: "0.3-dev-17", IsNew: true } && entries[1] is { Version: "0.3-dev-16", IsInstalled: true, IsNew: false }, "about marks new and installed versions in the changelog");
-        RunOnDispatcher(() => { about = new AboutView(down, "0.3-dev-16"); return about.CheckAsync(); });
+        Check(entries[0] is { Version: "0.3-dev-18", IsNew: true } && entries[1] is { Version: "0.3-dev-17", IsInstalled: true, IsNew: false }, "about marks new and installed versions in the changelog");
+        // The changelog shows one release line at a time, with only new and installed builds open.
+        var lines = ((StackPanel)about.FindName("LinePanel")).Children.OfType<RadioButton>().ToList();
+        Check(UpdateService.ReleaseLine("0.3-dev-17") == "0.3" && UpdateService.ReleaseLine("0.1") == "0.1" && UpdateService.ReleaseLine("Alpha-01") == "Alpha"
+            && lines.Select(r => (string)r.Tag).SequenceEqual(["0.3", "0.2", "0.1", "Alpha"]) && lines[0].IsChecked == true
+            && entries.All(e => e.Version.StartsWith("0.3-")) && entries[0].IsExpanded && entries[1].IsExpanded && !entries[2].IsExpanded
+            && entries[2].Sections[0] is { Tone: "Added" }, "the changelog is grouped by release line, folded except for new and installed builds");
+        lines[2].IsChecked = true;
+        entries = ((IEnumerable<ChangelogEntryView>)((ItemsControl)about.FindName("ChangelogList")).ItemsSource).ToList();
+        Check(about.Line == "0.1" && entries.All(e => e.Version.StartsWith("0.1-")) && entries[0].IsExpanded && entries.Skip(1).All(e => !e.IsExpanded),
+            "another release line opens with its newest build");
+        Invoke(about, "Fold_Click", about, new RoutedEventArgs());
+        Check(entries.All(e => e.IsExpanded) && (string)((Button)about.FindName("FoldButton")).Content == "Fold all", "Open all opens every build in the line");
+        RunOnDispatcher(() => { about = new AboutView(down, "0.3-dev-17"); return about.CheckAsync(); });
         entries = ((IEnumerable<ChangelogEntryView>)((ItemsControl)about!.FindName("ChangelogList")).ItemsSource).ToList();
         Check(((TextBlock)about.FindName("StatusText")).Text.Contains("Couldn't reach GitHub") && ((TextBlock)about.FindName("SourceText")).Text.Contains("Included")
             && entries[0].IsInstalled && ((Button)about.FindName("CheckButton")).IsEnabled, "offline, about keeps the bundled changelog and lets you try again");
         using var current = UpdateService.CreateClient(new FakeHttp(r => r.RequestUri!.Host == "api.github.com" ? Text(ReleasesJson) : Text(UpdateService.BundledChangelog())));
-        RunOnDispatcher(() => { about = new AboutView(current, "0.3-dev-17"); return about.CheckAsync(); });
+        RunOnDispatcher(() => { about = new AboutView(current, "0.3-dev-18"); return about.CheckAsync(); });
         Check(((TextBlock)about!.FindName("StatusText")).Text.Contains("latest version") && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Collapsed,
             "about says when you have the latest version");
 
         // With an installer: the button updates in place, and a Keyloom that is not installed yet is offered the install.
         string? restartedWith = null;
         Task Restart(string exe) { restartedWith = exe; return Task.CompletedTask; }
-        RunOnDispatcher(() => { about = new AboutView(http, "0.3-dev-16", Restart); return about.CheckAsync(); });
-        Check(((TextBlock)about!.FindName("DownloadText")).Text == "Update to 0.3-dev-17", "about offers to update in place");
-        RunOnDispatcher(() => { about = new AboutView(current, "0.3-dev-17", Restart); return about.CheckAsync(); });
+        RunOnDispatcher(() => { about = new AboutView(http, "0.3-dev-17", Restart); return about.CheckAsync(); });
+        Check(((TextBlock)about!.FindName("DownloadText")).Text == "Update to 0.3-dev-18", "about offers to update in place");
+        RunOnDispatcher(() => { about = new AboutView(current, "0.3-dev-18", Restart); return about.CheckAsync(); });
         Check(((TextBlock)about!.FindName("DownloadText")).Text == "Install" && ((TextBlock)about.FindName("StatusText")).Text.Contains("Start menu")
             && ((FrameworkElement)about.FindName("DownloadButton")).Visibility == Visibility.Visible, "a Keyloom started from a ZIP is offered the install");
         using var failing = UpdateService.CreateClient(new FakeHttp(r => r.RequestUri!.Host == "api.github.com" ? Text(ReleasesJson)
             : r.RequestUri.AbsolutePath.EndsWith(".zip") ? Text("", HttpStatusCode.NotFound) : Text(OnlineChangelog)));
-        RunOnDispatcher(async () => { about = new AboutView(failing, "0.3-dev-16", Restart); await about.CheckAsync(); await about.UpdateAsync(); });
+        RunOnDispatcher(async () => { about = new AboutView(failing, "0.3-dev-17", Restart); await about.CheckAsync(); await about.UpdateAsync(); });
         Check(restartedWith == null && ((TextBlock)about!.FindName("StatusText")).Text.Contains("didn't finish") && ((Button)about.FindName("DownloadButton")).IsEnabled,
             "a failed download says so, keeps this Keyloom running and lets you try again");
     }

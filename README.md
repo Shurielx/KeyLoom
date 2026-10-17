@@ -214,7 +214,7 @@ Macros, settings, icons and usage live in `%APPDATA%\Keyloom`, with a backup of 
 
 Requires Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). For local use, double-click **Start Keyloom.bat**: it builds the current source and opens the app.
 
-Pushing a tag like `v0.3-dev-16` runs the release workflow: it builds, tests and publishes `Keyloom-<version>-win-x64.zip` with `SHA256SUMS.txt`, the files the in-app updater downloads.
+Pushing a tag like `v0.3-dev-17` runs the release workflow: it builds, tests and publishes `Keyloom-<version>-win-x64.zip` with `SHA256SUMS.txt`, the files the in-app updater downloads.
 
 ```powershell
 dotnet build Keyloom.csproj -c Release

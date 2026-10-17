@@ -2,6 +2,14 @@
 
 Short list of changes per version, shown in Keyloom under **About**. Full notes are on the [releases page](https://github.com/Shurielx/KeyLoom/releases).
 
+## 0.3-dev-17 · 2026-10-17
+
+### Changed
+- What's new shows one release at a time: 0.3, 0.2, 0.1
+- Each build folds to tags like Added 5 or Fixed 2
+- Click a build to open it, or Open all for the release
+- New and installed builds start open
+
 ## 0.3-dev-16 · 2026-10-17
 
 ### Added

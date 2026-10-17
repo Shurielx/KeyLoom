@@ -43,6 +43,9 @@ public static partial class UpdateService
     }
     public static bool IsNewer(string candidate, string current) =>
         ParseVersion(candidate) is { } a && ParseVersion(current) is { } b && a.CompareTo(b) > 0;
+    /// <summary>The release a build belongs to: 0.3-dev-16 and 0.3.1 are both 0.3. Labels that are not versions keep their name, so Alpha-01 is Alpha.</summary>
+    public static string ReleaseLine(string version) =>
+        ParseVersion(version) is { } v ? $"{v.Major}.{v.Minor}" : version.Split('-')[0].Trim();
 
     // ---- Changelog ----
 
